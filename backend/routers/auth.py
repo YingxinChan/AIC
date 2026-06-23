@@ -12,7 +12,7 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 async def register(body: RegisterRequest, response: Response, db: AsyncSession = Depends(get_db)):
     user = await auth_service.register_user(db, body.email, body.password)
     token = create_access_token(user.id, user.email)
-    response.set_cookie(key="access_token", value=token, httponly=True)
+    response.set_cookie(key="access_token", value=token, httponly=True, samesite="lax")
     return {"user": {"id": user.id, "email": user.email}}
 
 
@@ -20,7 +20,7 @@ async def register(body: RegisterRequest, response: Response, db: AsyncSession =
 async def login(body: LoginRequest, response: Response, db: AsyncSession = Depends(get_db)):
     user = await auth_service.login_user(db, body.email, body.password)
     token = create_access_token(user.id, user.email)
-    response.set_cookie(key="access_token", value=token, httponly=True)
+    response.set_cookie(key="access_token", value=token, httponly=True, samesite="lax")
     return {"user": {"id": user.id, "email": user.email}}
 
 
