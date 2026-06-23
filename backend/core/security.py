@@ -1,11 +1,8 @@
 from datetime import datetime, timedelta
-from fastapi import HTTPException, Request, Depends
+from fastapi import HTTPException, Request
 from passlib.context import CryptContext
 from jose import JWTError, jwt
-from sqlalchemy.ext.asyncio import AsyncSession
 from core.config import settings
-from core.database import get_db
-from models.user import User
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
