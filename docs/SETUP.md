@@ -84,28 +84,16 @@ VS Code won't auto-detect the venv since it's inside a subfolder. If you see yel
 
 Replace the path with wherever you cloned the repo. The squiggles will disappear once selected.
 
-### 5. Apply database migrations
+### 5. Dev login
 
-```bash
-alembic upgrade head
-```
+The database is already set up — tables and a shared dev account exist. No migration or seed commands needed.
 
-This creates the `users`, `trips`, and `activities` tables in the shared Supabase database. Safe to run multiple times — it skips migrations that are already applied.
-
-### 5a. Create the dev login (optional but recommended)
-
-```bash
-python scripts/seed_dev_user.py
-```
-
-Creates a shared development account you can use to log in without registering:
+Use this account to log in during development:
 
 | Field    | Value               |
 |----------|---------------------|
 | Email    | `dev@smarttrip.ai`  |
 | Password | `devpass123`        |
-
-Safe to run multiple times — it skips creation if the user already exists.
 
 ### 6. Verify all connections
 
