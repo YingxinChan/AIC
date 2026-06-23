@@ -245,6 +245,39 @@ python scripts/seed_dev_user.py
 
 ---
 
+## Error handling
+
+Since features are being built incrementally, always raise proper HTTP exceptions instead of letting errors crash silently. This makes it obvious what's not implemented yet vs. what's genuinely broken.
+
+**Use `HTTPException` for expected errors:**
+
+```python
+from fastapi import HTTPException
+
+# Not found
+raise HTTPException(status_code=404, detail="Trip not found")
+
+# Wrong user
+raise HTTPException(status_code=403, detail="Not your trip")
+
+# Feature not ready yet — use 501 so it's obvious it's a stub
+raise HTTPException(status_code=501, detail="Not implemented yet")
+```
+
+**Wrap external calls in try/except:**
+
+```python
+# Good — teammates know exactly what failed
+try:
+    result = await some_external_api_call()
+except Exception as e:
+    raise HTTPException(status_code=503, detail=f"External service error: {e}")
+```
+
+**Never silently return empty data for an error.** If something fails, raise an exception — don't return `{}` or `[]`. The global exception handler in `main.py` will catch anything unexpected and return a readable error response.
+
+---
+
 ## Common mistakes
 
 **Forgetting `await`**
