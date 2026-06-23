@@ -1,8 +1,11 @@
 from datetime import datetime, timedelta
-from fastapi import HTTPException, Request
+from fastapi import HTTPException, Request, Depends
 from passlib.context import CryptContext
 from jose import JWTError, jwt
+from sqlalchemy.ext.asyncio import AsyncSession
 from core.config import settings
+from core.database import get_db
+from models.user import User
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -31,9 +34,15 @@ def decode_access_token(token: str) -> dict:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
 
-def get_current_user(request: Request) -> dict:
-    # STUB: replaced in Task 2
+async def get_current_user(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
     token = request.cookies.get("access_token")
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    return {"id": 1, "email": "stub@example.com"}
+    payload = decode_access_token(token)
+    user = await db.get(User, int(payload["sub"]))
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return {"id": user.id, "email": user.email}
