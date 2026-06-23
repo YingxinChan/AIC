@@ -6,8 +6,7 @@ class Settings(BaseSettings):
     secret_key: str = "dev-secret-key"
     gmail_user: str = ""
     gmail_app_password: str = ""
-    amadeus_client_id: str = ""
-    amadeus_client_secret: str = ""
+    openweather_api_key: str = ""
 
     @property
     def sync_database_url(self) -> str:

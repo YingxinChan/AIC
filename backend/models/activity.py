@@ -15,3 +15,6 @@ class Activity(Base):
     location: Mapped[str] = mapped_column(String(255), default="", server_default="")
     description: Mapped[str] = mapped_column(String(1000), default="", server_default="")
     is_swapped: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    alternate_name: Mapped[str] = mapped_column(String(255), default="", server_default="")
+    alternate_location: Mapped[str] = mapped_column(String(255), default="", server_default="")
+    swap_reason: Mapped[str] = mapped_column(String(255), default="", server_default="")
