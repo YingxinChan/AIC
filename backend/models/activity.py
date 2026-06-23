@@ -12,6 +12,6 @@ class Activity(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     type: Mapped[str] = mapped_column(String(10), nullable=False)  # "indoor" | "outdoor"
     time_slot: Mapped[str] = mapped_column(String(50), nullable=False)
-    location: Mapped[str] = mapped_column(String(255), default="")
-    description: Mapped[str] = mapped_column(String(1000), default="")
-    is_swapped: Mapped[bool] = mapped_column(Boolean, default=False)
+    location: Mapped[str] = mapped_column(String(255), default="", server_default="")
+    description: Mapped[str] = mapped_column(String(1000), default="", server_default="")
+    is_swapped: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
