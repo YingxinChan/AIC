@@ -46,9 +46,9 @@ def upgrade() -> None:
     sa.Column('name', sa.String(length=255), nullable=False),
     sa.Column('type', sa.String(length=10), nullable=False),
     sa.Column('time_slot', sa.String(length=50), nullable=False),
-    sa.Column('location', sa.String(length=255), nullable=False),
-    sa.Column('description', sa.String(length=1000), nullable=False),
-    sa.Column('is_swapped', sa.Boolean(), nullable=False),
+    sa.Column('location', sa.String(length=255), nullable=False, server_default=''),
+    sa.Column('description', sa.String(length=1000), nullable=False, server_default=''),
+    sa.Column('is_swapped', sa.Boolean(), nullable=False, server_default='false'),
     sa.ForeignKeyConstraint(['trip_id'], ['trips.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
