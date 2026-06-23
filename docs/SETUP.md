@@ -45,7 +45,7 @@ cd AIC
 ### 1. Get the shared database credentials
 The team uses shared cloud databases — you do **not** need to install PostgreSQL or Redis locally.
 
-Ask Stella for the `.env` file. Drop it into the `backend/` folder as-is — no need to edit anything.
+Ask Stella for the `.env` file. Drop it into the `backend/` folder as-is — no need to edit anything. (should be in github)
 
 > **Never commit `.env` to the repo.** It's in `.gitignore` for this reason.
 
@@ -72,7 +72,19 @@ venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 4. Verify all connections
+### 4. Set the Python interpreter in VS Code
+
+VS Code won't auto-detect the venv since it's inside a subfolder. If you see yellow squiggles on imports, fix it by selecting the right interpreter:
+
+1. Press `Cmd+Shift+P` (Mac) or `Ctrl+Shift+P` (Windows)
+2. Type **Python: Select Interpreter**
+3. Click **Enter interpreter path...** and paste:
+   - **Mac/Linux:** `/path/to/AIC/backend/venv/bin/python`
+   - **Windows:** `C:\path\to\AIC\backend\venv\Scripts\python.exe`
+
+Replace the path with wherever you cloned the repo. The squiggles will disappear once selected.
+
+### 5. Verify all connections
 
 Before starting the backend, run this to confirm everything is reachable:
 
