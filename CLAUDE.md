@@ -27,11 +27,12 @@ An app that plans travel itineraries according to weather forecasts, then sugges
 - **Stage 1:** CatBoost Regressor for rain volume prediction. Literature target R² = 0.837 — this is a target from research, NOT a proven/achieved result yet. Report actual achieved numbers honestly in the proposal, do not assume the target is hit.
 - **Stage 2:** LightGBM Classifier for flash storm detection. Literature target F1 = 0.752 — same caveat, not yet validated.
 
-## Flights (decision made after researching free API options)
+## Flights (decision updated 23 June 2026)
 - Skyscanner's official API is CLOSED to non-partners — confirmed not viable, application takes weeks.
-- **Decision: use Amadeus Self-Service API (free tier, real flight data, no credit card) as the primary source.**
-- Keep mocked/sample flight data as a fallback in case Amadeus integration has issues — so the demo never breaks even if the live API has a problem on the day.
-- Real Skyscanner affiliate integration is future work / post-MVP, mentioned in the proposal's roadmap section, not built now.
+- Amadeus Self-Service API was the original plan, but their free self-service portal is being **decommissioned on 17 July 2026** — before our prototype deadline. Confirmed unavailable.
+- **Decision: use mock flight data only for the prototype.** Flights are not the core feature (the weather-adaptive itinerary is), and a well-crafted mock is more reliable for a live demo than a live API.
+- The mock should look realistic: return a few plausible London flight options with airline, price, times, and duration — enough to demonstrate the concept clearly in the demo.
+- Real flight API integration (e.g. Skyscanner affiliate, or whatever replaces Amadeus) is explicitly future work / post-MVP. Mention in the proposal's roadmap section.
 
 ## Working style / philosophy agreed in planning
 - **Parallel tracks, not sequential phases.** ML, Backend, Frontend, and Proposal writing all start in Week 1, not waiting on each other. The only required sync point early on is agreeing on the **API contract** (what endpoints exist, what data they take/return) — once that's written down, frontend and backend can each build independently against it.
@@ -42,7 +43,7 @@ An app that plans travel itineraries according to weather forecasts, then sugges
 ## Things explicitly cut or de-scoped for MVP (mention as "future work" in proposal, don't apologize for them)
 - Mobile app (React Native) — replaced with web app entirely.
 - Firebase push notifications — replaced with email notifications.
-- Real Skyscanner integration — replaced with Amadeus + mock fallback.
+- Real flight API integration — Skyscanner is closed to non-partners, Amadeus self-service is shutting down July 2026. Using mock flight data for the prototype instead.
 - Map view — lowest priority, may be cut if time is short.
 - Multi-city/global expansion — explicitly future work, MVP is London only.
 
