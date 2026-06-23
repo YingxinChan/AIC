@@ -11,13 +11,5 @@ node_modules/
 dist/
 .vite/
 
-# ML artifacts
-ml/data/raw/*
-ml/data/processed/*
-ml/models/*
-!ml/data/raw/.gitkeep
-!ml/data/processed/.gitkeep
-!ml/models/.gitkeep
-
 # OS
 .DS_Store
