@@ -9,6 +9,10 @@ class Settings(BaseSettings):
     amadeus_client_id: str = ""
     amadeus_client_secret: str = ""
 
+    @property
+    def sync_database_url(self) -> str:
+        return self.database_url.replace("+asyncpg", "")
+
     class Config:
         env_file = ".env"
 
