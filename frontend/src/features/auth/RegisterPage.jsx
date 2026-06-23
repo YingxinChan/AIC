@@ -25,8 +25,13 @@ export default function RegisterPage() {
       const data = await register(email, password)
       setUser(data.user)
       navigate('/dashboard')
-    } catch {
-      setError('Could not create account. Try again.')
+    } catch (err) {
+      const status = err?.response?.status
+      if (status === 409) {
+        setError('An account with this email already exists.')
+      } else {
+        setError('Could not create account. Try again.')
+      }
     } finally {
       setLoading(false)
     }

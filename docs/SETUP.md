@@ -84,7 +84,30 @@ VS Code won't auto-detect the venv since it's inside a subfolder. If you see yel
 
 Replace the path with wherever you cloned the repo. The squiggles will disappear once selected.
 
-### 5. Verify all connections
+### 5. Apply database migrations
+
+```bash
+alembic upgrade head
+```
+
+This creates the `users`, `trips`, and `activities` tables in the shared Supabase database. Safe to run multiple times — it skips migrations that are already applied.
+
+### 5a. Create the dev login (optional but recommended)
+
+```bash
+python scripts/seed_dev_user.py
+```
+
+Creates a shared development account you can use to log in without registering:
+
+| Field    | Value               |
+|----------|---------------------|
+| Email    | `dev@smarttrip.ai`  |
+| Password | `devpass123`        |
+
+Safe to run multiple times — it skips creation if the user already exists.
+
+### 6. Verify all connections
 
 Before starting the backend, run this to confirm everything is reachable:
 
@@ -127,7 +150,7 @@ Backend runs at: http://localhost:8000
 API docs (auto-generated): http://localhost:8000/docs
 Health check: http://localhost:8000/api/health
 
-### 7. Run backend tests
+### 8. Run backend tests
 
 **Mac/Linux:**
 ```bash
@@ -140,7 +163,7 @@ python -m pytest tests/ -v
 venv\Scripts\activate
 python -m pytest tests/ -v
 ```
-Expected: 24 tests passing.
+Expected: 33 tests passing.
 
 ---
 
@@ -157,7 +180,7 @@ npm install
 npm run dev
 ```
 
-Frontend runs at: http://localhost:5173
+Frontend runs at: http://localhost:5173 (or `5174` if 5173 is already in use — check the terminal output)
 
 ### 3. Run frontend tests
 ```bash
@@ -167,12 +190,12 @@ Expected: 20 tests passing.
 
 ---
 
-## Current stub behaviour (skeleton state)
+## Current state
 
-The project is a skeleton — no real logic is wired up yet. This is expected:
+Auth is real — all other features are stubs:
 
-- **Login:** any email + any password works (auth is a stub)
-- **All API routes** return `{"status": "not_implemented"}`
+- **Register / Login:** fully working, backed by Supabase. Use `dev@smarttrip.ai` / `devpass123` for dev login.
+- **All other API routes** return `{"status": "not_implemented"}` — teammates fill these in
 - **Unbuilt sections** show placeholder text explaining what goes there
 - **Map:** shows London, no pins yet
 - **Itinerary page:** navigate directly to `http://localhost:5173/trips/1`
