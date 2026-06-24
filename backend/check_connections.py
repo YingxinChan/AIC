@@ -18,7 +18,7 @@ async def check_db():
 async def check_redis():
     try:
         import redis.asyncio as redis
-        r = redis.from_url(os.getenv("REDIS_URL", ""))
+        r = redis.from_url(os.getenv("REDIS_URL", ""), ssl_cert_reqs=None)
         await r.ping()
         await r.aclose()
         print("✓ Redis (Upstash) — connected")
