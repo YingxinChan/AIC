@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import api from '../../lib/api';
 
 export default function FlightsPage() {
   const [origin, setOrigin] = useState('');
@@ -12,43 +13,12 @@ export default function FlightsPage() {
     setLoading(true);
     setErrorMessage('');
     try {
-      // Map the 2 form fields perfectly to the 3 query arguments expected by the router
-      const params = new URLSearchParams({ 
-        origin: origin,          // Origin City (e.g., Paris)
-        departure: date,         // Departure Date string
-        return_date: date        // Return Date string (matching departure for simplicity)
+      const { data } = await api.get('/api/flights/search', {
+        params: { origin, departure: date, return_date: date }
       });
-      
-      // Add http://127.0.0.1:8000 in front of the route
-      // Check if your app stores a login token (common in React apps)
-      const token = localStorage.getItem('token') || localStorage.getItem('access_token');
-
-      const response = await fetch(`http://localhost:8000/api/flights/search?${params}`, {
-        method: 'GET',
-        headers: {
-          // If you have a token, this sends it to the backend
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        // This tells the browser to send any secure session cookies
-        credentials: 'include' 
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Server responded with status ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      if (data && data.flights) {
-        setFlights(data.flights);
-      } else if (Array.isArray(data)) {
-        setFlights(data);
-      } else {
-        setFlights([]);
-      }
+      setFlights(data.flights || []);
     } catch (error) {
-      console.error("Failed to fetch flights", error);
-      setErrorMessage(error.message || "Something went wrong while fetching flights.");
+      setErrorMessage(error.response?.data?.detail || 'Something went wrong while fetching flights.');
     }
     setLoading(false);
   };
@@ -95,7 +65,7 @@ export default function FlightsPage() {
       {/* Error Feedback Display */}
       {errorMessage && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-          <strong>Error:</strong> {errorMessage}. Please check if your backend server terminal is running or inspect your network configurations.
+          <strong>Error:</strong> {errorMessage}
         </div>
       )}
 

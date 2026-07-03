@@ -1,5 +1,4 @@
 # Mock flight data for demo purposes
-# Mock flight data for demo purposes
 MOCK_FLIGHTS = [
     {
         "airline": "British Airways",
@@ -57,7 +56,6 @@ MOCK_FLIGHTS = [
     }
 ]
 
-# We MUST keep the exact arguments from the original stub!
 def search_flights(origin: str, departure: str, return_date: str) -> dict:
     """
     Returns mock flight data matching the exact signature of the router.
