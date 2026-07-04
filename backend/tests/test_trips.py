@@ -1,3 +1,13 @@
+def test_list_trips_requires_auth(client):
+    response = client.get("/api/trips/")
+    assert response.status_code == 401
+
+def test_create_trip_requires_auth(client):
+    response = client.post("/api/trips/", json={
+        "name": "Summer Trip", "start_date": "2026-08-01", "end_date": "2026-08-07"
+    })
+    assert response.status_code == 401
+
 def test_create_trip_returns_id(auth_client):
     response = auth_client.post("/api/trips/", json={
         "name": "Summer Trip", "start_date": "2026-08-01", "end_date": "2026-08-07"
