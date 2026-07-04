@@ -32,9 +32,10 @@ export default function FlightsPage() {
         <h2 className="text-lg font-semibold text-gray-800 mb-4">Search flights to London</h2>
         <form onSubmit={handleSearch} className="flex gap-4 items-end">
           <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Origin City</label>
-            <input 
-              type="text" 
+            <label htmlFor="origin" className="block text-sm font-medium text-gray-700 mb-1">Origin City</label>
+            <input
+              id="origin"
+              type="text"
               value={origin}
               onChange={(e) => setOrigin(e.target.value)}
               placeholder="e.g. Paris"
@@ -43,9 +44,10 @@ export default function FlightsPage() {
             />
           </div>
           <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Travel Date</label>
-            <input 
-              type="date" 
+            <label htmlFor="travel-date" className="block text-sm font-medium text-gray-700 mb-1">Travel Date</label>
+            <input
+              id="travel-date"
+              type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-900 focus:outline-none"
