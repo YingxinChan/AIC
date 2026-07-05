@@ -7,7 +7,6 @@ MOCK_FLIGHTS = [
         "departure_time": "08:00",
         "arrival_time": "08:15",
         "duration": "1h 15m",
-        "price": 89
     },
     {
         "airline": "EasyJet",
@@ -15,8 +14,7 @@ MOCK_FLIGHTS = [
         "departure_city": "Paris",
         "departure_time": "10:30",
         "arrival_time": "10:45",
-        "duration": "1h 15m",
-        "price": 34
+        "duration": "1h 15m"
     },
     {
         "airline": "Ryanair",
@@ -25,7 +23,6 @@ MOCK_FLIGHTS = [
         "departure_time": "14:00",
         "arrival_time": "14:15",
         "duration": "1h 15m",
-        "price": 40
     },
     {
         "airline": "British Airways",
@@ -34,7 +31,6 @@ MOCK_FLIGHTS = [
         "departure_time": "09:00",
         "arrival_time": "10:00",
         "duration": "2h 00m",
-        "price": 83
     },
     {
         "airline": "Ryanair",
@@ -43,7 +39,6 @@ MOCK_FLIGHTS = [
         "departure_time": "09:00",
         "arrival_time": "10:00",
         "duration": "2h 00m",
-        "price": 48
     },
     {
         "airline": "EasyJet",
@@ -52,7 +47,6 @@ MOCK_FLIGHTS = [
         "departure_time": "16:00",
         "arrival_time": "17:00",
         "duration": "2h 00m",
-        "price": 39
     }
 ]
 
