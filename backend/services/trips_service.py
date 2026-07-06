@@ -6,22 +6,33 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.trip import Trip
 
+VALID_LEGS = ("arrival", "departure")
+
+
+def _trip_dict(trip: Trip) -> dict:
+    return {
+        "id": trip.id,
+        "user_id": trip.user_id,
+        "name": trip.name,
+        "destination": trip.destination,
+        "start_date": trip.start_date,
+        "end_date": trip.end_date,
+        "created_at": trip.created_at,
+        "arrival_flight_number": trip.arrival_flight_number,
+        "arrival_airline": trip.arrival_airline,
+        "arrival_time": trip.arrival_time,
+        "departure_flight_number": trip.departure_flight_number,
+        "departure_airline": trip.departure_airline,
+        "departure_time": trip.departure_time,
+        "original_plan": trip.original_plan,
+        "hotel_address": trip.hotel_address,
+    }
+
 
 async def list_trips(db: AsyncSession, user_id: int) -> list[dict]:
     result = await db.execute(select(Trip).where(Trip.user_id == user_id))
     trips = result.scalars().all()
-
-    return [
-        {
-            "id": trip.id,
-            "user_id": trip.user_id,
-            "name": trip.name,
-            "start_date": trip.start_date,
-            "end_date": trip.end_date,
-            "created_at": trip.created_at,
-        }
-        for trip in trips
-    ]
+    return [_trip_dict(trip) for trip in trips]
 
 
 async def create_trip(
@@ -30,8 +41,14 @@ async def create_trip(
     name: str,
     start_date: date,
     end_date: date,
+    destination: str = "London",
+    original_plan: str = "",
+    hotel_address: str = "",
 ) -> dict:
-    trip = Trip(user_id=user_id, name=name, start_date=start_date, end_date=end_date)
+    trip = Trip(
+        user_id=user_id, name=name, start_date=start_date, end_date=end_date,
+        destination=destination, original_plan=original_plan, hotel_address=hotel_address,
+    )
     db.add(trip)
     await db.commit()
     await db.refresh(trip)
@@ -39,32 +56,42 @@ async def create_trip(
 
 
 async def get_trip(db: AsyncSession, trip_id: int, user_id: int) -> dict:
-    result = await db.execute(
-        select(Trip).where(Trip.id == trip_id, Trip.user_id == user_id)
-    )
-    trip = result.scalar_one_or_none()
-
-    if trip is None:
-        raise HTTPException(status_code=404, detail="Trip not found")
-
-    return {
-        "id": trip.id,
-        "user_id": trip.user_id,
-        "name": trip.name,
-        "start_date": trip.start_date,
-        "end_date": trip.end_date,
-        "created_at": trip.created_at,
-    }
+    trip = await _get_owned_trip(db, trip_id, user_id)
+    return _trip_dict(trip)
 
 
 async def delete_trip(db: AsyncSession, trip_id: int, user_id: int) -> None:
+    trip = await _get_owned_trip(db, trip_id, user_id)
+    await db.delete(trip)
+    await db.commit()
+
+
+async def select_flight(
+    db: AsyncSession,
+    trip_id: int,
+    user_id: int,
+    leg: str,
+    flight_number: str,
+    airline: str,
+    time: str,
+) -> dict:
+    if leg not in VALID_LEGS:
+        raise HTTPException(status_code=400, detail=f"leg must be one of {VALID_LEGS}")
+
+    trip = await _get_owned_trip(db, trip_id, user_id)
+    setattr(trip, f"{leg}_flight_number", flight_number)
+    setattr(trip, f"{leg}_airline", airline)
+    setattr(trip, f"{leg}_time", time)
+    await db.commit()
+    await db.refresh(trip)
+    return _trip_dict(trip)
+
+
+async def _get_owned_trip(db: AsyncSession, trip_id: int, user_id: int) -> Trip:
     result = await db.execute(
         select(Trip).where(Trip.id == trip_id, Trip.user_id == user_id)
     )
     trip = result.scalar_one_or_none()
-
     if trip is None:
         raise HTTPException(status_code=404, detail="Trip not found")
-
-    await db.delete(trip)
-    await db.commit()
+    return trip
