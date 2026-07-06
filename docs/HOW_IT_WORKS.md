@@ -123,22 +123,20 @@ Tokens expire after 7 days. After that, the user has to log in again.
 
 ---
 
-### Celery + Redis — background jobs
+### Celery + Redis — background jobs (set up, not currently used by itinerary generation)
 
-Some things take too long to do while a user is waiting for a response — like generating an itinerary (fetching weather data, running ML models, building a day-by-day plan). If we tried to do all that in one HTTP request, the browser would time out.
+Some things take too long to do while a user is waiting for a response. The original plan was to run itinerary generation as a background job:
 
 **Celery** is a task queue — you hand it a job, it runs it in the background, and you check back later for the result.
 
 **Redis** is an in-memory database that Celery uses as a message broker — it's the "queue" that holds pending jobs.
 
-The intended flow for itinerary generation:
+**What's actually implemented instead:** `itinerary_service.py` calls Claude Haiku directly and synchronously inside the request handler for `POST /api/trips/{id}/itinerary/generate` — no job queue, no polling. A single Haiku call for a few days' worth of activities is fast enough that this didn't need the extra moving parts, so the flow is just:
 1. User clicks "Generate" → frontend sends `POST /api/trips/1/itinerary/generate`
-2. Backend dispatches a Celery task and immediately returns a `job_id`
-3. Frontend polls `GET /api/jobs/{job_id}` every few seconds
-4. Celery worker finishes in the background, saves the result to the DB
-5. Frontend sees it's done and shows the itinerary
+2. Backend calls Claude Haiku, waits for the response, saves the activities to the DB
+3. Backend returns the generated itinerary in the same response
 
-This is not implemented yet — `itinerary_service.py` is a stub. But the Celery setup is already wired in `core/celery.py`.
+The Celery/Redis setup in `core/celery.py` is still there and still works — it's just unused for this feature. If a future feature genuinely needs a background job (e.g. something slower, or the ML pipeline), it's already wired up and ready.
 
 ---
 
@@ -245,10 +243,12 @@ Several services return placeholder responses right now. This is intentional —
 
 | Feature | File to edit | Status |
 |---|---|---|
-| Trip CRUD | `services/trips_service.py` | Stub |
-| Itinerary generation | `services/itinerary_service.py` | Stub |
+| Trip CRUD | `services/trips_service.py` | **Done** |
+| Flight selection → trip timing | `services/trips_service.py` (`select_flight`) | **Done** |
+| Itinerary generation (Claude Haiku) | `services/itinerary_service.py` | **Done** |
+| Activity swap (weather-triggered) | `services/itinerary_service.py` (`swap_activity`) | Stub |
 | Weather forecast | `services/weather_service.py` | Stub |
-| Flight search | `services/flights_service.py` | Stub (mock data) |
+| Flight search | `services/flights_service.py` | **Done** (mock data — real API integration is future work) |
 | Email notifications | `services/notifications_service.py` | Stub |
 | ML models | `ml/predictor.py` | Stub |
 | Auth | `services/auth_service.py` | **Done** |

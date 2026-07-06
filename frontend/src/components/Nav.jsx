@@ -18,7 +18,6 @@ export default function Nav() {
         <Link to="/dashboard" className="font-bold text-gray-900 text-lg">SmartTrip AI</Link>
         <div className="flex items-center gap-6 text-sm text-gray-600">
           <Link to="/dashboard" className="hover:text-gray-900">Trips</Link>
-          <Link to="/flights" className="hover:text-gray-900">Flights</Link>
           <Link to="/settings/notifications" className="hover:text-gray-900">Notifications</Link>
           <button onClick={handleSignOut} className="hover:text-gray-900">Sign out</button>
         </div>

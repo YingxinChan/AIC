@@ -18,7 +18,7 @@ test('renders nav links', () => {
   render(<MemoryRouter><Nav /></MemoryRouter>)
   expect(screen.getByText('SmartTrip AI')).toBeInTheDocument()
   expect(screen.getByText('Trips')).toBeInTheDocument()
-  expect(screen.getByText('Flights')).toBeInTheDocument()
+  expect(screen.queryByText('Flights')).not.toBeInTheDocument()
   expect(screen.getByText('Notifications')).toBeInTheDocument()
   expect(screen.getByText('Sign out')).toBeInTheDocument()
 })

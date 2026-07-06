@@ -51,6 +51,7 @@ export default function App() {
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/trips/new" element={<NewTripPage />} />
               <Route path="/trips/:tripId" element={<ItineraryPage />} />
+              <Route path="/trips/:tripId/flights" element={<FlightsPage />} />
               <Route path="/flights" element={<FlightsPage />} />
               <Route path="/settings/notifications" element={<NotificationsPage />} />
             </Route>

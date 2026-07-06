@@ -50,17 +50,28 @@ MOCK_FLIGHTS = [
     }
 ]
 
-def search_flights(origin: str, departure: str, return_date: str) -> dict:
+def search_flights(origin: str, departure: str, return_date: str, direction: str = "arrival", destination: str = "London") -> dict:
     """
     Returns mock flight data matching the exact signature of the router.
     `departure` represents the departure date string from the frontend.
     `return_date` represents the return date string from the frontend.
+    `destination` is the trip's destination city (defaults to "London" for
+    the MVP). `direction` is "arrival" (flying into `destination`, default)
+    or "departure" (flying out of `destination`) — flights are mock-only, so
+    "departure" just relabels the same mock set as originating in
+    `destination` instead of modeling a separate return-flight dataset.
     """
     # Loosely filter by origin city (case-insensitive)
     results = [f for f in MOCK_FLIGHTS if origin and origin.lower() in f["departure_city"].lower()]
-    
+
     # Fallback: if city doesn't match our short list, return the first 3 items anyway for the demo
     if not results:
         results = MOCK_FLIGHTS[:3]
-        
+
+    if direction == "departure":
+        results = [
+            {**f, "departure_city": destination, "destination_city": f["departure_city"]}
+            for f in results
+        ]
+
     return {"flights": results}
