@@ -84,8 +84,7 @@ export default function FlightsPage() {
               </p>
               <p className="text-sm text-gray-500 mt-1">Duration: {flight.duration}</p>
             </div>
-            <div className="text-right">
-              <p className="text-xl font-bold text-gray-900 mb-2">£{flight.price}</p>
+            <div className="text-right flex items-center justify-end">
               <button 
                 type="button"
                 className="bg-gray-100 border border-gray-300 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-200 transition-colors"
