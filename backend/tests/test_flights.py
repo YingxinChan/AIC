@@ -24,6 +24,22 @@ def test_flight_search_departure_direction_reframes_as_leaving_london(auth_clien
     assert all(f["departure_city"] == "London" for f in flights)
     assert all(f["destination_city"] == "Paris" for f in flights)
 
+def test_flight_search_filters_by_flight_number_when_given(auth_client):
+    response = auth_client.get(
+        "/api/flights/search?origin=Paris&departure=2026-08-01&return_date=2026-08-07&flight_number=112"
+    )
+    assert response.status_code == 200
+    flights = response.json()["flights"]
+    assert len(flights) == 1
+    assert flights[0]["flight_number"] == "BA 112"
+
+def test_flight_search_flight_number_no_match_returns_empty_not_a_fallback(auth_client):
+    response = auth_client.get(
+        "/api/flights/search?origin=Paris&departure=2026-08-01&return_date=2026-08-07&flight_number=ZZ999"
+    )
+    assert response.status_code == 200
+    assert response.json()["flights"] == []
+
 def test_flight_search_departure_direction_uses_given_destination_not_hardcoded_london(auth_client):
     response = auth_client.get(
         "/api/flights/search?origin=Berlin&departure=2026-08-01&return_date=2026-08-07"

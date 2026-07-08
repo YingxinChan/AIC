@@ -143,6 +143,41 @@ def test_select_flight_persists_departure_independently(auth_client):
     assert data["departure_airline"] == "Ryanair"
     assert data["departure_time"] == "09:00"
 
+def test_select_flight_persists_other_time_alongside_the_leg_time(auth_client):
+    create = auth_client.post("/api/trips/", json={
+        "name": "Summer Trip", "start_date": "2026-08-01", "end_date": "2026-08-07"
+    })
+    trip_id = create.json()["id"]
+
+    arrival = auth_client.patch(f"/api/trips/{trip_id}/flight", json={
+        "leg": "arrival", "flight_number": "BA 112", "airline": "British Airways",
+        "time": "14:00", "other_time": "08:00",
+    })
+    assert arrival.status_code == 200
+    assert arrival.json()["arrival_time"] == "14:00"
+    assert arrival.json()["arrival_other_time"] == "08:00"
+
+    departure = auth_client.patch(f"/api/trips/{trip_id}/flight", json={
+        "leg": "departure", "flight_number": "FR 3110", "airline": "Ryanair",
+        "time": "09:00", "other_time": "10:15",
+    })
+    assert departure.status_code == 200
+    assert departure.json()["departure_time"] == "09:00"
+    assert departure.json()["departure_other_time"] == "10:15"
+    # arrival's other_time should be untouched by the departure update
+    assert departure.json()["arrival_other_time"] == "08:00"
+
+def test_select_flight_other_time_defaults_to_empty_string(auth_client):
+    create = auth_client.post("/api/trips/", json={
+        "name": "Summer Trip", "start_date": "2026-08-01", "end_date": "2026-08-07"
+    })
+    trip_id = create.json()["id"]
+
+    response = auth_client.patch(f"/api/trips/{trip_id}/flight", json={
+        "leg": "arrival", "flight_number": "BA 112", "airline": "British Airways", "time": "14:00"
+    })
+    assert response.json()["arrival_other_time"] == ""
+
 def test_select_flight_invalid_leg_returns_400(auth_client):
     create = auth_client.post("/api/trips/", json={
         "name": "Summer Trip", "start_date": "2026-08-01", "end_date": "2026-08-07"
