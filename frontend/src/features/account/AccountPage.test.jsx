@@ -33,6 +33,12 @@ test('renders Account heading and a placeholder for unbuilt profile/subscription
   renderPage()
   expect(screen.getByRole('heading', { name: /account/i })).toBeInTheDocument()
   expect(screen.getByText(/account settings will appear here/i)).toBeInTheDocument()
+  expect(screen.getByText(/subscription management will appear here/i)).toBeInTheDocument()
+})
+
+test('Manage Subscription links to /account/subscription', () => {
+  renderPage()
+  expect(screen.getByRole('link', { name: /manage subscription/i })).toHaveAttribute('href', '/account/subscription')
 })
 
 test('clicking Log Out calls the real sign-out flow and navigates to login', async () => {

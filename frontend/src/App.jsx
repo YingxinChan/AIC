@@ -12,6 +12,7 @@ import NewTripPage from './features/trips/NewTripPage'
 import ItineraryPage from './features/trips/ItineraryPage'
 import FlightSelectPage from './features/flights/FlightSelectPage'
 import AccountPage from './features/account/AccountPage'
+import SubscriptionPage from './features/account/SubscriptionPage'
 
 export default function App() {
   return (
@@ -31,6 +32,7 @@ export default function App() {
               <Route path="/trips/new/flights/:leg" element={<FlightSelectPage />} />
               <Route path="/trips/:tripId" element={<ItineraryPage />} />
               <Route path="/account" element={<AccountPage />} />
+              <Route path="/account/subscription" element={<SubscriptionPage />} />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
