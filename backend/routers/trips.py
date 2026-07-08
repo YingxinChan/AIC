@@ -49,6 +49,6 @@ async def select_flight(
     db: AsyncSession = Depends(get_db),
 ):
     return await trips_service.select_flight(
-        db, trip_id, current_user["id"], body.leg, body.flight_number, body.airline, body.time
+        db, trip_id, current_user["id"], body.leg, body.flight_number, body.airline, body.time, body.other_time
     )
 

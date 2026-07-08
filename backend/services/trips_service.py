@@ -21,9 +21,11 @@ def _trip_dict(trip: Trip) -> dict:
         "arrival_flight_number": trip.arrival_flight_number,
         "arrival_airline": trip.arrival_airline,
         "arrival_time": trip.arrival_time,
+        "arrival_other_time": trip.arrival_other_time,
         "departure_flight_number": trip.departure_flight_number,
         "departure_airline": trip.departure_airline,
         "departure_time": trip.departure_time,
+        "departure_other_time": trip.departure_other_time,
         "original_plan": trip.original_plan,
         "hotel_address": trip.hotel_address,
     }
@@ -74,6 +76,7 @@ async def select_flight(
     flight_number: str,
     airline: str,
     time: str,
+    other_time: str = "",
 ) -> dict:
     if leg not in VALID_LEGS:
         raise HTTPException(status_code=400, detail=f"leg must be one of {VALID_LEGS}")
@@ -82,6 +85,7 @@ async def select_flight(
     setattr(trip, f"{leg}_flight_number", flight_number)
     setattr(trip, f"{leg}_airline", airline)
     setattr(trip, f"{leg}_time", time)
+    setattr(trip, f"{leg}_other_time", other_time)
     await db.commit()
     await db.refresh(trip)
     return _trip_dict(trip)
