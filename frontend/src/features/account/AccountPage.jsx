@@ -1,71 +1,123 @@
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { LogOut } from 'lucide-react'
-import Placeholder from '../../components/Placeholder'
+
 import { useAuth } from '../auth/useAuth'
 import { logout as apiLogout } from '../auth/authApi'
-import { useEffect, useState } from "react";
-import { getTrips } from "../trips/tripsApi";
+import { getTrips } from '../trips/tripsApi'
+
+function formatMemberSince(createdAt) {
+  if (!createdAt) {
+    return '—'
+  }
+
+  const date = new Date(createdAt)
+
+  if (Number.isNaN(date.getTime())) {
+    return '—'
+  }
+
+  return date.toLocaleDateString('en-GB', {
+    month: 'long',
+    year: 'numeric',
+  })
+}
 
 export default function AccountPage() {
-  const [trips, setTrips] = useState([]);
-  useEffect(() => {
-  const fetchTrips = async () => {
-    const data = await getTrips();
-    setTrips(data);
-  };
-
-  fetchTrips();
-  }, []);
-
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const [tripCount, setTripCount] = useState(0)
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadTrips() {
+      try {
+        const trips = await getTrips()
+
+        if (!cancelled) {
+          setTripCount(Array.isArray(trips) ? trips.length : 0)
+        }
+      } catch {
+        if (!cancelled) {
+          setTripCount(0)
+        }
+      }
+    }
+
+    loadTrips()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const handleSignOut = async () => {
-    try { await apiLogout() } catch (_) {}
+    try {
+      await apiLogout()
+    } catch (_) {
+      // Clear local auth state even if the API logout request fails.
+    }
+
     logout()
     navigate('/login')
   }
 
+  const email = user?.email ?? ''
+  const avatarLetter = email.charAt(0).toUpperCase() || '?'
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Account</h1>
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-  <div className="flex flex-col items-center">
-    <div className="h-16 w-16 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-2xl font-bold">
-      {user?.email?.charAt(0).toUpperCase()}
-    </div>
+      <h1 className="mb-6 text-2xl font-bold text-gray-900">
+        Account
+      </h1>
 
-    <p className="mt-4 text-gray-700">
-      {user?.email}
-    </p>
-  </div>
+      {/* Account summary card */}
+      <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
+        <div className="flex items-center gap-5">
+          <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-indigo-600 text-3xl font-bold text-white">
+            {avatarLetter}
+          </div>
 
-  <div className="border-t mt-6 pt-6 space-y-4">
-    <div className="flex justify-between text-sm">
-      <span className="text-gray-600">Member since</span>
-      <span className="font-medium text-gray-900">
-        {new Date(user?.created_at).toLocaleDateString("en-US", {
-          month: "long",
-          year: "numeric",
-        })}
-      </span>
-    </div>
+          <div className="min-w-0">
+            <p className="break-all text-base text-gray-600">
+              {email}
+            </p>
+          </div>
+        </div>
 
-    <div className="flex justify-between text-sm">
-      <span className="text-gray-600">Trips planned</span>
-      <span className="font-medium text-gray-900">
-        {trips.length}
-      </span>
-    </div>
-  </div>
-</div>
+        <div className="my-6 border-t border-gray-200" />
 
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-sm font-semibold text-gray-800 mb-4">Subscription</h2>
-        <Placeholder label="Subscription management will appear here." />
+        <dl className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <dt className="text-sm text-gray-500">
+              Member since
+            </dt>
+            <dd className="text-sm font-medium text-gray-900">
+              {formatMemberSince(user?.created_at)}
+            </dd>
+          </div>
+
+          <div className="flex items-center justify-between gap-4">
+            <dt className="text-sm text-gray-500">
+              Trips planned
+            </dt>
+            <dd className="text-sm font-medium text-gray-900">
+              {tripCount}
+            </dd>
+          </div>
+        </dl>
+      </div>
+
+      {/* Existing subscription card — leave its content unchanged */}
+      <div className="rounded-lg border border-gray-200 bg-white p-6">
+        <h2 className="mb-4 text-sm font-semibold text-gray-800">
+          Subscription
+        </h2>
+
         <Link
           to="/account/subscription"
-          className="mt-4 w-full flex items-center justify-center gap-2 border border-indigo-200 text-indigo-600 px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-indigo-50 transition-colors"
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-indigo-200 px-4 py-2.5 text-sm font-semibold text-indigo-600 transition-colors hover:bg-indigo-50"
         >
           Manage Subscription
         </Link>
@@ -74,9 +126,10 @@ export default function AccountPage() {
       <button
         type="button"
         onClick={handleSignOut}
-        className="w-full flex items-center justify-center gap-2 border border-red-200 text-red-600 px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-red-50 transition-colors"
+        className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50"
       >
-        <LogOut size={16} /> Log Out
+        <LogOut size={16} />
+        Log Out
       </button>
     </div>
   )
