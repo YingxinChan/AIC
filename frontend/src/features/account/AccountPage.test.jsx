@@ -10,7 +10,22 @@ vi.mock('../auth/authApi', () => ({
 
 const mockAuthLogout = vi.fn()
 vi.mock('../auth/useAuth', () => ({
-  useAuth: () => ({ logout: mockAuthLogout }),
+  useAuth: () => ({
+    user: {
+      email: 'test@example.com',
+      created_at: '2024-01-15T00:00:00Z',
+    },
+    logout: mockAuthLogout,
+  }),
+}))
+
+vi.mock('../trips/tripsApi', () => ({
+  getTrips: vi.fn(() =>
+    Promise.resolve([
+      { id: 1 },
+      { id: 2 },
+    ])
+  ),
 }))
 
 function renderPage() {
@@ -29,11 +44,16 @@ beforeEach(() => {
   mockAuthLogout.mockClear()
 })
 
-test('renders Account heading and a placeholder for unbuilt profile/subscription content', () => {
+test('renders user email, member since, and trips planned count', async () => {
   renderPage()
+
   expect(screen.getByRole('heading', { name: /account/i })).toBeInTheDocument()
-  expect(screen.getByText(/account settings will appear here/i)).toBeInTheDocument()
-  expect(screen.getByText(/subscription management will appear here/i)).toBeInTheDocument()
+  expect(screen.getByText('test@example.com')).toBeInTheDocument()
+  expect(screen.getByText('January 2024')).toBeInTheDocument()
+
+  await waitFor(() => {
+    expect(screen.getByText('2')).toBeInTheDocument()
+  })
 })
 
 test('Manage Subscription links to /account/subscription', () => {
