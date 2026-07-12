@@ -13,7 +13,7 @@ async def register(body: RegisterRequest, response: Response, db: AsyncSession =
     user = await auth_service.register_user(db, body.email, body.password)
     token = create_access_token(user.id, user.email)
     response.set_cookie(key="access_token", value=token, httponly=True, samesite="lax")
-    return {"user": {"id": user.id, "email": user.email}}
+    return {"user": {"id": user.id, "email": user.email, "created_at": user.created_at,}}
 
 
 @router.post("/login", response_model=AuthOut)
@@ -21,7 +21,7 @@ async def login(body: LoginRequest, response: Response, db: AsyncSession = Depen
     user = await auth_service.login_user(db, body.email, body.password)
     token = create_access_token(user.id, user.email)
     response.set_cookie(key="access_token", value=token, httponly=True, samesite="lax")
-    return {"user": {"id": user.id, "email": user.email}}
+    return {"user": {"id": user.id, "email": user.email, "created_at": user.created_at,}}
 
 
 @router.post("/logout", status_code=204)

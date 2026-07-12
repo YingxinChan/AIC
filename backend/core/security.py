@@ -48,4 +48,4 @@ async def get_current_user(
     user = await db.get(User, int(user_id))
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    return {"id": user.id, "email": user.email}
+    return {"id": user.id, "email": user.email, "created_at":user.created_at, }
