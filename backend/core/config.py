@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     gmail_app_password: str = ""
     openweather_api_key: str = ""
     anthropic_api_key: str = ""
+    
 
     @property
     def sync_database_url(self) -> str:
