@@ -13,91 +13,112 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 
-def fetch_nasa_power(lat: float, lon: float, start_year: int, end_year: int):
-    start = f"{start_year}0101"
-    end = f"{end_year}1231"
+def fetch_open_meteo(lat: float, lon: float, start_year: int, end_year: int):
+    start = f"{start_year}-01-01"
+    end = f"{end_year}-12-31"
 
-    # Features we get from NASA
-    parameters = ",".join([
-    "PRECTOTCORR", # Rain
-    "T2M", # Temp
-    "T2M_MAX", # Temp max
-    "T2M_MIN", # Temp min
-    "T2MDEW", # Dew point temp (temp at which air becomes saturated)
-    "WS2M", # Wind speed
-    "U2M",  # Zonal wind (west-east)
-    "V2M",  # Meridional wind (south-north)
-    "RH2M", # Relative humidity
-    "QV2M", # Specific humidity
-    "PS", # Surface pressure
-    "ALLSKY_SFC_LW_DWN", # longwave radiation
+    # Hourly variables from Open-Meteo
+    hourly = ",".join([
+        "precipitation",
+        "temperature_2m",
+        "dew_point_2m",
+        "relative_humidity_2m",
+        "surface_pressure",
+        "wind_speed_10m",
+        "wind_direction_10m",
+        "shortwave_radiation",
     ])
 
     url = (
-        "https://power.larc.nasa.gov/api/temporal/daily/point"
-        f"?parameters={parameters}"
-        f"&community=RE"
+        "https://archive-api.open-meteo.com/v1/archive"
+        f"?latitude={lat}"
         f"&longitude={lon}"
-        f"&latitude={lat}"
-        f"&start={start}"
-        f"&end={end}"
-        f"&format=JSON"
+        f"&start_date={start}"
+        f"&end_date={end}"
+        f"&hourly={hourly}"
+        f"&timezone=GMT"
     )
 
     response = requests.get(url)
     if response.status_code != 200: #incase it fail to get data
         raise Exception(f"Request failed with status code {response.status_code}")
-    
-    data = response.json()["properties"]["parameter"]
 
-    mapping = {
-        "PRECTOTCORR": "rain",
-        "T2M": "temp",
-        "T2M_MAX": "temp_max",
-        "T2M_MIN": "temp_min",
-        "T2MDEW": "dew_point",
-        "WS2M": "wind",
-        "U2M": "wind_u",
-        "V2M": "wind_v",
-        "RH2M": "humidity",
-        "QV2M": "specific_humidity",
-        "PS": "pressure",
-        "ALLSKY_SFC_LW_DWN": "longwave_radiation",
-    }
 
     # Create dataframe
-    df = pd.DataFrame({
-        "date": list(data["PRECTOTCORR"].keys())
+    data = response.json()["hourly"]
+
+    # Hourly dataframe
+    hourly_df = pd.DataFrame({
+        "datetime": data["time"],
+        "rain": data["precipitation"],
+        "temp": data["temperature_2m"],
+        "humidity": data["relative_humidity_2m"],
+        "dew_point": data["dew_point_2m"],
+        "pressure": data["surface_pressure"],
+        "wind": data["wind_speed_10m"],
+        "wind_dir": data["wind_direction_10m"],
+        "radiation": data["shortwave_radiation"],
     })
 
-    for nasa_name, col_name in mapping.items():
-        df[col_name] = list(data[nasa_name].values())
+    hourly_df["datetime"] = pd.to_datetime(hourly_df["datetime"])
+    hourly_df["date"] = hourly_df["datetime"].dt.date
 
-    df["date"] = pd.to_datetime(df["date"], format="%Y%m%d")
+    # Daily dataframe
+    daily_df = (
+        hourly_df
+        .groupby("date")
+        .agg({
+            "rain": "sum",
+            "temp": "mean",
+            "humidity": "mean",
+            "dew_point": "mean",
+            "pressure": "mean",
+            "wind": "mean",
+            "wind_dir": "mean",
+            "radiation": "sum",
+        })
+        .reset_index()
+    )
 
-    # Clean missing data
-    df = df.replace(-999, pd.NA)
-    df = df.dropna()
+    temp_stats = (
+        hourly_df
+        .groupby("date")["temp"]
+        .agg(["max", "min"])
+        .reset_index()
+    )
 
-    print(df.columns)
+    temp_stats.columns = [
+        "date",
+        "temp_max",
+        "temp_min"
+    ]
+
+    # Merge temperature statistics
+    daily_df = daily_df.merge(temp_stats, on="date")
+
+    # Convert date back to datetime
+    daily_df["date"] = pd.to_datetime(daily_df["date"])
+
+    # Remove missing rows
+    daily_df = daily_df.dropna()
+
+    print(daily_df.head())
     
-    from pathlib import Path
-
     # Save CSV
     base = Path(__file__).resolve().parents[1] # Project's ml folder
     output_path = base / "data" / "raw" / "london_weather.csv" # File location
-    df.to_csv(output_path, index=False)
+    daily_df.to_csv(output_path, index=False)
 
     print(f"Saved weather data to {output_path}")
 
-    return df
+    return daily_df
 
 def fetch_owm_historical(lat: float, lon: float, start_year: int, end_year: int):
     # STUB
     raise NotImplementedError("fetch_owm_historical not yet implemented")
 
 if __name__ == "__main__":
-    df = fetch_nasa_power(
+    df = fetch_open_meteo(
         lat=51.5074,
         lon=-0.1278,
         start_year=2001,
