@@ -36,7 +36,7 @@ def flood_risk(
         "flood_risk": level,
     }
 
-# Heavy rain probability + accumulated rainfall
+# Heavy rain probability + wind + temp
 def beach_safety(
     heavy_rain_probability: float,
     wind: float,
