@@ -4,6 +4,7 @@ import { vi } from 'vitest'
 import ItineraryPage from './ItineraryPage'
 import { getTrip } from './tripsApi'
 import { getItinerary, generateItinerary } from './itineraryApi'
+import { geocodeCity } from '../../lib/geocode'
 
 vi.mock('../../components/MapView', () => ({
   default: () => <div>Map</div>,
@@ -16,6 +17,10 @@ vi.mock('./tripsApi', () => ({
 vi.mock('./itineraryApi', () => ({
   getItinerary: vi.fn(),
   generateItinerary: vi.fn(),
+}))
+
+vi.mock('../../lib/geocode', () => ({
+  geocodeCity: vi.fn().mockResolvedValue(null),
 }))
 
 function renderAt(tripId) {
@@ -46,6 +51,13 @@ test('shows the trip\'s own destination in the map heading, not a hardcoded city
   renderAt(1)
 
   await waitFor(() => expect(screen.getByRole('heading', { name: /paris map/i })).toBeInTheDocument())
+})
+
+test('geocodes the trip\'s own destination for the map, not a hardcoded city', async () => {
+  getTrip.mockResolvedValue({ destination: 'Tokyo' })
+  renderAt(1)
+
+  await waitFor(() => expect(geocodeCity).toHaveBeenCalledWith('Tokyo'))
 })
 
 test('shows placeholder and "Generate itinerary" button before anything is generated', async () => {

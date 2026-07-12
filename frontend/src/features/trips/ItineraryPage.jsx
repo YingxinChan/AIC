@@ -6,6 +6,7 @@ import MapView from '../../components/MapView'
 import { getTrip } from './tripsApi'
 import { getItinerary, generateItinerary } from './itineraryApi'
 import { tripStatus, STATUS_STYLES } from './tripStatus'
+import { geocodeCity } from '../../lib/geocode'
 
 function airlineCode(flightNumber) {
   return (flightNumber || '').split(' ')[0]
@@ -19,6 +20,7 @@ export default function ItineraryPage() {
   const [itineraryNotice, setItineraryNotice] = useState('')
   const [generating, setGenerating] = useState(false)
   const [selectedDayIndex, setSelectedDayIndex] = useState(0)
+  const [mapCenter, setMapCenter] = useState(null)
 
   const destination = trip?.destination || ''
   const hasArrivalFlight = Boolean(trip?.arrival_flight_number)
@@ -39,6 +41,14 @@ export default function ItineraryPage() {
       .catch(() => {})
     return () => { cancelled = true }
   }, [tripId])
+
+  useEffect(() => {
+    if (!destination) return
+    let cancelled = false
+    geocodeCity(destination)
+      .then((coords) => { if (!cancelled) setMapCenter(coords) })
+    return () => { cancelled = true }
+  }, [destination])
 
   const handleGenerate = async () => {
     setGenerating(true)
@@ -218,7 +228,7 @@ export default function ItineraryPage() {
         <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-800 mb-4">
           <MapPin size={18} className="text-indigo-600" /> {destination || 'Trip'} Map
         </h2>
-        <MapView height="h-80" />
+        <MapView height="h-80" center={mapCenter} />
       </div>
 
       <div className="flex justify-center">
