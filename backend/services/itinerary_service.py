@@ -30,8 +30,10 @@ ITINERARY_SCHEMA = {
                                 "time_slot": {"type": "string"},
                                 "location": {"type": "string"},
                                 "description": {"type": "string"},
+                                "lat": {"type": "number"},
+                                "lng": {"type": "number"},
                             },
-                            "required": ["name", "type", "time_slot", "location", "description"],
+                            "required": ["name", "type", "time_slot", "location", "description", "lat", "lng"],
                             "additionalProperties": False,
                         },
                     },
@@ -67,6 +69,8 @@ async def get_itinerary(trip_id: int, db: AsyncSession, user_id: int) -> dict:
             "time_slot": a.time_slot,
             "location": a.location,
             "description": a.description,
+            "lat": a.lat,
+            "lng": a.lng,
             "is_swapped": a.is_swapped,
         })
 
@@ -122,7 +126,11 @@ async def generate_itinerary(trip_id: int, db: AsyncSession, user_id: int) -> di
                 f"activities per day, with specific time slots (e.g. '09:00 - 11:00') and "
                 f"real {destination} locations. Each day's activities must be grouped by "
                 f"geographic area and ordered into a sensible one-directional route — never "
-                f"schedule a day that crosses the city, comes back, then crosses it again."
+                f"schedule a day that crosses the city, comes back, then crosses it again. "
+                f"For every activity, also give its real approximate latitude and longitude "
+                f"(as decimal degrees, e.g. lat 51.5194, lng -0.1270 for the British Museum) "
+                f"— use your knowledge of the actual location, not a placeholder or the "
+                f"city's center point."
             ),
             messages=[{"role": "user", "content": content}],
             output_config={"format": {"type": "json_schema", "schema": ITINERARY_SCHEMA}},

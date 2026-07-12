@@ -1,5 +1,5 @@
 from datetime import date
-from sqlalchemy import String, Date, Boolean, ForeignKey
+from sqlalchemy import String, Date, Boolean, Float, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 from models.base import Base
 
@@ -14,6 +14,8 @@ class Activity(Base):
     time_slot: Mapped[str] = mapped_column(String(50), nullable=False)
     location: Mapped[str] = mapped_column(String(255), default="", server_default="")
     description: Mapped[str] = mapped_column(String(1000), default="", server_default="")
+    lat: Mapped[float] = mapped_column(Float, default=0.0, server_default="0")
+    lng: Mapped[float] = mapped_column(Float, default=0.0, server_default="0")
     is_swapped: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     alternate_name: Mapped[str] = mapped_column(String(255), default="", server_default="")
     alternate_location: Mapped[str] = mapped_column(String(255), default="", server_default="")

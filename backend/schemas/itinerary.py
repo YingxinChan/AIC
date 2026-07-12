@@ -8,6 +8,8 @@ class ActivityOut(BaseModel):
     time_slot: str
     location: str
     description: str
+    lat: float
+    lng: float
     is_swapped: bool
 
 class ItineraryDayOut(BaseModel):
