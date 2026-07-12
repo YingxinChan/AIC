@@ -41,12 +41,19 @@ def weather_condition(code: int) -> str:
     return WEATHER_CODES.get(code, "Unknown")
 
 # Loads the lgbm model
-predictor = WeatherPredictor()
+predictor = None
+def get_predictor():
+    global predictor
 
+    if predictor is None:
+        predictor = WeatherPredictor()
+
+    return predictor
 # ML daily risk
 def get_weather_prediction(lat: float, lon: float) -> dict:
     forecast = get_forecast(lat, lon)
     features = build_features(forecast)
+    predictor = get_predictor()
     predictions = predictor.predict(features)
 
     results = [ ]
