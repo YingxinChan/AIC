@@ -1,6 +1,5 @@
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
-from uuid import UUID
 
 class RegisterRequest(BaseModel):
     email: EmailStr
@@ -11,9 +10,9 @@ class LoginRequest(BaseModel):
     password: str
 
 class UserOut(BaseModel):
-    id: UUID
+    id: int
     email: EmailStr
-    created_at:datetime
+    created_at: datetime
 
 class AuthOut(BaseModel):
     user: UserOut
