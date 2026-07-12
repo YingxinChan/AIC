@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     gmail_user: str = ""
     gmail_app_password: str = ""
     openweather_api_key: str = ""
-    anthropic_api_key: str
+    anthropic_api_key: str = ""
     
 
     @property
