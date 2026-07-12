@@ -1,0 +1,13 @@
+[
+    "day_sin",
+    "day_cos",
+    "rain",
+    "temp",
+    "temp_max",
+    "temp_min",
+    "humidity",
+    "pressure",
+    "wind",
+    "wind_dir",
+    "radiation"
+]
