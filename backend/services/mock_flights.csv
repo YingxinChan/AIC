@@ -1,0 +1,2401 @@
+airline,flight_number,departure_city,destination_city,departure_time,arrival_time,duration
+KLM,KL346,"London, UK","Edinburgh, UK",17:45,18:45,1h 0m
+EasyJet,EA653,"London, UK","Edinburgh, UK",11:45,12:45,1h 0m
+Lufthansa,LU163,"London, UK","Edinburgh, UK",09:00,10:00,1h 0m
+EasyJet,EA541,"London, UK","Edinburgh, UK",19:45,20:45,1h 0m
+KLM,KL758,"London, UK","Dublin, Ireland",13:00,14:00,1h 0m
+Lufthansa,LU872,"London, UK","Dublin, Ireland",17:30,18:30,1h 0m
+EasyJet,EA263,"London, UK","Dublin, Ireland",22:30,23:30,1h 0m
+Lufthansa,LU832,"London, UK","Dublin, Ireland",16:15,17:15,1h 0m
+Ryanair,RY977,"London, UK","Brussels, Belgium",22:45,23:45,1h 0m
+KLM,KL292,"London, UK","Brussels, Belgium",06:00,07:00,1h 0m
+Ryanair,RY977,"London, UK","Brussels, Belgium",12:00,13:00,1h 0m
+KLM,KL818,"London, UK","Brussels, Belgium",10:15,11:15,1h 0m
+EasyJet,EA577,"London, UK","Bruges, Belgium",20:30,21:30,1h 0m
+Ryanair,RY176,"London, UK","Bruges, Belgium",12:45,13:45,1h 0m
+Lufthansa,LU662,"London, UK","Bruges, Belgium",19:30,20:30,1h 0m
+British Airways,BR242,"London, UK","Bruges, Belgium",21:00,22:00,1h 0m
+EasyJet,EA199,"London, UK","Amsterdam, Netherlands",12:15,13:15,1h 0m
+KLM,KL786,"London, UK","Amsterdam, Netherlands",22:30,23:30,1h 0m
+British Airways,BR126,"London, UK","Amsterdam, Netherlands",08:15,09:15,1h 0m
+Lufthansa,LU862,"London, UK","Amsterdam, Netherlands",10:45,11:45,1h 0m
+EasyJet,EA963,"London, UK","Rome, Italy",09:00,10:00,1h 0m
+British Airways,BR382,"London, UK","Rome, Italy",19:45,20:45,1h 0m
+KLM,KL154,"London, UK","Rome, Italy",06:00,07:00,1h 0m
+Lufthansa,LU202,"London, UK","Rome, Italy",06:00,07:00,1h 0m
+Lufthansa,LU373,"London, UK","Florence, Italy",18:30,19:30,1h 0m
+Lufthansa,LU475,"London, UK","Florence, Italy",20:00,21:00,1h 0m
+British Airways,BR238,"London, UK","Florence, Italy",10:15,11:15,1h 0m
+KLM,KL229,"London, UK","Florence, Italy",15:45,16:45,1h 0m
+British Airways,BR978,"London, UK","Venice, Italy",14:45,15:45,1h 0m
+British Airways,BR300,"London, UK","Venice, Italy",19:30,20:30,1h 0m
+Lufthansa,LU850,"London, UK","Venice, Italy",22:00,23:00,1h 0m
+Lufthansa,LU374,"London, UK","Venice, Italy",17:00,18:00,1h 0m
+KLM,KL920,"London, UK","Milan, Italy",12:00,13:00,1h 0m
+Lufthansa,LU891,"London, UK","Milan, Italy",13:15,14:15,1h 0m
+Ryanair,RY425,"London, UK","Milan, Italy",19:30,20:30,1h 0m
+KLM,KL270,"London, UK","Milan, Italy",22:00,23:00,1h 0m
+KLM,KL147,"London, UK","Barcelona, Spain",16:15,17:15,1h 0m
+EasyJet,EA269,"London, UK","Barcelona, Spain",14:00,15:00,1h 0m
+EasyJet,EA711,"London, UK","Barcelona, Spain",13:30,14:30,1h 0m
+KLM,KL136,"London, UK","Barcelona, Spain",12:45,13:45,1h 0m
+Lufthansa,LU504,"London, UK","Madrid, Spain",22:15,23:15,1h 0m
+Lufthansa,LU703,"London, UK","Madrid, Spain",22:00,23:00,1h 0m
+EasyJet,EA408,"London, UK","Madrid, Spain",07:15,08:15,1h 0m
+Lufthansa,LU269,"London, UK","Madrid, Spain",21:15,22:15,1h 0m
+KLM,KL550,"London, UK","Lisbon, Portugal",15:30,16:30,1h 0m
+Ryanair,RY263,"London, UK","Lisbon, Portugal",15:30,16:30,1h 0m
+Ryanair,RY973,"London, UK","Lisbon, Portugal",20:00,21:00,1h 0m
+KLM,KL705,"London, UK","Lisbon, Portugal",11:45,12:45,1h 0m
+EasyJet,EA768,"London, UK","Zurich, Switzerland",10:45,11:45,1h 0m
+Ryanair,RY813,"London, UK","Zurich, Switzerland",17:45,18:45,1h 0m
+Ryanair,RY232,"London, UK","Zurich, Switzerland",19:15,20:15,1h 0m
+Lufthansa,LU285,"London, UK","Zurich, Switzerland",22:00,23:00,1h 0m
+British Airways,BR435,"London, UK","Berlin, Germany",13:00,14:00,1h 0m
+KLM,KL725,"London, UK","Berlin, Germany",22:45,23:45,1h 0m
+British Airways,BR137,"London, UK","Berlin, Germany",14:45,15:45,1h 0m
+Lufthansa,LU731,"London, UK","Berlin, Germany",21:30,22:30,1h 0m
+EasyJet,EA560,"London, UK","Munich, Germany",20:30,21:30,1h 0m
+Lufthansa,LU636,"London, UK","Munich, Germany",15:30,16:30,1h 0m
+British Airways,BR880,"London, UK","Munich, Germany",07:00,08:00,1h 0m
+KLM,KL409,"London, UK","Munich, Germany",12:15,13:15,1h 0m
+KLM,KL546,"London, UK","Paris, France",15:15,16:15,1h 0m
+Lufthansa,LU621,"London, UK","Paris, France",10:15,11:15,1h 0m
+Lufthansa,LU678,"London, UK","Paris, France",16:45,17:45,1h 0m
+EasyJet,EA281,"London, UK","Paris, France",17:00,18:00,1h 0m
+Ryanair,RY303,"London, UK","Istanbul, Turkey",10:00,11:00,1h 0m
+British Airways,BR501,"London, UK","Istanbul, Turkey",21:45,22:45,1h 0m
+EasyJet,EA399,"London, UK","Istanbul, Turkey",15:30,16:30,1h 0m
+Lufthansa,LU218,"London, UK","Istanbul, Turkey",06:15,07:15,1h 0m
+British Airways,BR115,"London, UK","Athens, Greece",19:00,20:00,1h 0m
+Ryanair,RY398,"London, UK","Athens, Greece",22:00,23:00,1h 0m
+EasyJet,EA291,"London, UK","Athens, Greece",19:15,20:15,1h 0m
+British Airways,BR571,"London, UK","Athens, Greece",21:00,22:00,1h 0m
+British Airways,BR839,"London, UK","Oslo, Norway",14:15,15:15,1h 0m
+EasyJet,EA175,"London, UK","Oslo, Norway",20:30,21:30,1h 0m
+EasyJet,EA430,"London, UK","Oslo, Norway",11:30,12:30,1h 0m
+British Airways,BR931,"London, UK","Oslo, Norway",13:30,14:30,1h 0m
+KLM,KL121,"London, UK","Copenhagen, Denmark",06:00,07:00,1h 0m
+Ryanair,RY420,"London, UK","Copenhagen, Denmark",08:45,09:45,1h 0m
+Lufthansa,LU439,"London, UK","Copenhagen, Denmark",21:45,22:45,1h 0m
+British Airways,BR509,"London, UK","Copenhagen, Denmark",15:45,16:45,1h 0m
+Lufthansa,LU662,"London, UK","Budapest, Hungary",12:15,13:15,1h 0m
+EasyJet,EA474,"London, UK","Budapest, Hungary",21:15,22:15,1h 0m
+British Airways,BR519,"London, UK","Budapest, Hungary",20:15,21:15,1h 0m
+British Airways,BR489,"London, UK","Budapest, Hungary",10:30,11:30,1h 0m
+Ryanair,RY740,"London, UK","Krakow, Poland",19:00,20:00,1h 0m
+EasyJet,EA730,"London, UK","Krakow, Poland",13:15,14:15,1h 0m
+British Airways,BR948,"London, UK","Krakow, Poland",09:30,10:30,1h 0m
+Ryanair,RY177,"London, UK","Krakow, Poland",19:00,20:00,1h 0m
+British Airways,BR615,"London, UK","Vienna, Austria",15:15,16:15,1h 0m
+Ryanair,RY246,"London, UK","Vienna, Austria",17:00,18:00,1h 0m
+British Airways,BR316,"London, UK","Vienna, Austria",21:00,22:00,1h 0m
+Ryanair,RY908,"London, UK","Vienna, Austria",16:45,17:45,1h 0m
+Lufthansa,LU856,"London, UK","Prague, Czech Republic",18:15,19:15,1h 0m
+Ryanair,RY618,"London, UK","Prague, Czech Republic",07:30,08:30,1h 0m
+Ryanair,RY207,"London, UK","Prague, Czech Republic",13:45,14:45,1h 0m
+EasyJet,EA684,"London, UK","Prague, Czech Republic",19:30,20:30,1h 0m
+EasyJet,EA578,"Edinburgh, UK","London, UK",15:45,16:45,1h 0m
+EasyJet,EA509,"Edinburgh, UK","London, UK",16:30,17:30,1h 0m
+KLM,KL122,"Edinburgh, UK","London, UK",16:15,17:15,1h 0m
+KLM,KL314,"Edinburgh, UK","London, UK",07:15,08:15,1h 0m
+British Airways,BR995,"Edinburgh, UK","Dublin, Ireland",15:45,18:15,2h 30m
+EasyJet,EA973,"Edinburgh, UK","Dublin, Ireland",11:15,13:45,2h 30m
+British Airways,BR237,"Edinburgh, UK","Dublin, Ireland",19:30,22:00,2h 30m
+EasyJet,EA530,"Edinburgh, UK","Dublin, Ireland",07:45,10:15,2h 30m
+British Airways,BR963,"Edinburgh, UK","Brussels, Belgium",21:15,23:45,2h 30m
+British Airways,BR322,"Edinburgh, UK","Brussels, Belgium",20:30,23:00,2h 30m
+Lufthansa,LU587,"Edinburgh, UK","Brussels, Belgium",11:30,14:00,2h 30m
+EasyJet,EA132,"Edinburgh, UK","Brussels, Belgium",06:45,09:15,2h 30m
+Lufthansa,LU350,"Edinburgh, UK","Bruges, Belgium",12:15,14:45,2h 30m
+EasyJet,EA521,"Edinburgh, UK","Bruges, Belgium",14:45,17:15,2h 30m
+British Airways,BR320,"Edinburgh, UK","Bruges, Belgium",19:45,22:15,2h 30m
+British Airways,BR735,"Edinburgh, UK","Bruges, Belgium",16:45,19:15,2h 30m
+KLM,KL912,"Edinburgh, UK","Amsterdam, Netherlands",09:45,12:15,2h 30m
+KLM,KL193,"Edinburgh, UK","Amsterdam, Netherlands",09:30,12:00,2h 30m
+KLM,KL325,"Edinburgh, UK","Amsterdam, Netherlands",14:00,16:30,2h 30m
+British Airways,BR542,"Edinburgh, UK","Amsterdam, Netherlands",11:00,13:30,2h 30m
+Lufthansa,LU646,"Edinburgh, UK","Rome, Italy",14:30,17:00,2h 30m
+EasyJet,EA904,"Edinburgh, UK","Rome, Italy",09:15,11:45,2h 30m
+Lufthansa,LU389,"Edinburgh, UK","Rome, Italy",17:45,20:15,2h 30m
+EasyJet,EA157,"Edinburgh, UK","Rome, Italy",22:00,00:30,2h 30m
+KLM,KL437,"Edinburgh, UK","Florence, Italy",07:45,10:15,2h 30m
+Lufthansa,LU576,"Edinburgh, UK","Florence, Italy",19:30,22:00,2h 30m
+British Airways,BR706,"Edinburgh, UK","Florence, Italy",22:45,01:15,2h 30m
+EasyJet,EA847,"Edinburgh, UK","Florence, Italy",21:00,23:30,2h 30m
+KLM,KL187,"Edinburgh, UK","Venice, Italy",17:30,20:00,2h 30m
+EasyJet,EA420,"Edinburgh, UK","Venice, Italy",06:15,08:45,2h 30m
+EasyJet,EA502,"Edinburgh, UK","Venice, Italy",12:00,14:30,2h 30m
+Lufthansa,LU310,"Edinburgh, UK","Venice, Italy",09:00,11:30,2h 30m
+Lufthansa,LU451,"Edinburgh, UK","Milan, Italy",18:30,21:00,2h 30m
+Lufthansa,LU831,"Edinburgh, UK","Milan, Italy",16:00,18:30,2h 30m
+British Airways,BR388,"Edinburgh, UK","Milan, Italy",14:15,16:45,2h 30m
+British Airways,BR458,"Edinburgh, UK","Milan, Italy",10:15,12:45,2h 30m
+Lufthansa,LU167,"Edinburgh, UK","Barcelona, Spain",08:45,11:15,2h 30m
+Ryanair,RY565,"Edinburgh, UK","Barcelona, Spain",11:45,14:15,2h 30m
+EasyJet,EA738,"Edinburgh, UK","Barcelona, Spain",11:15,13:45,2h 30m
+Ryanair,RY325,"Edinburgh, UK","Barcelona, Spain",14:45,17:15,2h 30m
+KLM,KL195,"Edinburgh, UK","Madrid, Spain",13:15,15:45,2h 30m
+KLM,KL715,"Edinburgh, UK","Madrid, Spain",18:00,20:30,2h 30m
+EasyJet,EA128,"Edinburgh, UK","Madrid, Spain",20:30,23:00,2h 30m
+KLM,KL523,"Edinburgh, UK","Madrid, Spain",09:00,11:30,2h 30m
+Lufthansa,LU637,"Edinburgh, UK","Lisbon, Portugal",21:45,00:15,2h 30m
+KLM,KL114,"Edinburgh, UK","Lisbon, Portugal",07:15,09:45,2h 30m
+Ryanair,RY198,"Edinburgh, UK","Lisbon, Portugal",11:00,13:30,2h 30m
+Lufthansa,LU905,"Edinburgh, UK","Lisbon, Portugal",18:00,20:30,2h 30m
+Lufthansa,LU456,"Edinburgh, UK","Zurich, Switzerland",14:45,17:15,2h 30m
+EasyJet,EA693,"Edinburgh, UK","Zurich, Switzerland",22:30,01:00,2h 30m
+British Airways,BR764,"Edinburgh, UK","Zurich, Switzerland",20:30,23:00,2h 30m
+Lufthansa,LU563,"Edinburgh, UK","Zurich, Switzerland",10:30,13:00,2h 30m
+EasyJet,EA257,"Edinburgh, UK","Berlin, Germany",10:30,13:00,2h 30m
+British Airways,BR450,"Edinburgh, UK","Berlin, Germany",22:30,01:00,2h 30m
+KLM,KL893,"Edinburgh, UK","Berlin, Germany",15:00,17:30,2h 30m
+EasyJet,EA730,"Edinburgh, UK","Berlin, Germany",17:45,20:15,2h 30m
+British Airways,BR664,"Edinburgh, UK","Munich, Germany",10:15,12:45,2h 30m
+EasyJet,EA180,"Edinburgh, UK","Munich, Germany",06:45,09:15,2h 30m
+British Airways,BR457,"Edinburgh, UK","Munich, Germany",20:00,22:30,2h 30m
+Lufthansa,LU849,"Edinburgh, UK","Munich, Germany",08:45,11:15,2h 30m
+KLM,KL680,"Edinburgh, UK","Paris, France",18:30,21:00,2h 30m
+British Airways,BR200,"Edinburgh, UK","Paris, France",18:15,20:45,2h 30m
+EasyJet,EA428,"Edinburgh, UK","Paris, France",13:45,16:15,2h 30m
+Ryanair,RY347,"Edinburgh, UK","Paris, France",16:15,18:45,2h 30m
+KLM,KL267,"Edinburgh, UK","Istanbul, Turkey",22:30,01:00,2h 30m
+Lufthansa,LU835,"Edinburgh, UK","Istanbul, Turkey",07:45,10:15,2h 30m
+Lufthansa,LU316,"Edinburgh, UK","Istanbul, Turkey",14:15,16:45,2h 30m
+KLM,KL487,"Edinburgh, UK","Istanbul, Turkey",09:15,11:45,2h 30m
+KLM,KL206,"Edinburgh, UK","Athens, Greece",22:15,00:45,2h 30m
+Ryanair,RY710,"Edinburgh, UK","Athens, Greece",19:45,22:15,2h 30m
+KLM,KL757,"Edinburgh, UK","Athens, Greece",21:30,00:00,2h 30m
+EasyJet,EA153,"Edinburgh, UK","Athens, Greece",20:45,23:15,2h 30m
+KLM,KL117,"Edinburgh, UK","Oslo, Norway",08:30,11:00,2h 30m
+EasyJet,EA156,"Edinburgh, UK","Oslo, Norway",13:00,15:30,2h 30m
+Lufthansa,LU824,"Edinburgh, UK","Oslo, Norway",07:30,10:00,2h 30m
+KLM,KL640,"Edinburgh, UK","Oslo, Norway",06:15,08:45,2h 30m
+EasyJet,EA916,"Edinburgh, UK","Copenhagen, Denmark",15:45,18:15,2h 30m
+British Airways,BR170,"Edinburgh, UK","Copenhagen, Denmark",19:15,21:45,2h 30m
+British Airways,BR857,"Edinburgh, UK","Copenhagen, Denmark",07:15,09:45,2h 30m
+KLM,KL941,"Edinburgh, UK","Copenhagen, Denmark",11:15,13:45,2h 30m
+British Airways,BR850,"Edinburgh, UK","Budapest, Hungary",14:00,16:30,2h 30m
+Lufthansa,LU797,"Edinburgh, UK","Budapest, Hungary",13:00,15:30,2h 30m
+British Airways,BR244,"Edinburgh, UK","Budapest, Hungary",17:30,20:00,2h 30m
+EasyJet,EA955,"Edinburgh, UK","Budapest, Hungary",20:30,23:00,2h 30m
+KLM,KL445,"Edinburgh, UK","Krakow, Poland",21:30,00:00,2h 30m
+KLM,KL823,"Edinburgh, UK","Krakow, Poland",19:45,22:15,2h 30m
+British Airways,BR979,"Edinburgh, UK","Krakow, Poland",09:00,11:30,2h 30m
+Ryanair,RY694,"Edinburgh, UK","Krakow, Poland",16:30,19:00,2h 30m
+Lufthansa,LU923,"Edinburgh, UK","Vienna, Austria",20:00,22:30,2h 30m
+Ryanair,RY746,"Edinburgh, UK","Vienna, Austria",16:00,18:30,2h 30m
+British Airways,BR953,"Edinburgh, UK","Vienna, Austria",07:30,10:00,2h 30m
+EasyJet,EA813,"Edinburgh, UK","Vienna, Austria",13:00,15:30,2h 30m
+Ryanair,RY193,"Edinburgh, UK","Prague, Czech Republic",18:45,21:15,2h 30m
+Lufthansa,LU260,"Edinburgh, UK","Prague, Czech Republic",15:45,18:15,2h 30m
+EasyJet,EA101,"Edinburgh, UK","Prague, Czech Republic",21:45,00:15,2h 30m
+EasyJet,EA160,"Edinburgh, UK","Prague, Czech Republic",22:45,01:15,2h 30m
+KLM,KL644,"Dublin, Ireland","London, UK",11:00,12:00,1h 0m
+British Airways,BR768,"Dublin, Ireland","London, UK",06:15,07:15,1h 0m
+EasyJet,EA653,"Dublin, Ireland","London, UK",11:00,12:00,1h 0m
+KLM,KL406,"Dublin, Ireland","London, UK",19:30,20:30,1h 0m
+EasyJet,EA136,"Dublin, Ireland","Edinburgh, UK",20:45,23:15,2h 30m
+Lufthansa,LU151,"Dublin, Ireland","Edinburgh, UK",09:15,11:45,2h 30m
+Ryanair,RY910,"Dublin, Ireland","Edinburgh, UK",15:15,17:45,2h 30m
+Lufthansa,LU553,"Dublin, Ireland","Edinburgh, UK",19:45,22:15,2h 30m
+EasyJet,EA765,"Dublin, Ireland","Brussels, Belgium",18:00,20:30,2h 30m
+British Airways,BR306,"Dublin, Ireland","Brussels, Belgium",07:45,10:15,2h 30m
+KLM,KL273,"Dublin, Ireland","Brussels, Belgium",18:15,20:45,2h 30m
+EasyJet,EA564,"Dublin, Ireland","Brussels, Belgium",17:30,20:00,2h 30m
+British Airways,BR739,"Dublin, Ireland","Bruges, Belgium",19:30,22:00,2h 30m
+EasyJet,EA660,"Dublin, Ireland","Bruges, Belgium",09:00,11:30,2h 30m
+KLM,KL311,"Dublin, Ireland","Bruges, Belgium",22:15,00:45,2h 30m
+Ryanair,RY509,"Dublin, Ireland","Bruges, Belgium",19:30,22:00,2h 30m
+British Airways,BR718,"Dublin, Ireland","Amsterdam, Netherlands",18:30,21:00,2h 30m
+EasyJet,EA214,"Dublin, Ireland","Amsterdam, Netherlands",16:15,18:45,2h 30m
+British Airways,BR364,"Dublin, Ireland","Amsterdam, Netherlands",08:00,10:30,2h 30m
+KLM,KL797,"Dublin, Ireland","Amsterdam, Netherlands",18:00,20:30,2h 30m
+KLM,KL395,"Dublin, Ireland","Rome, Italy",18:45,21:15,2h 30m
+EasyJet,EA303,"Dublin, Ireland","Rome, Italy",06:30,09:00,2h 30m
+Lufthansa,LU266,"Dublin, Ireland","Rome, Italy",21:15,23:45,2h 30m
+KLM,KL823,"Dublin, Ireland","Rome, Italy",15:15,17:45,2h 30m
+Lufthansa,LU444,"Dublin, Ireland","Florence, Italy",14:45,17:15,2h 30m
+EasyJet,EA683,"Dublin, Ireland","Florence, Italy",19:30,22:00,2h 30m
+Ryanair,RY965,"Dublin, Ireland","Florence, Italy",10:45,13:15,2h 30m
+British Airways,BR630,"Dublin, Ireland","Florence, Italy",12:00,14:30,2h 30m
+British Airways,BR849,"Dublin, Ireland","Venice, Italy",08:30,11:00,2h 30m
+Lufthansa,LU569,"Dublin, Ireland","Venice, Italy",08:30,11:00,2h 30m
+Ryanair,RY887,"Dublin, Ireland","Venice, Italy",06:30,09:00,2h 30m
+British Airways,BR559,"Dublin, Ireland","Venice, Italy",20:30,23:00,2h 30m
+EasyJet,EA170,"Dublin, Ireland","Milan, Italy",16:15,18:45,2h 30m
+Ryanair,RY523,"Dublin, Ireland","Milan, Italy",15:00,17:30,2h 30m
+EasyJet,EA897,"Dublin, Ireland","Milan, Italy",14:00,16:30,2h 30m
+KLM,KL449,"Dublin, Ireland","Milan, Italy",13:00,15:30,2h 30m
+EasyJet,EA328,"Dublin, Ireland","Barcelona, Spain",09:45,12:15,2h 30m
+Lufthansa,LU235,"Dublin, Ireland","Barcelona, Spain",12:00,14:30,2h 30m
+KLM,KL525,"Dublin, Ireland","Barcelona, Spain",13:15,15:45,2h 30m
+EasyJet,EA471,"Dublin, Ireland","Barcelona, Spain",22:00,00:30,2h 30m
+Ryanair,RY580,"Dublin, Ireland","Madrid, Spain",07:00,09:30,2h 30m
+Ryanair,RY206,"Dublin, Ireland","Madrid, Spain",10:45,13:15,2h 30m
+British Airways,BR650,"Dublin, Ireland","Madrid, Spain",20:15,22:45,2h 30m
+Lufthansa,LU957,"Dublin, Ireland","Madrid, Spain",11:45,14:15,2h 30m
+Ryanair,RY220,"Dublin, Ireland","Lisbon, Portugal",11:30,14:00,2h 30m
+Ryanair,RY266,"Dublin, Ireland","Lisbon, Portugal",13:30,16:00,2h 30m
+EasyJet,EA320,"Dublin, Ireland","Lisbon, Portugal",07:00,09:30,2h 30m
+Lufthansa,LU441,"Dublin, Ireland","Lisbon, Portugal",19:15,21:45,2h 30m
+Ryanair,RY473,"Dublin, Ireland","Zurich, Switzerland",14:30,17:00,2h 30m
+KLM,KL225,"Dublin, Ireland","Zurich, Switzerland",18:15,20:45,2h 30m
+Ryanair,RY122,"Dublin, Ireland","Zurich, Switzerland",19:15,21:45,2h 30m
+British Airways,BR768,"Dublin, Ireland","Zurich, Switzerland",20:15,22:45,2h 30m
+Ryanair,RY656,"Dublin, Ireland","Berlin, Germany",10:15,12:45,2h 30m
+EasyJet,EA673,"Dublin, Ireland","Berlin, Germany",12:15,14:45,2h 30m
+Ryanair,RY488,"Dublin, Ireland","Berlin, Germany",13:30,16:00,2h 30m
+KLM,KL412,"Dublin, Ireland","Berlin, Germany",11:30,14:00,2h 30m
+Lufthansa,LU866,"Dublin, Ireland","Munich, Germany",13:00,15:30,2h 30m
+Lufthansa,LU867,"Dublin, Ireland","Munich, Germany",14:30,17:00,2h 30m
+Lufthansa,LU271,"Dublin, Ireland","Munich, Germany",13:45,16:15,2h 30m
+British Airways,BR489,"Dublin, Ireland","Munich, Germany",07:15,09:45,2h 30m
+EasyJet,EA385,"Dublin, Ireland","Paris, France",16:00,18:30,2h 30m
+British Airways,BR270,"Dublin, Ireland","Paris, France",20:30,23:00,2h 30m
+Ryanair,RY920,"Dublin, Ireland","Paris, France",17:00,19:30,2h 30m
+Ryanair,RY259,"Dublin, Ireland","Paris, France",19:15,21:45,2h 30m
+Lufthansa,LU963,"Dublin, Ireland","Istanbul, Turkey",08:15,10:45,2h 30m
+EasyJet,EA202,"Dublin, Ireland","Istanbul, Turkey",12:15,14:45,2h 30m
+Ryanair,RY214,"Dublin, Ireland","Istanbul, Turkey",07:15,09:45,2h 30m
+Ryanair,RY509,"Dublin, Ireland","Istanbul, Turkey",09:30,12:00,2h 30m
+Lufthansa,LU556,"Dublin, Ireland","Athens, Greece",20:45,23:15,2h 30m
+Lufthansa,LU478,"Dublin, Ireland","Athens, Greece",16:00,18:30,2h 30m
+Ryanair,RY220,"Dublin, Ireland","Athens, Greece",20:15,22:45,2h 30m
+Lufthansa,LU977,"Dublin, Ireland","Athens, Greece",19:30,22:00,2h 30m
+Lufthansa,LU461,"Dublin, Ireland","Oslo, Norway",22:15,00:45,2h 30m
+Ryanair,RY962,"Dublin, Ireland","Oslo, Norway",19:45,22:15,2h 30m
+EasyJet,EA956,"Dublin, Ireland","Oslo, Norway",13:00,15:30,2h 30m
+British Airways,BR213,"Dublin, Ireland","Oslo, Norway",11:30,14:00,2h 30m
+Ryanair,RY343,"Dublin, Ireland","Copenhagen, Denmark",22:30,01:00,2h 30m
+KLM,KL613,"Dublin, Ireland","Copenhagen, Denmark",08:00,10:30,2h 30m
+Ryanair,RY563,"Dublin, Ireland","Copenhagen, Denmark",10:15,12:45,2h 30m
+EasyJet,EA652,"Dublin, Ireland","Copenhagen, Denmark",15:45,18:15,2h 30m
+EasyJet,EA432,"Dublin, Ireland","Budapest, Hungary",19:00,21:30,2h 30m
+Lufthansa,LU582,"Dublin, Ireland","Budapest, Hungary",11:30,14:00,2h 30m
+Ryanair,RY590,"Dublin, Ireland","Budapest, Hungary",09:30,12:00,2h 30m
+KLM,KL303,"Dublin, Ireland","Budapest, Hungary",17:15,19:45,2h 30m
+KLM,KL752,"Dublin, Ireland","Krakow, Poland",19:00,21:30,2h 30m
+Ryanair,RY395,"Dublin, Ireland","Krakow, Poland",14:00,16:30,2h 30m
+EasyJet,EA844,"Dublin, Ireland","Krakow, Poland",06:30,09:00,2h 30m
+EasyJet,EA845,"Dublin, Ireland","Krakow, Poland",21:45,00:15,2h 30m
+Lufthansa,LU361,"Dublin, Ireland","Vienna, Austria",07:30,10:00,2h 30m
+Ryanair,RY982,"Dublin, Ireland","Vienna, Austria",13:30,16:00,2h 30m
+Lufthansa,LU923,"Dublin, Ireland","Vienna, Austria",06:00,08:30,2h 30m
+EasyJet,EA647,"Dublin, Ireland","Vienna, Austria",17:15,19:45,2h 30m
+British Airways,BR586,"Dublin, Ireland","Prague, Czech Republic",07:15,09:45,2h 30m
+Ryanair,RY213,"Dublin, Ireland","Prague, Czech Republic",15:00,17:30,2h 30m
+EasyJet,EA801,"Dublin, Ireland","Prague, Czech Republic",08:30,11:00,2h 30m
+British Airways,BR667,"Dublin, Ireland","Prague, Czech Republic",22:45,01:15,2h 30m
+Lufthansa,LU867,"Brussels, Belgium","London, UK",09:15,10:15,1h 0m
+Ryanair,RY967,"Brussels, Belgium","London, UK",15:30,16:30,1h 0m
+KLM,KL618,"Brussels, Belgium","London, UK",11:30,12:30,1h 0m
+Lufthansa,LU736,"Brussels, Belgium","London, UK",13:45,14:45,1h 0m
+EasyJet,EA643,"Brussels, Belgium","Edinburgh, UK",13:00,15:30,2h 30m
+Ryanair,RY689,"Brussels, Belgium","Edinburgh, UK",20:45,23:15,2h 30m
+British Airways,BR195,"Brussels, Belgium","Edinburgh, UK",07:45,10:15,2h 30m
+Lufthansa,LU302,"Brussels, Belgium","Edinburgh, UK",14:00,16:30,2h 30m
+EasyJet,EA660,"Brussels, Belgium","Dublin, Ireland",19:00,21:30,2h 30m
+EasyJet,EA890,"Brussels, Belgium","Dublin, Ireland",10:45,13:15,2h 30m
+KLM,KL306,"Brussels, Belgium","Dublin, Ireland",09:15,11:45,2h 30m
+EasyJet,EA843,"Brussels, Belgium","Dublin, Ireland",10:30,13:00,2h 30m
+Lufthansa,LU587,"Brussels, Belgium","Bruges, Belgium",16:45,19:15,2h 30m
+British Airways,BR265,"Brussels, Belgium","Bruges, Belgium",22:30,01:00,2h 30m
+EasyJet,EA932,"Brussels, Belgium","Bruges, Belgium",07:30,10:00,2h 30m
+EasyJet,EA910,"Brussels, Belgium","Bruges, Belgium",14:00,16:30,2h 30m
+EasyJet,EA786,"Brussels, Belgium","Amsterdam, Netherlands",22:30,01:00,2h 30m
+Ryanair,RY589,"Brussels, Belgium","Amsterdam, Netherlands",15:30,18:00,2h 30m
+KLM,KL874,"Brussels, Belgium","Amsterdam, Netherlands",20:00,22:30,2h 30m
+Ryanair,RY114,"Brussels, Belgium","Amsterdam, Netherlands",21:15,23:45,2h 30m
+Ryanair,RY176,"Brussels, Belgium","Rome, Italy",07:00,09:30,2h 30m
+Lufthansa,LU958,"Brussels, Belgium","Rome, Italy",19:00,21:30,2h 30m
+Ryanair,RY517,"Brussels, Belgium","Rome, Italy",17:00,19:30,2h 30m
+British Airways,BR817,"Brussels, Belgium","Rome, Italy",07:15,09:45,2h 30m
+British Airways,BR855,"Brussels, Belgium","Florence, Italy",10:00,12:30,2h 30m
+EasyJet,EA416,"Brussels, Belgium","Florence, Italy",13:30,16:00,2h 30m
+Lufthansa,LU680,"Brussels, Belgium","Florence, Italy",17:30,20:00,2h 30m
+Ryanair,RY432,"Brussels, Belgium","Florence, Italy",14:00,16:30,2h 30m
+British Airways,BR987,"Brussels, Belgium","Venice, Italy",09:45,12:15,2h 30m
+Lufthansa,LU267,"Brussels, Belgium","Venice, Italy",20:00,22:30,2h 30m
+Ryanair,RY661,"Brussels, Belgium","Venice, Italy",09:15,11:45,2h 30m
+KLM,KL638,"Brussels, Belgium","Venice, Italy",13:15,15:45,2h 30m
+British Airways,BR707,"Brussels, Belgium","Milan, Italy",15:30,18:00,2h 30m
+EasyJet,EA137,"Brussels, Belgium","Milan, Italy",14:30,17:00,2h 30m
+Ryanair,RY280,"Brussels, Belgium","Milan, Italy",10:45,13:15,2h 30m
+Lufthansa,LU179,"Brussels, Belgium","Milan, Italy",14:15,16:45,2h 30m
+British Airways,BR958,"Brussels, Belgium","Barcelona, Spain",12:15,14:45,2h 30m
+EasyJet,EA555,"Brussels, Belgium","Barcelona, Spain",15:30,18:00,2h 30m
+British Airways,BR271,"Brussels, Belgium","Barcelona, Spain",15:45,18:15,2h 30m
+British Airways,BR838,"Brussels, Belgium","Barcelona, Spain",07:30,10:00,2h 30m
+EasyJet,EA990,"Brussels, Belgium","Madrid, Spain",15:00,17:30,2h 30m
+British Airways,BR379,"Brussels, Belgium","Madrid, Spain",08:00,10:30,2h 30m
+EasyJet,EA917,"Brussels, Belgium","Madrid, Spain",20:30,23:00,2h 30m
+British Airways,BR132,"Brussels, Belgium","Madrid, Spain",19:00,21:30,2h 30m
+British Airways,BR213,"Brussels, Belgium","Lisbon, Portugal",21:00,23:30,2h 30m
+Ryanair,RY205,"Brussels, Belgium","Lisbon, Portugal",12:30,15:00,2h 30m
+Ryanair,RY519,"Brussels, Belgium","Lisbon, Portugal",16:45,19:15,2h 30m
+Ryanair,RY303,"Brussels, Belgium","Lisbon, Portugal",22:30,01:00,2h 30m
+EasyJet,EA571,"Brussels, Belgium","Zurich, Switzerland",14:30,17:00,2h 30m
+British Airways,BR676,"Brussels, Belgium","Zurich, Switzerland",18:30,21:00,2h 30m
+Lufthansa,LU860,"Brussels, Belgium","Zurich, Switzerland",18:45,21:15,2h 30m
+Ryanair,RY435,"Brussels, Belgium","Zurich, Switzerland",13:15,15:45,2h 30m
+British Airways,BR402,"Brussels, Belgium","Berlin, Germany",15:30,18:00,2h 30m
+Ryanair,RY256,"Brussels, Belgium","Berlin, Germany",07:15,09:45,2h 30m
+Ryanair,RY924,"Brussels, Belgium","Berlin, Germany",08:00,10:30,2h 30m
+Lufthansa,LU252,"Brussels, Belgium","Berlin, Germany",16:45,19:15,2h 30m
+Ryanair,RY742,"Brussels, Belgium","Munich, Germany",14:45,17:15,2h 30m
+EasyJet,EA644,"Brussels, Belgium","Munich, Germany",14:15,16:45,2h 30m
+EasyJet,EA936,"Brussels, Belgium","Munich, Germany",10:30,13:00,2h 30m
+Ryanair,RY459,"Brussels, Belgium","Munich, Germany",15:45,18:15,2h 30m
+British Airways,BR342,"Brussels, Belgium","Paris, France",18:00,20:30,2h 30m
+British Airways,BR593,"Brussels, Belgium","Paris, France",07:15,09:45,2h 30m
+EasyJet,EA133,"Brussels, Belgium","Paris, France",10:00,12:30,2h 30m
+EasyJet,EA877,"Brussels, Belgium","Paris, France",18:30,21:00,2h 30m
+KLM,KL440,"Brussels, Belgium","Istanbul, Turkey",19:30,22:00,2h 30m
+Lufthansa,LU402,"Brussels, Belgium","Istanbul, Turkey",21:45,00:15,2h 30m
+KLM,KL792,"Brussels, Belgium","Istanbul, Turkey",08:30,11:00,2h 30m
+KLM,KL583,"Brussels, Belgium","Istanbul, Turkey",19:45,22:15,2h 30m
+British Airways,BR739,"Brussels, Belgium","Athens, Greece",20:30,23:00,2h 30m
+KLM,KL219,"Brussels, Belgium","Athens, Greece",08:45,11:15,2h 30m
+KLM,KL556,"Brussels, Belgium","Athens, Greece",09:15,11:45,2h 30m
+British Airways,BR186,"Brussels, Belgium","Athens, Greece",19:30,22:00,2h 30m
+British Airways,BR710,"Brussels, Belgium","Oslo, Norway",16:30,19:00,2h 30m
+KLM,KL885,"Brussels, Belgium","Oslo, Norway",13:00,15:30,2h 30m
+KLM,KL804,"Brussels, Belgium","Oslo, Norway",12:30,15:00,2h 30m
+EasyJet,EA615,"Brussels, Belgium","Oslo, Norway",22:15,00:45,2h 30m
+British Airways,BR282,"Brussels, Belgium","Copenhagen, Denmark",06:30,09:00,2h 30m
+KLM,KL404,"Brussels, Belgium","Copenhagen, Denmark",08:30,11:00,2h 30m
+KLM,KL380,"Brussels, Belgium","Copenhagen, Denmark",19:30,22:00,2h 30m
+Lufthansa,LU496,"Brussels, Belgium","Copenhagen, Denmark",20:30,23:00,2h 30m
+KLM,KL581,"Brussels, Belgium","Budapest, Hungary",11:15,13:45,2h 30m
+British Airways,BR961,"Brussels, Belgium","Budapest, Hungary",10:00,12:30,2h 30m
+British Airways,BR672,"Brussels, Belgium","Budapest, Hungary",18:00,20:30,2h 30m
+Ryanair,RY756,"Brussels, Belgium","Budapest, Hungary",13:30,16:00,2h 30m
+EasyJet,EA765,"Brussels, Belgium","Krakow, Poland",15:45,18:15,2h 30m
+KLM,KL252,"Brussels, Belgium","Krakow, Poland",18:00,20:30,2h 30m
+Ryanair,RY730,"Brussels, Belgium","Krakow, Poland",08:30,11:00,2h 30m
+British Airways,BR857,"Brussels, Belgium","Krakow, Poland",12:00,14:30,2h 30m
+Lufthansa,LU119,"Brussels, Belgium","Vienna, Austria",20:15,22:45,2h 30m
+EasyJet,EA409,"Brussels, Belgium","Vienna, Austria",20:30,23:00,2h 30m
+EasyJet,EA111,"Brussels, Belgium","Vienna, Austria",20:45,23:15,2h 30m
+Lufthansa,LU155,"Brussels, Belgium","Vienna, Austria",19:00,21:30,2h 30m
+Lufthansa,LU923,"Brussels, Belgium","Prague, Czech Republic",13:15,15:45,2h 30m
+British Airways,BR129,"Brussels, Belgium","Prague, Czech Republic",14:15,16:45,2h 30m
+British Airways,BR373,"Brussels, Belgium","Prague, Czech Republic",09:15,11:45,2h 30m
+Ryanair,RY629,"Brussels, Belgium","Prague, Czech Republic",19:15,21:45,2h 30m
+KLM,KL533,"Bruges, Belgium","London, UK",22:45,23:45,1h 0m
+EasyJet,EA543,"Bruges, Belgium","London, UK",06:00,07:00,1h 0m
+Lufthansa,LU715,"Bruges, Belgium","London, UK",20:15,21:15,1h 0m
+Ryanair,RY454,"Bruges, Belgium","London, UK",07:45,08:45,1h 0m
+Ryanair,RY594,"Bruges, Belgium","Edinburgh, UK",14:00,16:30,2h 30m
+Ryanair,RY672,"Bruges, Belgium","Edinburgh, UK",08:15,10:45,2h 30m
+British Airways,BR247,"Bruges, Belgium","Edinburgh, UK",13:00,15:30,2h 30m
+British Airways,BR295,"Bruges, Belgium","Edinburgh, UK",17:45,20:15,2h 30m
+Lufthansa,LU152,"Bruges, Belgium","Dublin, Ireland",08:00,10:30,2h 30m
+KLM,KL382,"Bruges, Belgium","Dublin, Ireland",08:15,10:45,2h 30m
+British Airways,BR929,"Bruges, Belgium","Dublin, Ireland",15:00,17:30,2h 30m
+Lufthansa,LU980,"Bruges, Belgium","Dublin, Ireland",18:15,20:45,2h 30m
+Ryanair,RY184,"Bruges, Belgium","Brussels, Belgium",16:45,19:15,2h 30m
+EasyJet,EA856,"Bruges, Belgium","Brussels, Belgium",22:00,00:30,2h 30m
+Lufthansa,LU866,"Bruges, Belgium","Brussels, Belgium",12:00,14:30,2h 30m
+British Airways,BR751,"Bruges, Belgium","Brussels, Belgium",08:45,11:15,2h 30m
+KLM,KL945,"Bruges, Belgium","Amsterdam, Netherlands",18:45,21:15,2h 30m
+British Airways,BR517,"Bruges, Belgium","Amsterdam, Netherlands",11:00,13:30,2h 30m
+British Airways,BR861,"Bruges, Belgium","Amsterdam, Netherlands",22:15,00:45,2h 30m
+Ryanair,RY513,"Bruges, Belgium","Amsterdam, Netherlands",22:45,01:15,2h 30m
+KLM,KL674,"Bruges, Belgium","Rome, Italy",07:45,10:15,2h 30m
+Ryanair,RY636,"Bruges, Belgium","Rome, Italy",17:15,19:45,2h 30m
+EasyJet,EA547,"Bruges, Belgium","Rome, Italy",21:15,23:45,2h 30m
+British Airways,BR566,"Bruges, Belgium","Rome, Italy",18:15,20:45,2h 30m
+Lufthansa,LU629,"Bruges, Belgium","Florence, Italy",20:00,22:30,2h 30m
+Lufthansa,LU497,"Bruges, Belgium","Florence, Italy",06:00,08:30,2h 30m
+British Airways,BR512,"Bruges, Belgium","Florence, Italy",19:15,21:45,2h 30m
+KLM,KL450,"Bruges, Belgium","Florence, Italy",10:45,13:15,2h 30m
+KLM,KL188,"Bruges, Belgium","Venice, Italy",08:30,11:00,2h 30m
+EasyJet,EA113,"Bruges, Belgium","Venice, Italy",14:30,17:00,2h 30m
+EasyJet,EA839,"Bruges, Belgium","Venice, Italy",07:15,09:45,2h 30m
+KLM,KL801,"Bruges, Belgium","Venice, Italy",20:15,22:45,2h 30m
+British Airways,BR382,"Bruges, Belgium","Milan, Italy",20:30,23:00,2h 30m
+Lufthansa,LU937,"Bruges, Belgium","Milan, Italy",18:45,21:15,2h 30m
+KLM,KL422,"Bruges, Belgium","Milan, Italy",20:45,23:15,2h 30m
+Lufthansa,LU920,"Bruges, Belgium","Milan, Italy",16:30,19:00,2h 30m
+KLM,KL370,"Bruges, Belgium","Barcelona, Spain",09:45,12:15,2h 30m
+EasyJet,EA263,"Bruges, Belgium","Barcelona, Spain",22:00,00:30,2h 30m
+EasyJet,EA855,"Bruges, Belgium","Barcelona, Spain",17:45,20:15,2h 30m
+British Airways,BR132,"Bruges, Belgium","Barcelona, Spain",10:45,13:15,2h 30m
+Lufthansa,LU698,"Bruges, Belgium","Madrid, Spain",22:30,01:00,2h 30m
+KLM,KL635,"Bruges, Belgium","Madrid, Spain",19:45,22:15,2h 30m
+KLM,KL620,"Bruges, Belgium","Madrid, Spain",09:30,12:00,2h 30m
+EasyJet,EA724,"Bruges, Belgium","Madrid, Spain",20:00,22:30,2h 30m
+EasyJet,EA103,"Bruges, Belgium","Lisbon, Portugal",08:15,10:45,2h 30m
+Lufthansa,LU812,"Bruges, Belgium","Lisbon, Portugal",20:30,23:00,2h 30m
+EasyJet,EA995,"Bruges, Belgium","Lisbon, Portugal",21:30,00:00,2h 30m
+Lufthansa,LU411,"Bruges, Belgium","Lisbon, Portugal",21:15,23:45,2h 30m
+KLM,KL167,"Bruges, Belgium","Zurich, Switzerland",10:15,12:45,2h 30m
+Lufthansa,LU407,"Bruges, Belgium","Zurich, Switzerland",17:45,20:15,2h 30m
+Lufthansa,LU239,"Bruges, Belgium","Zurich, Switzerland",06:15,08:45,2h 30m
+KLM,KL745,"Bruges, Belgium","Zurich, Switzerland",21:30,00:00,2h 30m
+Lufthansa,LU477,"Bruges, Belgium","Berlin, Germany",07:15,09:45,2h 30m
+KLM,KL366,"Bruges, Belgium","Berlin, Germany",19:30,22:00,2h 30m
+British Airways,BR323,"Bruges, Belgium","Berlin, Germany",12:30,15:00,2h 30m
+British Airways,BR117,"Bruges, Belgium","Berlin, Germany",10:15,12:45,2h 30m
+Lufthansa,LU189,"Bruges, Belgium","Munich, Germany",22:00,00:30,2h 30m
+KLM,KL895,"Bruges, Belgium","Munich, Germany",06:30,09:00,2h 30m
+Ryanair,RY172,"Bruges, Belgium","Munich, Germany",08:30,11:00,2h 30m
+Lufthansa,LU739,"Bruges, Belgium","Munich, Germany",14:30,17:00,2h 30m
+Ryanair,RY200,"Bruges, Belgium","Paris, France",19:00,21:30,2h 30m
+Ryanair,RY594,"Bruges, Belgium","Paris, France",11:00,13:30,2h 30m
+Ryanair,RY127,"Bruges, Belgium","Paris, France",20:00,22:30,2h 30m
+Lufthansa,LU491,"Bruges, Belgium","Paris, France",22:45,01:15,2h 30m
+KLM,KL547,"Bruges, Belgium","Istanbul, Turkey",12:15,14:45,2h 30m
+British Airways,BR392,"Bruges, Belgium","Istanbul, Turkey",10:45,13:15,2h 30m
+KLM,KL338,"Bruges, Belgium","Istanbul, Turkey",11:00,13:30,2h 30m
+Ryanair,RY258,"Bruges, Belgium","Istanbul, Turkey",21:15,23:45,2h 30m
+Ryanair,RY446,"Bruges, Belgium","Athens, Greece",14:45,17:15,2h 30m
+EasyJet,EA380,"Bruges, Belgium","Athens, Greece",18:45,21:15,2h 30m
+KLM,KL560,"Bruges, Belgium","Athens, Greece",12:00,14:30,2h 30m
+Ryanair,RY946,"Bruges, Belgium","Athens, Greece",17:45,20:15,2h 30m
+British Airways,BR434,"Bruges, Belgium","Oslo, Norway",11:15,13:45,2h 30m
+British Airways,BR777,"Bruges, Belgium","Oslo, Norway",10:00,12:30,2h 30m
+Lufthansa,LU101,"Bruges, Belgium","Oslo, Norway",20:45,23:15,2h 30m
+EasyJet,EA783,"Bruges, Belgium","Oslo, Norway",16:00,18:30,2h 30m
+Lufthansa,LU644,"Bruges, Belgium","Copenhagen, Denmark",21:30,00:00,2h 30m
+Ryanair,RY645,"Bruges, Belgium","Copenhagen, Denmark",10:15,12:45,2h 30m
+Lufthansa,LU955,"Bruges, Belgium","Copenhagen, Denmark",20:00,22:30,2h 30m
+Lufthansa,LU627,"Bruges, Belgium","Copenhagen, Denmark",15:45,18:15,2h 30m
+Ryanair,RY149,"Bruges, Belgium","Budapest, Hungary",07:30,10:00,2h 30m
+EasyJet,EA289,"Bruges, Belgium","Budapest, Hungary",15:45,18:15,2h 30m
+Lufthansa,LU310,"Bruges, Belgium","Budapest, Hungary",06:30,09:00,2h 30m
+Lufthansa,LU850,"Bruges, Belgium","Budapest, Hungary",07:15,09:45,2h 30m
+KLM,KL230,"Bruges, Belgium","Krakow, Poland",18:30,21:00,2h 30m
+KLM,KL280,"Bruges, Belgium","Krakow, Poland",08:00,10:30,2h 30m
+KLM,KL681,"Bruges, Belgium","Krakow, Poland",08:45,11:15,2h 30m
+Ryanair,RY577,"Bruges, Belgium","Krakow, Poland",22:00,00:30,2h 30m
+Ryanair,RY268,"Bruges, Belgium","Vienna, Austria",11:00,13:30,2h 30m
+EasyJet,EA880,"Bruges, Belgium","Vienna, Austria",18:45,21:15,2h 30m
+Ryanair,RY642,"Bruges, Belgium","Vienna, Austria",11:30,14:00,2h 30m
+KLM,KL231,"Bruges, Belgium","Vienna, Austria",21:15,23:45,2h 30m
+British Airways,BR695,"Bruges, Belgium","Prague, Czech Republic",15:45,18:15,2h 30m
+British Airways,BR915,"Bruges, Belgium","Prague, Czech Republic",22:00,00:30,2h 30m
+Ryanair,RY613,"Bruges, Belgium","Prague, Czech Republic",12:30,15:00,2h 30m
+British Airways,BR872,"Bruges, Belgium","Prague, Czech Republic",14:30,17:00,2h 30m
+Lufthansa,LU253,"Amsterdam, Netherlands","London, UK",21:15,22:15,1h 0m
+British Airways,BR342,"Amsterdam, Netherlands","London, UK",19:15,20:15,1h 0m
+Lufthansa,LU773,"Amsterdam, Netherlands","London, UK",15:00,16:00,1h 0m
+British Airways,BR236,"Amsterdam, Netherlands","London, UK",12:15,13:15,1h 0m
+British Airways,BR896,"Amsterdam, Netherlands","Edinburgh, UK",08:30,11:00,2h 30m
+British Airways,BR960,"Amsterdam, Netherlands","Edinburgh, UK",20:15,22:45,2h 30m
+British Airways,BR321,"Amsterdam, Netherlands","Edinburgh, UK",08:15,10:45,2h 30m
+Lufthansa,LU904,"Amsterdam, Netherlands","Edinburgh, UK",22:00,00:30,2h 30m
+EasyJet,EA884,"Amsterdam, Netherlands","Dublin, Ireland",09:30,12:00,2h 30m
+KLM,KL436,"Amsterdam, Netherlands","Dublin, Ireland",14:45,17:15,2h 30m
+British Airways,BR192,"Amsterdam, Netherlands","Dublin, Ireland",21:45,00:15,2h 30m
+Ryanair,RY693,"Amsterdam, Netherlands","Dublin, Ireland",14:00,16:30,2h 30m
+Ryanair,RY710,"Amsterdam, Netherlands","Brussels, Belgium",10:15,12:45,2h 30m
+Lufthansa,LU270,"Amsterdam, Netherlands","Brussels, Belgium",18:45,21:15,2h 30m
+KLM,KL668,"Amsterdam, Netherlands","Brussels, Belgium",12:15,14:45,2h 30m
+Lufthansa,LU101,"Amsterdam, Netherlands","Brussels, Belgium",11:00,13:30,2h 30m
+EasyJet,EA488,"Amsterdam, Netherlands","Bruges, Belgium",18:45,21:15,2h 30m
+EasyJet,EA661,"Amsterdam, Netherlands","Bruges, Belgium",15:45,18:15,2h 30m
+EasyJet,EA955,"Amsterdam, Netherlands","Bruges, Belgium",07:45,10:15,2h 30m
+Ryanair,RY841,"Amsterdam, Netherlands","Bruges, Belgium",06:00,08:30,2h 30m
+British Airways,BR218,"Amsterdam, Netherlands","Rome, Italy",22:30,01:00,2h 30m
+Ryanair,RY155,"Amsterdam, Netherlands","Rome, Italy",21:45,00:15,2h 30m
+Lufthansa,LU621,"Amsterdam, Netherlands","Rome, Italy",22:45,01:15,2h 30m
+KLM,KL885,"Amsterdam, Netherlands","Rome, Italy",16:00,18:30,2h 30m
+Lufthansa,LU276,"Amsterdam, Netherlands","Florence, Italy",14:30,17:00,2h 30m
+EasyJet,EA128,"Amsterdam, Netherlands","Florence, Italy",10:30,13:00,2h 30m
+Ryanair,RY859,"Amsterdam, Netherlands","Florence, Italy",22:15,00:45,2h 30m
+Lufthansa,LU591,"Amsterdam, Netherlands","Florence, Italy",09:45,12:15,2h 30m
+EasyJet,EA962,"Amsterdam, Netherlands","Venice, Italy",20:00,22:30,2h 30m
+Lufthansa,LU755,"Amsterdam, Netherlands","Venice, Italy",14:30,17:00,2h 30m
+Ryanair,RY424,"Amsterdam, Netherlands","Venice, Italy",12:15,14:45,2h 30m
+EasyJet,EA532,"Amsterdam, Netherlands","Venice, Italy",19:00,21:30,2h 30m
+Ryanair,RY477,"Amsterdam, Netherlands","Milan, Italy",06:45,09:15,2h 30m
+KLM,KL363,"Amsterdam, Netherlands","Milan, Italy",10:30,13:00,2h 30m
+British Airways,BR519,"Amsterdam, Netherlands","Milan, Italy",22:30,01:00,2h 30m
+Lufthansa,LU977,"Amsterdam, Netherlands","Milan, Italy",14:45,17:15,2h 30m
+EasyJet,EA492,"Amsterdam, Netherlands","Barcelona, Spain",12:00,14:30,2h 30m
+EasyJet,EA446,"Amsterdam, Netherlands","Barcelona, Spain",20:15,22:45,2h 30m
+KLM,KL915,"Amsterdam, Netherlands","Barcelona, Spain",10:00,12:30,2h 30m
+KLM,KL112,"Amsterdam, Netherlands","Barcelona, Spain",15:00,17:30,2h 30m
+Lufthansa,LU264,"Amsterdam, Netherlands","Madrid, Spain",14:30,17:00,2h 30m
+Ryanair,RY180,"Amsterdam, Netherlands","Madrid, Spain",09:30,12:00,2h 30m
+Ryanair,RY287,"Amsterdam, Netherlands","Madrid, Spain",19:30,22:00,2h 30m
+Lufthansa,LU837,"Amsterdam, Netherlands","Madrid, Spain",21:15,23:45,2h 30m
+KLM,KL899,"Amsterdam, Netherlands","Lisbon, Portugal",10:45,13:15,2h 30m
+KLM,KL404,"Amsterdam, Netherlands","Lisbon, Portugal",19:00,21:30,2h 30m
+British Airways,BR561,"Amsterdam, Netherlands","Lisbon, Portugal",12:45,15:15,2h 30m
+KLM,KL182,"Amsterdam, Netherlands","Lisbon, Portugal",21:00,23:30,2h 30m
+Lufthansa,LU346,"Amsterdam, Netherlands","Zurich, Switzerland",15:15,17:45,2h 30m
+EasyJet,EA968,"Amsterdam, Netherlands","Zurich, Switzerland",19:45,22:15,2h 30m
+British Airways,BR407,"Amsterdam, Netherlands","Zurich, Switzerland",13:30,16:00,2h 30m
+EasyJet,EA865,"Amsterdam, Netherlands","Zurich, Switzerland",12:45,15:15,2h 30m
+British Airways,BR551,"Amsterdam, Netherlands","Berlin, Germany",10:30,13:00,2h 30m
+EasyJet,EA636,"Amsterdam, Netherlands","Berlin, Germany",06:00,08:30,2h 30m
+Ryanair,RY751,"Amsterdam, Netherlands","Berlin, Germany",17:45,20:15,2h 30m
+Lufthansa,LU103,"Amsterdam, Netherlands","Berlin, Germany",16:00,18:30,2h 30m
+KLM,KL886,"Amsterdam, Netherlands","Munich, Germany",09:00,11:30,2h 30m
+Ryanair,RY567,"Amsterdam, Netherlands","Munich, Germany",17:00,19:30,2h 30m
+Ryanair,RY754,"Amsterdam, Netherlands","Munich, Germany",15:00,17:30,2h 30m
+KLM,KL693,"Amsterdam, Netherlands","Munich, Germany",18:45,21:15,2h 30m
+Lufthansa,LU178,"Amsterdam, Netherlands","Paris, France",16:30,19:00,2h 30m
+Lufthansa,LU375,"Amsterdam, Netherlands","Paris, France",13:00,15:30,2h 30m
+KLM,KL217,"Amsterdam, Netherlands","Paris, France",13:00,15:30,2h 30m
+British Airways,BR782,"Amsterdam, Netherlands","Paris, France",22:00,00:30,2h 30m
+Ryanair,RY804,"Amsterdam, Netherlands","Istanbul, Turkey",07:30,10:00,2h 30m
+KLM,KL246,"Amsterdam, Netherlands","Istanbul, Turkey",12:00,14:30,2h 30m
+Lufthansa,LU383,"Amsterdam, Netherlands","Istanbul, Turkey",14:30,17:00,2h 30m
+EasyJet,EA922,"Amsterdam, Netherlands","Istanbul, Turkey",18:45,21:15,2h 30m
+British Airways,BR870,"Amsterdam, Netherlands","Athens, Greece",17:45,20:15,2h 30m
+KLM,KL803,"Amsterdam, Netherlands","Athens, Greece",16:00,18:30,2h 30m
+Ryanair,RY923,"Amsterdam, Netherlands","Athens, Greece",09:45,12:15,2h 30m
+EasyJet,EA132,"Amsterdam, Netherlands","Athens, Greece",06:45,09:15,2h 30m
+EasyJet,EA578,"Amsterdam, Netherlands","Oslo, Norway",13:15,15:45,2h 30m
+Ryanair,RY898,"Amsterdam, Netherlands","Oslo, Norway",15:45,18:15,2h 30m
+British Airways,BR408,"Amsterdam, Netherlands","Oslo, Norway",10:45,13:15,2h 30m
+Ryanair,RY742,"Amsterdam, Netherlands","Oslo, Norway",10:30,13:00,2h 30m
+Lufthansa,LU636,"Amsterdam, Netherlands","Copenhagen, Denmark",12:45,15:15,2h 30m
+KLM,KL358,"Amsterdam, Netherlands","Copenhagen, Denmark",14:00,16:30,2h 30m
+Ryanair,RY444,"Amsterdam, Netherlands","Copenhagen, Denmark",21:00,23:30,2h 30m
+EasyJet,EA996,"Amsterdam, Netherlands","Copenhagen, Denmark",17:00,19:30,2h 30m
+British Airways,BR919,"Amsterdam, Netherlands","Budapest, Hungary",20:15,22:45,2h 30m
+Ryanair,RY699,"Amsterdam, Netherlands","Budapest, Hungary",20:45,23:15,2h 30m
+KLM,KL842,"Amsterdam, Netherlands","Budapest, Hungary",15:45,18:15,2h 30m
+Ryanair,RY870,"Amsterdam, Netherlands","Budapest, Hungary",06:00,08:30,2h 30m
+Lufthansa,LU562,"Amsterdam, Netherlands","Krakow, Poland",15:15,17:45,2h 30m
+Ryanair,RY528,"Amsterdam, Netherlands","Krakow, Poland",14:15,16:45,2h 30m
+EasyJet,EA847,"Amsterdam, Netherlands","Krakow, Poland",15:00,17:30,2h 30m
+KLM,KL995,"Amsterdam, Netherlands","Krakow, Poland",22:00,00:30,2h 30m
+Lufthansa,LU811,"Amsterdam, Netherlands","Vienna, Austria",08:15,10:45,2h 30m
+Lufthansa,LU966,"Amsterdam, Netherlands","Vienna, Austria",13:00,15:30,2h 30m
+KLM,KL107,"Amsterdam, Netherlands","Vienna, Austria",16:45,19:15,2h 30m
+Ryanair,RY386,"Amsterdam, Netherlands","Vienna, Austria",08:45,11:15,2h 30m
+EasyJet,EA534,"Amsterdam, Netherlands","Prague, Czech Republic",16:30,19:00,2h 30m
+Lufthansa,LU923,"Amsterdam, Netherlands","Prague, Czech Republic",15:45,18:15,2h 30m
+Lufthansa,LU766,"Amsterdam, Netherlands","Prague, Czech Republic",11:45,14:15,2h 30m
+EasyJet,EA242,"Amsterdam, Netherlands","Prague, Czech Republic",08:30,11:00,2h 30m
+EasyJet,EA661,"Rome, Italy","London, UK",21:45,22:45,1h 0m
+EasyJet,EA372,"Rome, Italy","London, UK",22:30,23:30,1h 0m
+KLM,KL867,"Rome, Italy","London, UK",17:15,18:15,1h 0m
+Ryanair,RY228,"Rome, Italy","London, UK",11:15,12:15,1h 0m
+KLM,KL658,"Rome, Italy","Edinburgh, UK",12:00,14:30,2h 30m
+British Airways,BR230,"Rome, Italy","Edinburgh, UK",17:00,19:30,2h 30m
+Lufthansa,LU762,"Rome, Italy","Edinburgh, UK",13:15,15:45,2h 30m
+Ryanair,RY778,"Rome, Italy","Edinburgh, UK",15:00,17:30,2h 30m
+Ryanair,RY224,"Rome, Italy","Dublin, Ireland",17:00,19:30,2h 30m
+EasyJet,EA848,"Rome, Italy","Dublin, Ireland",07:30,10:00,2h 30m
+British Airways,BR959,"Rome, Italy","Dublin, Ireland",19:45,22:15,2h 30m
+Ryanair,RY541,"Rome, Italy","Dublin, Ireland",12:00,14:30,2h 30m
+Ryanair,RY351,"Rome, Italy","Brussels, Belgium",20:00,22:30,2h 30m
+KLM,KL399,"Rome, Italy","Brussels, Belgium",20:45,23:15,2h 30m
+Lufthansa,LU472,"Rome, Italy","Brussels, Belgium",18:15,20:45,2h 30m
+KLM,KL252,"Rome, Italy","Brussels, Belgium",20:45,23:15,2h 30m
+Lufthansa,LU201,"Rome, Italy","Bruges, Belgium",07:15,09:45,2h 30m
+Lufthansa,LU855,"Rome, Italy","Bruges, Belgium",06:30,09:00,2h 30m
+British Airways,BR209,"Rome, Italy","Bruges, Belgium",22:15,00:45,2h 30m
+Lufthansa,LU814,"Rome, Italy","Bruges, Belgium",21:15,23:45,2h 30m
+EasyJet,EA738,"Rome, Italy","Amsterdam, Netherlands",07:00,09:30,2h 30m
+Lufthansa,LU110,"Rome, Italy","Amsterdam, Netherlands",17:15,19:45,2h 30m
+KLM,KL234,"Rome, Italy","Amsterdam, Netherlands",17:00,19:30,2h 30m
+Lufthansa,LU648,"Rome, Italy","Amsterdam, Netherlands",07:15,09:45,2h 30m
+EasyJet,EA453,"Rome, Italy","Florence, Italy",08:30,11:00,2h 30m
+EasyJet,EA141,"Rome, Italy","Florence, Italy",10:15,12:45,2h 30m
+Ryanair,RY916,"Rome, Italy","Florence, Italy",15:15,17:45,2h 30m
+Ryanair,RY576,"Rome, Italy","Florence, Italy",16:15,18:45,2h 30m
+EasyJet,EA486,"Rome, Italy","Venice, Italy",10:45,13:15,2h 30m
+KLM,KL945,"Rome, Italy","Venice, Italy",09:45,12:15,2h 30m
+KLM,KL614,"Rome, Italy","Venice, Italy",08:15,10:45,2h 30m
+EasyJet,EA510,"Rome, Italy","Venice, Italy",06:15,08:45,2h 30m
+EasyJet,EA679,"Rome, Italy","Milan, Italy",06:00,08:30,2h 30m
+British Airways,BR393,"Rome, Italy","Milan, Italy",15:15,17:45,2h 30m
+Lufthansa,LU854,"Rome, Italy","Milan, Italy",10:00,12:30,2h 30m
+EasyJet,EA394,"Rome, Italy","Milan, Italy",08:00,10:30,2h 30m
+KLM,KL116,"Rome, Italy","Barcelona, Spain",18:30,21:00,2h 30m
+Lufthansa,LU848,"Rome, Italy","Barcelona, Spain",15:15,17:45,2h 30m
+EasyJet,EA839,"Rome, Italy","Barcelona, Spain",21:00,23:30,2h 30m
+Ryanair,RY321,"Rome, Italy","Barcelona, Spain",21:30,00:00,2h 30m
+Lufthansa,LU686,"Rome, Italy","Madrid, Spain",16:45,19:15,2h 30m
+Lufthansa,LU397,"Rome, Italy","Madrid, Spain",19:30,22:00,2h 30m
+British Airways,BR684,"Rome, Italy","Madrid, Spain",15:15,17:45,2h 30m
+KLM,KL462,"Rome, Italy","Madrid, Spain",11:30,14:00,2h 30m
+Ryanair,RY846,"Rome, Italy","Lisbon, Portugal",17:15,19:45,2h 30m
+Lufthansa,LU677,"Rome, Italy","Lisbon, Portugal",06:30,09:00,2h 30m
+EasyJet,EA888,"Rome, Italy","Lisbon, Portugal",18:00,20:30,2h 30m
+KLM,KL397,"Rome, Italy","Lisbon, Portugal",12:45,15:15,2h 30m
+KLM,KL971,"Rome, Italy","Zurich, Switzerland",12:45,15:15,2h 30m
+British Airways,BR599,"Rome, Italy","Zurich, Switzerland",20:45,23:15,2h 30m
+EasyJet,EA483,"Rome, Italy","Zurich, Switzerland",09:15,11:45,2h 30m
+EasyJet,EA775,"Rome, Italy","Zurich, Switzerland",16:15,18:45,2h 30m
+KLM,KL965,"Rome, Italy","Berlin, Germany",08:15,10:45,2h 30m
+Ryanair,RY432,"Rome, Italy","Berlin, Germany",15:30,18:00,2h 30m
+British Airways,BR978,"Rome, Italy","Berlin, Germany",07:45,10:15,2h 30m
+Lufthansa,LU451,"Rome, Italy","Berlin, Germany",13:15,15:45,2h 30m
+EasyJet,EA484,"Rome, Italy","Munich, Germany",08:45,11:15,2h 30m
+KLM,KL177,"Rome, Italy","Munich, Germany",09:00,11:30,2h 30m
+KLM,KL866,"Rome, Italy","Munich, Germany",08:00,10:30,2h 30m
+EasyJet,EA343,"Rome, Italy","Munich, Germany",21:30,00:00,2h 30m
+Ryanair,RY239,"Rome, Italy","Paris, France",21:15,23:45,2h 30m
+EasyJet,EA569,"Rome, Italy","Paris, France",06:15,08:45,2h 30m
+KLM,KL971,"Rome, Italy","Paris, France",16:15,18:45,2h 30m
+EasyJet,EA562,"Rome, Italy","Paris, France",11:45,14:15,2h 30m
+KLM,KL179,"Rome, Italy","Istanbul, Turkey",13:00,15:30,2h 30m
+EasyJet,EA356,"Rome, Italy","Istanbul, Turkey",18:00,20:30,2h 30m
+KLM,KL710,"Rome, Italy","Istanbul, Turkey",06:45,09:15,2h 30m
+KLM,KL828,"Rome, Italy","Istanbul, Turkey",11:45,14:15,2h 30m
+Ryanair,RY506,"Rome, Italy","Athens, Greece",18:00,20:30,2h 30m
+Lufthansa,LU729,"Rome, Italy","Athens, Greece",14:15,16:45,2h 30m
+Lufthansa,LU432,"Rome, Italy","Athens, Greece",11:30,14:00,2h 30m
+Lufthansa,LU450,"Rome, Italy","Athens, Greece",13:45,16:15,2h 30m
+EasyJet,EA637,"Rome, Italy","Oslo, Norway",13:30,16:00,2h 30m
+Lufthansa,LU717,"Rome, Italy","Oslo, Norway",07:15,09:45,2h 30m
+EasyJet,EA295,"Rome, Italy","Oslo, Norway",18:45,21:15,2h 30m
+Ryanair,RY345,"Rome, Italy","Oslo, Norway",21:30,00:00,2h 30m
+EasyJet,EA988,"Rome, Italy","Copenhagen, Denmark",12:30,15:00,2h 30m
+Ryanair,RY473,"Rome, Italy","Copenhagen, Denmark",18:15,20:45,2h 30m
+KLM,KL485,"Rome, Italy","Copenhagen, Denmark",18:15,20:45,2h 30m
+EasyJet,EA500,"Rome, Italy","Copenhagen, Denmark",19:15,21:45,2h 30m
+EasyJet,EA190,"Rome, Italy","Budapest, Hungary",09:45,12:15,2h 30m
+British Airways,BR768,"Rome, Italy","Budapest, Hungary",20:00,22:30,2h 30m
+EasyJet,EA153,"Rome, Italy","Budapest, Hungary",15:45,18:15,2h 30m
+Lufthansa,LU571,"Rome, Italy","Budapest, Hungary",15:30,18:00,2h 30m
+Ryanair,RY575,"Rome, Italy","Krakow, Poland",08:15,10:45,2h 30m
+EasyJet,EA245,"Rome, Italy","Krakow, Poland",16:00,18:30,2h 30m
+Lufthansa,LU623,"Rome, Italy","Krakow, Poland",14:15,16:45,2h 30m
+British Airways,BR741,"Rome, Italy","Krakow, Poland",14:00,16:30,2h 30m
+KLM,KL601,"Rome, Italy","Vienna, Austria",10:15,12:45,2h 30m
+EasyJet,EA672,"Rome, Italy","Vienna, Austria",19:00,21:30,2h 30m
+EasyJet,EA895,"Rome, Italy","Vienna, Austria",10:00,12:30,2h 30m
+British Airways,BR845,"Rome, Italy","Vienna, Austria",17:30,20:00,2h 30m
+Ryanair,RY499,"Rome, Italy","Prague, Czech Republic",20:15,22:45,2h 30m
+Lufthansa,LU539,"Rome, Italy","Prague, Czech Republic",17:30,20:00,2h 30m
+KLM,KL581,"Rome, Italy","Prague, Czech Republic",19:30,22:00,2h 30m
+Lufthansa,LU146,"Rome, Italy","Prague, Czech Republic",22:15,00:45,2h 30m
+KLM,KL261,"Florence, Italy","London, UK",18:00,19:00,1h 0m
+Lufthansa,LU381,"Florence, Italy","London, UK",13:00,14:00,1h 0m
+Ryanair,RY208,"Florence, Italy","London, UK",18:30,19:30,1h 0m
+Ryanair,RY533,"Florence, Italy","London, UK",10:45,11:45,1h 0m
+EasyJet,EA417,"Florence, Italy","Edinburgh, UK",12:30,15:00,2h 30m
+Lufthansa,LU950,"Florence, Italy","Edinburgh, UK",21:30,00:00,2h 30m
+EasyJet,EA794,"Florence, Italy","Edinburgh, UK",08:45,11:15,2h 30m
+Ryanair,RY917,"Florence, Italy","Edinburgh, UK",22:00,00:30,2h 30m
+EasyJet,EA863,"Florence, Italy","Dublin, Ireland",17:45,20:15,2h 30m
+Ryanair,RY741,"Florence, Italy","Dublin, Ireland",21:00,23:30,2h 30m
+KLM,KL672,"Florence, Italy","Dublin, Ireland",09:30,12:00,2h 30m
+Lufthansa,LU574,"Florence, Italy","Dublin, Ireland",15:00,17:30,2h 30m
+Ryanair,RY221,"Florence, Italy","Brussels, Belgium",21:15,23:45,2h 30m
+Lufthansa,LU762,"Florence, Italy","Brussels, Belgium",09:45,12:15,2h 30m
+Lufthansa,LU861,"Florence, Italy","Brussels, Belgium",18:30,21:00,2h 30m
+Ryanair,RY946,"Florence, Italy","Brussels, Belgium",22:15,00:45,2h 30m
+Lufthansa,LU124,"Florence, Italy","Bruges, Belgium",12:15,14:45,2h 30m
+Ryanair,RY938,"Florence, Italy","Bruges, Belgium",21:00,23:30,2h 30m
+KLM,KL101,"Florence, Italy","Bruges, Belgium",21:30,00:00,2h 30m
+KLM,KL667,"Florence, Italy","Bruges, Belgium",21:45,00:15,2h 30m
+Lufthansa,LU415,"Florence, Italy","Amsterdam, Netherlands",17:45,20:15,2h 30m
+Ryanair,RY110,"Florence, Italy","Amsterdam, Netherlands",17:30,20:00,2h 30m
+British Airways,BR296,"Florence, Italy","Amsterdam, Netherlands",21:00,23:30,2h 30m
+British Airways,BR859,"Florence, Italy","Amsterdam, Netherlands",18:00,20:30,2h 30m
+British Airways,BR462,"Florence, Italy","Rome, Italy",13:15,15:45,2h 30m
+Lufthansa,LU932,"Florence, Italy","Rome, Italy",17:00,19:30,2h 30m
+Lufthansa,LU970,"Florence, Italy","Rome, Italy",14:30,17:00,2h 30m
+EasyJet,EA989,"Florence, Italy","Rome, Italy",19:30,22:00,2h 30m
+Ryanair,RY368,"Florence, Italy","Venice, Italy",06:00,08:30,2h 30m
+EasyJet,EA741,"Florence, Italy","Venice, Italy",20:00,22:30,2h 30m
+KLM,KL589,"Florence, Italy","Venice, Italy",10:30,13:00,2h 30m
+EasyJet,EA451,"Florence, Italy","Venice, Italy",09:00,11:30,2h 30m
+Lufthansa,LU814,"Florence, Italy","Milan, Italy",21:15,23:45,2h 30m
+KLM,KL722,"Florence, Italy","Milan, Italy",10:45,13:15,2h 30m
+British Airways,BR208,"Florence, Italy","Milan, Italy",20:30,23:00,2h 30m
+British Airways,BR948,"Florence, Italy","Milan, Italy",20:00,22:30,2h 30m
+KLM,KL343,"Florence, Italy","Barcelona, Spain",18:30,21:00,2h 30m
+EasyJet,EA267,"Florence, Italy","Barcelona, Spain",14:15,16:45,2h 30m
+KLM,KL266,"Florence, Italy","Barcelona, Spain",08:45,11:15,2h 30m
+British Airways,BR347,"Florence, Italy","Barcelona, Spain",16:45,19:15,2h 30m
+EasyJet,EA199,"Florence, Italy","Madrid, Spain",12:15,14:45,2h 30m
+KLM,KL269,"Florence, Italy","Madrid, Spain",09:15,11:45,2h 30m
+Lufthansa,LU207,"Florence, Italy","Madrid, Spain",14:00,16:30,2h 30m
+Lufthansa,LU140,"Florence, Italy","Madrid, Spain",13:15,15:45,2h 30m
+British Airways,BR416,"Florence, Italy","Lisbon, Portugal",16:30,19:00,2h 30m
+KLM,KL508,"Florence, Italy","Lisbon, Portugal",21:30,00:00,2h 30m
+Ryanair,RY131,"Florence, Italy","Lisbon, Portugal",07:15,09:45,2h 30m
+Lufthansa,LU946,"Florence, Italy","Lisbon, Portugal",21:30,00:00,2h 30m
+British Airways,BR744,"Florence, Italy","Zurich, Switzerland",15:45,18:15,2h 30m
+Ryanair,RY172,"Florence, Italy","Zurich, Switzerland",22:30,01:00,2h 30m
+KLM,KL678,"Florence, Italy","Zurich, Switzerland",07:30,10:00,2h 30m
+Lufthansa,LU339,"Florence, Italy","Zurich, Switzerland",10:00,12:30,2h 30m
+EasyJet,EA746,"Florence, Italy","Berlin, Germany",18:30,21:00,2h 30m
+British Airways,BR456,"Florence, Italy","Berlin, Germany",20:00,22:30,2h 30m
+British Airways,BR647,"Florence, Italy","Berlin, Germany",19:00,21:30,2h 30m
+EasyJet,EA177,"Florence, Italy","Berlin, Germany",13:00,15:30,2h 30m
+KLM,KL516,"Florence, Italy","Munich, Germany",10:15,12:45,2h 30m
+KLM,KL478,"Florence, Italy","Munich, Germany",20:30,23:00,2h 30m
+KLM,KL799,"Florence, Italy","Munich, Germany",14:00,16:30,2h 30m
+KLM,KL822,"Florence, Italy","Munich, Germany",21:45,00:15,2h 30m
+EasyJet,EA109,"Florence, Italy","Paris, France",10:45,13:15,2h 30m
+EasyJet,EA151,"Florence, Italy","Paris, France",09:45,12:15,2h 30m
+KLM,KL304,"Florence, Italy","Paris, France",09:00,11:30,2h 30m
+EasyJet,EA227,"Florence, Italy","Paris, France",22:45,01:15,2h 30m
+KLM,KL709,"Florence, Italy","Istanbul, Turkey",22:00,00:30,2h 30m
+Lufthansa,LU381,"Florence, Italy","Istanbul, Turkey",18:30,21:00,2h 30m
+EasyJet,EA525,"Florence, Italy","Istanbul, Turkey",10:15,12:45,2h 30m
+KLM,KL828,"Florence, Italy","Istanbul, Turkey",07:45,10:15,2h 30m
+KLM,KL857,"Florence, Italy","Athens, Greece",16:45,19:15,2h 30m
+Lufthansa,LU890,"Florence, Italy","Athens, Greece",12:30,15:00,2h 30m
+Ryanair,RY635,"Florence, Italy","Athens, Greece",08:00,10:30,2h 30m
+British Airways,BR204,"Florence, Italy","Athens, Greece",12:15,14:45,2h 30m
+Ryanair,RY695,"Florence, Italy","Oslo, Norway",06:45,09:15,2h 30m
+British Airways,BR614,"Florence, Italy","Oslo, Norway",18:45,21:15,2h 30m
+British Airways,BR556,"Florence, Italy","Oslo, Norway",15:00,17:30,2h 30m
+British Airways,BR774,"Florence, Italy","Oslo, Norway",19:00,21:30,2h 30m
+EasyJet,EA234,"Florence, Italy","Copenhagen, Denmark",12:00,14:30,2h 30m
+KLM,KL385,"Florence, Italy","Copenhagen, Denmark",11:15,13:45,2h 30m
+Ryanair,RY191,"Florence, Italy","Copenhagen, Denmark",16:30,19:00,2h 30m
+EasyJet,EA865,"Florence, Italy","Copenhagen, Denmark",16:00,18:30,2h 30m
+KLM,KL275,"Florence, Italy","Budapest, Hungary",10:30,13:00,2h 30m
+Ryanair,RY192,"Florence, Italy","Budapest, Hungary",06:00,08:30,2h 30m
+EasyJet,EA790,"Florence, Italy","Budapest, Hungary",22:45,01:15,2h 30m
+Ryanair,RY821,"Florence, Italy","Budapest, Hungary",17:00,19:30,2h 30m
+Ryanair,RY787,"Florence, Italy","Krakow, Poland",12:00,14:30,2h 30m
+Ryanair,RY267,"Florence, Italy","Krakow, Poland",21:30,00:00,2h 30m
+Ryanair,RY618,"Florence, Italy","Krakow, Poland",21:30,00:00,2h 30m
+Lufthansa,LU913,"Florence, Italy","Krakow, Poland",11:45,14:15,2h 30m
+KLM,KL686,"Florence, Italy","Vienna, Austria",21:00,23:30,2h 30m
+EasyJet,EA328,"Florence, Italy","Vienna, Austria",14:00,16:30,2h 30m
+Ryanair,RY962,"Florence, Italy","Vienna, Austria",22:30,01:00,2h 30m
+Ryanair,RY928,"Florence, Italy","Vienna, Austria",12:30,15:00,2h 30m
+EasyJet,EA555,"Florence, Italy","Prague, Czech Republic",06:00,08:30,2h 30m
+British Airways,BR932,"Florence, Italy","Prague, Czech Republic",06:00,08:30,2h 30m
+EasyJet,EA241,"Florence, Italy","Prague, Czech Republic",21:15,23:45,2h 30m
+EasyJet,EA441,"Florence, Italy","Prague, Czech Republic",19:30,22:00,2h 30m
+Lufthansa,LU430,"Venice, Italy","London, UK",19:15,20:15,1h 0m
+British Airways,BR797,"Venice, Italy","London, UK",11:30,12:30,1h 0m
+EasyJet,EA849,"Venice, Italy","London, UK",06:45,07:45,1h 0m
+British Airways,BR937,"Venice, Italy","London, UK",09:00,10:00,1h 0m
+EasyJet,EA275,"Venice, Italy","Edinburgh, UK",08:30,11:00,2h 30m
+KLM,KL867,"Venice, Italy","Edinburgh, UK",15:15,17:45,2h 30m
+EasyJet,EA534,"Venice, Italy","Edinburgh, UK",21:30,00:00,2h 30m
+EasyJet,EA160,"Venice, Italy","Edinburgh, UK",08:45,11:15,2h 30m
+KLM,KL448,"Venice, Italy","Dublin, Ireland",10:30,13:00,2h 30m
+KLM,KL359,"Venice, Italy","Dublin, Ireland",15:15,17:45,2h 30m
+EasyJet,EA807,"Venice, Italy","Dublin, Ireland",16:15,18:45,2h 30m
+Lufthansa,LU434,"Venice, Italy","Dublin, Ireland",12:00,14:30,2h 30m
+Lufthansa,LU486,"Venice, Italy","Brussels, Belgium",07:00,09:30,2h 30m
+Ryanair,RY237,"Venice, Italy","Brussels, Belgium",07:15,09:45,2h 30m
+British Airways,BR992,"Venice, Italy","Brussels, Belgium",13:30,16:00,2h 30m
+British Airways,BR757,"Venice, Italy","Brussels, Belgium",12:15,14:45,2h 30m
+Lufthansa,LU583,"Venice, Italy","Bruges, Belgium",19:15,21:45,2h 30m
+Lufthansa,LU858,"Venice, Italy","Bruges, Belgium",06:00,08:30,2h 30m
+KLM,KL723,"Venice, Italy","Bruges, Belgium",17:00,19:30,2h 30m
+Lufthansa,LU432,"Venice, Italy","Bruges, Belgium",11:00,13:30,2h 30m
+KLM,KL625,"Venice, Italy","Amsterdam, Netherlands",20:15,22:45,2h 30m
+EasyJet,EA307,"Venice, Italy","Amsterdam, Netherlands",12:45,15:15,2h 30m
+British Airways,BR977,"Venice, Italy","Amsterdam, Netherlands",21:45,00:15,2h 30m
+British Airways,BR942,"Venice, Italy","Amsterdam, Netherlands",06:00,08:30,2h 30m
+EasyJet,EA772,"Venice, Italy","Rome, Italy",16:30,19:00,2h 30m
+British Airways,BR583,"Venice, Italy","Rome, Italy",16:45,19:15,2h 30m
+Ryanair,RY648,"Venice, Italy","Rome, Italy",06:45,09:15,2h 30m
+Ryanair,RY719,"Venice, Italy","Rome, Italy",18:30,21:00,2h 30m
+Ryanair,RY350,"Venice, Italy","Florence, Italy",16:30,19:00,2h 30m
+EasyJet,EA447,"Venice, Italy","Florence, Italy",09:45,12:15,2h 30m
+KLM,KL308,"Venice, Italy","Florence, Italy",11:15,13:45,2h 30m
+British Airways,BR539,"Venice, Italy","Florence, Italy",17:45,20:15,2h 30m
+EasyJet,EA157,"Venice, Italy","Milan, Italy",15:30,18:00,2h 30m
+Ryanair,RY336,"Venice, Italy","Milan, Italy",16:00,18:30,2h 30m
+Lufthansa,LU560,"Venice, Italy","Milan, Italy",17:30,20:00,2h 30m
+KLM,KL677,"Venice, Italy","Milan, Italy",07:15,09:45,2h 30m
+Ryanair,RY364,"Venice, Italy","Barcelona, Spain",19:00,21:30,2h 30m
+EasyJet,EA337,"Venice, Italy","Barcelona, Spain",21:15,23:45,2h 30m
+EasyJet,EA127,"Venice, Italy","Barcelona, Spain",16:30,19:00,2h 30m
+Ryanair,RY870,"Venice, Italy","Barcelona, Spain",07:45,10:15,2h 30m
+EasyJet,EA559,"Venice, Italy","Madrid, Spain",12:30,15:00,2h 30m
+Lufthansa,LU824,"Venice, Italy","Madrid, Spain",21:30,00:00,2h 30m
+KLM,KL815,"Venice, Italy","Madrid, Spain",19:15,21:45,2h 30m
+British Airways,BR592,"Venice, Italy","Madrid, Spain",12:15,14:45,2h 30m
+KLM,KL445,"Venice, Italy","Lisbon, Portugal",18:30,21:00,2h 30m
+Lufthansa,LU225,"Venice, Italy","Lisbon, Portugal",06:30,09:00,2h 30m
+KLM,KL764,"Venice, Italy","Lisbon, Portugal",18:00,20:30,2h 30m
+Ryanair,RY469,"Venice, Italy","Lisbon, Portugal",17:45,20:15,2h 30m
+KLM,KL977,"Venice, Italy","Zurich, Switzerland",19:00,21:30,2h 30m
+KLM,KL115,"Venice, Italy","Zurich, Switzerland",15:15,17:45,2h 30m
+EasyJet,EA633,"Venice, Italy","Zurich, Switzerland",18:30,21:00,2h 30m
+Ryanair,RY232,"Venice, Italy","Zurich, Switzerland",12:15,14:45,2h 30m
+EasyJet,EA355,"Venice, Italy","Berlin, Germany",15:30,18:00,2h 30m
+EasyJet,EA921,"Venice, Italy","Berlin, Germany",13:15,15:45,2h 30m
+Ryanair,RY914,"Venice, Italy","Berlin, Germany",07:15,09:45,2h 30m
+EasyJet,EA630,"Venice, Italy","Berlin, Germany",06:45,09:15,2h 30m
+Lufthansa,LU781,"Venice, Italy","Munich, Germany",11:00,13:30,2h 30m
+British Airways,BR153,"Venice, Italy","Munich, Germany",14:15,16:45,2h 30m
+Lufthansa,LU638,"Venice, Italy","Munich, Germany",18:15,20:45,2h 30m
+Ryanair,RY902,"Venice, Italy","Munich, Germany",14:15,16:45,2h 30m
+Ryanair,RY460,"Venice, Italy","Paris, France",21:00,23:30,2h 30m
+British Airways,BR829,"Venice, Italy","Paris, France",21:15,23:45,2h 30m
+Lufthansa,LU557,"Venice, Italy","Paris, France",17:15,19:45,2h 30m
+KLM,KL472,"Venice, Italy","Paris, France",18:30,21:00,2h 30m
+Ryanair,RY197,"Venice, Italy","Istanbul, Turkey",21:00,23:30,2h 30m
+KLM,KL309,"Venice, Italy","Istanbul, Turkey",12:00,14:30,2h 30m
+Ryanair,RY512,"Venice, Italy","Istanbul, Turkey",18:30,21:00,2h 30m
+KLM,KL622,"Venice, Italy","Istanbul, Turkey",22:45,01:15,2h 30m
+Ryanair,RY674,"Venice, Italy","Athens, Greece",17:15,19:45,2h 30m
+EasyJet,EA191,"Venice, Italy","Athens, Greece",14:00,16:30,2h 30m
+KLM,KL268,"Venice, Italy","Athens, Greece",12:15,14:45,2h 30m
+Ryanair,RY228,"Venice, Italy","Athens, Greece",07:30,10:00,2h 30m
+KLM,KL711,"Venice, Italy","Oslo, Norway",09:45,12:15,2h 30m
+KLM,KL527,"Venice, Italy","Oslo, Norway",20:15,22:45,2h 30m
+Lufthansa,LU649,"Venice, Italy","Oslo, Norway",11:45,14:15,2h 30m
+KLM,KL105,"Venice, Italy","Oslo, Norway",16:45,19:15,2h 30m
+KLM,KL181,"Venice, Italy","Copenhagen, Denmark",09:30,12:00,2h 30m
+British Airways,BR544,"Venice, Italy","Copenhagen, Denmark",09:15,11:45,2h 30m
+Ryanair,RY513,"Venice, Italy","Copenhagen, Denmark",10:15,12:45,2h 30m
+Ryanair,RY238,"Venice, Italy","Copenhagen, Denmark",14:00,16:30,2h 30m
+British Airways,BR688,"Venice, Italy","Budapest, Hungary",06:15,08:45,2h 30m
+British Airways,BR922,"Venice, Italy","Budapest, Hungary",07:00,09:30,2h 30m
+KLM,KL439,"Venice, Italy","Budapest, Hungary",14:30,17:00,2h 30m
+EasyJet,EA186,"Venice, Italy","Budapest, Hungary",14:15,16:45,2h 30m
+Lufthansa,LU304,"Venice, Italy","Krakow, Poland",21:15,23:45,2h 30m
+KLM,KL345,"Venice, Italy","Krakow, Poland",12:15,14:45,2h 30m
+EasyJet,EA151,"Venice, Italy","Krakow, Poland",16:30,19:00,2h 30m
+KLM,KL494,"Venice, Italy","Krakow, Poland",13:15,15:45,2h 30m
+British Airways,BR397,"Venice, Italy","Vienna, Austria",16:30,19:00,2h 30m
+Lufthansa,LU171,"Venice, Italy","Vienna, Austria",09:45,12:15,2h 30m
+KLM,KL872,"Venice, Italy","Vienna, Austria",06:45,09:15,2h 30m
+Ryanair,RY411,"Venice, Italy","Vienna, Austria",15:30,18:00,2h 30m
+KLM,KL649,"Venice, Italy","Prague, Czech Republic",08:15,10:45,2h 30m
+Lufthansa,LU306,"Venice, Italy","Prague, Czech Republic",12:30,15:00,2h 30m
+KLM,KL828,"Venice, Italy","Prague, Czech Republic",19:30,22:00,2h 30m
+Lufthansa,LU668,"Venice, Italy","Prague, Czech Republic",21:00,23:30,2h 30m
+EasyJet,EA428,"Milan, Italy","London, UK",15:00,16:00,1h 0m
+EasyJet,EA233,"Milan, Italy","London, UK",19:15,20:15,1h 0m
+Lufthansa,LU533,"Milan, Italy","London, UK",19:00,20:00,1h 0m
+British Airways,BR214,"Milan, Italy","London, UK",10:45,11:45,1h 0m
+Ryanair,RY148,"Milan, Italy","Edinburgh, UK",18:45,21:15,2h 30m
+Ryanair,RY304,"Milan, Italy","Edinburgh, UK",17:45,20:15,2h 30m
+Ryanair,RY123,"Milan, Italy","Edinburgh, UK",17:45,20:15,2h 30m
+Ryanair,RY508,"Milan, Italy","Edinburgh, UK",13:00,15:30,2h 30m
+British Airways,BR557,"Milan, Italy","Dublin, Ireland",08:15,10:45,2h 30m
+British Airways,BR411,"Milan, Italy","Dublin, Ireland",10:00,12:30,2h 30m
+KLM,KL347,"Milan, Italy","Dublin, Ireland",08:30,11:00,2h 30m
+KLM,KL378,"Milan, Italy","Dublin, Ireland",10:00,12:30,2h 30m
+KLM,KL158,"Milan, Italy","Brussels, Belgium",17:45,20:15,2h 30m
+Ryanair,RY760,"Milan, Italy","Brussels, Belgium",12:00,14:30,2h 30m
+British Airways,BR979,"Milan, Italy","Brussels, Belgium",08:45,11:15,2h 30m
+British Airways,BR334,"Milan, Italy","Brussels, Belgium",17:15,19:45,2h 30m
+Lufthansa,LU790,"Milan, Italy","Bruges, Belgium",21:00,23:30,2h 30m
+British Airways,BR183,"Milan, Italy","Bruges, Belgium",12:00,14:30,2h 30m
+KLM,KL140,"Milan, Italy","Bruges, Belgium",13:00,15:30,2h 30m
+KLM,KL356,"Milan, Italy","Bruges, Belgium",13:15,15:45,2h 30m
+Lufthansa,LU994,"Milan, Italy","Amsterdam, Netherlands",06:00,08:30,2h 30m
+KLM,KL941,"Milan, Italy","Amsterdam, Netherlands",07:45,10:15,2h 30m
+KLM,KL413,"Milan, Italy","Amsterdam, Netherlands",16:30,19:00,2h 30m
+EasyJet,EA505,"Milan, Italy","Amsterdam, Netherlands",20:15,22:45,2h 30m
+British Airways,BR294,"Milan, Italy","Rome, Italy",11:00,13:30,2h 30m
+Lufthansa,LU977,"Milan, Italy","Rome, Italy",11:30,14:00,2h 30m
+British Airways,BR378,"Milan, Italy","Rome, Italy",22:00,00:30,2h 30m
+Lufthansa,LU472,"Milan, Italy","Rome, Italy",16:30,19:00,2h 30m
+KLM,KL494,"Milan, Italy","Florence, Italy",15:30,18:00,2h 30m
+KLM,KL354,"Milan, Italy","Florence, Italy",20:15,22:45,2h 30m
+EasyJet,EA990,"Milan, Italy","Florence, Italy",21:00,23:30,2h 30m
+British Airways,BR543,"Milan, Italy","Florence, Italy",21:15,23:45,2h 30m
+KLM,KL341,"Milan, Italy","Venice, Italy",22:30,01:00,2h 30m
+Ryanair,RY185,"Milan, Italy","Venice, Italy",21:15,23:45,2h 30m
+British Airways,BR840,"Milan, Italy","Venice, Italy",19:15,21:45,2h 30m
+Ryanair,RY835,"Milan, Italy","Venice, Italy",13:30,16:00,2h 30m
+Lufthansa,LU349,"Milan, Italy","Barcelona, Spain",09:30,12:00,2h 30m
+Lufthansa,LU493,"Milan, Italy","Barcelona, Spain",12:30,15:00,2h 30m
+KLM,KL815,"Milan, Italy","Barcelona, Spain",20:15,22:45,2h 30m
+Lufthansa,LU955,"Milan, Italy","Barcelona, Spain",15:30,18:00,2h 30m
+EasyJet,EA612,"Milan, Italy","Madrid, Spain",22:30,01:00,2h 30m
+EasyJet,EA744,"Milan, Italy","Madrid, Spain",08:30,11:00,2h 30m
+Lufthansa,LU594,"Milan, Italy","Madrid, Spain",21:00,23:30,2h 30m
+Lufthansa,LU865,"Milan, Italy","Madrid, Spain",15:30,18:00,2h 30m
+British Airways,BR562,"Milan, Italy","Lisbon, Portugal",07:45,10:15,2h 30m
+British Airways,BR710,"Milan, Italy","Lisbon, Portugal",16:30,19:00,2h 30m
+British Airways,BR442,"Milan, Italy","Lisbon, Portugal",22:15,00:45,2h 30m
+British Airways,BR149,"Milan, Italy","Lisbon, Portugal",19:30,22:00,2h 30m
+EasyJet,EA170,"Milan, Italy","Zurich, Switzerland",22:00,00:30,2h 30m
+Lufthansa,LU153,"Milan, Italy","Zurich, Switzerland",07:45,10:15,2h 30m
+EasyJet,EA602,"Milan, Italy","Zurich, Switzerland",13:30,16:00,2h 30m
+Ryanair,RY803,"Milan, Italy","Zurich, Switzerland",13:30,16:00,2h 30m
+Ryanair,RY402,"Milan, Italy","Berlin, Germany",22:15,00:45,2h 30m
+British Airways,BR812,"Milan, Italy","Berlin, Germany",11:15,13:45,2h 30m
+Ryanair,RY539,"Milan, Italy","Berlin, Germany",17:15,19:45,2h 30m
+Ryanair,RY134,"Milan, Italy","Berlin, Germany",17:30,20:00,2h 30m
+Lufthansa,LU872,"Milan, Italy","Munich, Germany",17:00,19:30,2h 30m
+Ryanair,RY551,"Milan, Italy","Munich, Germany",08:45,11:15,2h 30m
+British Airways,BR663,"Milan, Italy","Munich, Germany",08:00,10:30,2h 30m
+British Airways,BR412,"Milan, Italy","Munich, Germany",21:45,00:15,2h 30m
+Lufthansa,LU791,"Milan, Italy","Paris, France",19:45,22:15,2h 30m
+Ryanair,RY864,"Milan, Italy","Paris, France",14:45,17:15,2h 30m
+EasyJet,EA192,"Milan, Italy","Paris, France",19:45,22:15,2h 30m
+Lufthansa,LU862,"Milan, Italy","Paris, France",08:45,11:15,2h 30m
+KLM,KL235,"Milan, Italy","Istanbul, Turkey",10:30,13:00,2h 30m
+EasyJet,EA778,"Milan, Italy","Istanbul, Turkey",11:45,14:15,2h 30m
+Ryanair,RY670,"Milan, Italy","Istanbul, Turkey",22:15,00:45,2h 30m
+British Airways,BR853,"Milan, Italy","Istanbul, Turkey",13:00,15:30,2h 30m
+British Airways,BR871,"Milan, Italy","Athens, Greece",13:15,15:45,2h 30m
+EasyJet,EA637,"Milan, Italy","Athens, Greece",15:30,18:00,2h 30m
+Lufthansa,LU778,"Milan, Italy","Athens, Greece",19:45,22:15,2h 30m
+Ryanair,RY931,"Milan, Italy","Athens, Greece",13:30,16:00,2h 30m
+British Airways,BR694,"Milan, Italy","Oslo, Norway",17:15,19:45,2h 30m
+KLM,KL226,"Milan, Italy","Oslo, Norway",12:45,15:15,2h 30m
+Lufthansa,LU331,"Milan, Italy","Oslo, Norway",18:15,20:45,2h 30m
+Ryanair,RY853,"Milan, Italy","Oslo, Norway",11:00,13:30,2h 30m
+Ryanair,RY290,"Milan, Italy","Copenhagen, Denmark",17:30,20:00,2h 30m
+Ryanair,RY690,"Milan, Italy","Copenhagen, Denmark",10:15,12:45,2h 30m
+British Airways,BR801,"Milan, Italy","Copenhagen, Denmark",07:15,09:45,2h 30m
+Lufthansa,LU325,"Milan, Italy","Copenhagen, Denmark",16:45,19:15,2h 30m
+British Airways,BR327,"Milan, Italy","Budapest, Hungary",14:15,16:45,2h 30m
+EasyJet,EA477,"Milan, Italy","Budapest, Hungary",20:45,23:15,2h 30m
+KLM,KL826,"Milan, Italy","Budapest, Hungary",12:45,15:15,2h 30m
+Ryanair,RY984,"Milan, Italy","Budapest, Hungary",13:30,16:00,2h 30m
+British Airways,BR141,"Milan, Italy","Krakow, Poland",15:15,17:45,2h 30m
+KLM,KL711,"Milan, Italy","Krakow, Poland",17:30,20:00,2h 30m
+KLM,KL472,"Milan, Italy","Krakow, Poland",14:30,17:00,2h 30m
+British Airways,BR238,"Milan, Italy","Krakow, Poland",17:30,20:00,2h 30m
+Ryanair,RY256,"Milan, Italy","Vienna, Austria",15:45,18:15,2h 30m
+KLM,KL157,"Milan, Italy","Vienna, Austria",07:00,09:30,2h 30m
+Ryanair,RY799,"Milan, Italy","Vienna, Austria",12:45,15:15,2h 30m
+KLM,KL840,"Milan, Italy","Vienna, Austria",11:00,13:30,2h 30m
+EasyJet,EA865,"Milan, Italy","Prague, Czech Republic",21:30,00:00,2h 30m
+British Airways,BR657,"Milan, Italy","Prague, Czech Republic",18:15,20:45,2h 30m
+KLM,KL453,"Milan, Italy","Prague, Czech Republic",15:15,17:45,2h 30m
+EasyJet,EA209,"Milan, Italy","Prague, Czech Republic",18:15,20:45,2h 30m
+Lufthansa,LU776,"Barcelona, Spain","London, UK",15:00,16:00,1h 0m
+KLM,KL427,"Barcelona, Spain","London, UK",10:00,11:00,1h 0m
+British Airways,BR720,"Barcelona, Spain","London, UK",17:45,18:45,1h 0m
+Lufthansa,LU244,"Barcelona, Spain","London, UK",18:15,19:15,1h 0m
+British Airways,BR876,"Barcelona, Spain","Edinburgh, UK",12:45,15:15,2h 30m
+Ryanair,RY314,"Barcelona, Spain","Edinburgh, UK",09:00,11:30,2h 30m
+Lufthansa,LU634,"Barcelona, Spain","Edinburgh, UK",09:00,11:30,2h 30m
+British Airways,BR282,"Barcelona, Spain","Edinburgh, UK",09:30,12:00,2h 30m
+Lufthansa,LU802,"Barcelona, Spain","Dublin, Ireland",10:00,12:30,2h 30m
+EasyJet,EA739,"Barcelona, Spain","Dublin, Ireland",18:00,20:30,2h 30m
+EasyJet,EA952,"Barcelona, Spain","Dublin, Ireland",15:00,17:30,2h 30m
+EasyJet,EA642,"Barcelona, Spain","Dublin, Ireland",22:15,00:45,2h 30m
+EasyJet,EA529,"Barcelona, Spain","Brussels, Belgium",12:15,14:45,2h 30m
+KLM,KL634,"Barcelona, Spain","Brussels, Belgium",12:45,15:15,2h 30m
+EasyJet,EA874,"Barcelona, Spain","Brussels, Belgium",15:00,17:30,2h 30m
+Ryanair,RY897,"Barcelona, Spain","Brussels, Belgium",14:45,17:15,2h 30m
+British Airways,BR315,"Barcelona, Spain","Bruges, Belgium",08:15,10:45,2h 30m
+British Airways,BR734,"Barcelona, Spain","Bruges, Belgium",15:00,17:30,2h 30m
+Lufthansa,LU276,"Barcelona, Spain","Bruges, Belgium",07:00,09:30,2h 30m
+Lufthansa,LU620,"Barcelona, Spain","Bruges, Belgium",07:30,10:00,2h 30m
+Ryanair,RY872,"Barcelona, Spain","Amsterdam, Netherlands",17:45,20:15,2h 30m
+Ryanair,RY480,"Barcelona, Spain","Amsterdam, Netherlands",12:00,14:30,2h 30m
+KLM,KL891,"Barcelona, Spain","Amsterdam, Netherlands",17:30,20:00,2h 30m
+Ryanair,RY592,"Barcelona, Spain","Amsterdam, Netherlands",13:00,15:30,2h 30m
+British Airways,BR127,"Barcelona, Spain","Rome, Italy",09:30,12:00,2h 30m
+Lufthansa,LU562,"Barcelona, Spain","Rome, Italy",16:00,18:30,2h 30m
+British Airways,BR895,"Barcelona, Spain","Rome, Italy",09:00,11:30,2h 30m
+EasyJet,EA771,"Barcelona, Spain","Rome, Italy",13:00,15:30,2h 30m
+KLM,KL544,"Barcelona, Spain","Florence, Italy",18:45,21:15,2h 30m
+EasyJet,EA391,"Barcelona, Spain","Florence, Italy",09:45,12:15,2h 30m
+British Airways,BR933,"Barcelona, Spain","Florence, Italy",10:15,12:45,2h 30m
+Lufthansa,LU292,"Barcelona, Spain","Florence, Italy",17:30,20:00,2h 30m
+EasyJet,EA600,"Barcelona, Spain","Venice, Italy",10:15,12:45,2h 30m
+Lufthansa,LU951,"Barcelona, Spain","Venice, Italy",22:30,01:00,2h 30m
+KLM,KL289,"Barcelona, Spain","Venice, Italy",11:15,13:45,2h 30m
+British Airways,BR705,"Barcelona, Spain","Venice, Italy",16:15,18:45,2h 30m
+Ryanair,RY768,"Barcelona, Spain","Milan, Italy",17:15,19:45,2h 30m
+Ryanair,RY846,"Barcelona, Spain","Milan, Italy",14:00,16:30,2h 30m
+British Airways,BR805,"Barcelona, Spain","Milan, Italy",09:00,11:30,2h 30m
+EasyJet,EA969,"Barcelona, Spain","Milan, Italy",20:45,23:15,2h 30m
+KLM,KL730,"Barcelona, Spain","Madrid, Spain",14:00,16:30,2h 30m
+Lufthansa,LU882,"Barcelona, Spain","Madrid, Spain",22:45,01:15,2h 30m
+EasyJet,EA884,"Barcelona, Spain","Madrid, Spain",13:30,16:00,2h 30m
+Ryanair,RY500,"Barcelona, Spain","Madrid, Spain",08:45,11:15,2h 30m
+Lufthansa,LU104,"Barcelona, Spain","Lisbon, Portugal",15:00,17:30,2h 30m
+British Airways,BR301,"Barcelona, Spain","Lisbon, Portugal",07:00,09:30,2h 30m
+British Airways,BR451,"Barcelona, Spain","Lisbon, Portugal",16:30,19:00,2h 30m
+KLM,KL189,"Barcelona, Spain","Lisbon, Portugal",17:15,19:45,2h 30m
+KLM,KL974,"Barcelona, Spain","Zurich, Switzerland",13:15,15:45,2h 30m
+Ryanair,RY122,"Barcelona, Spain","Zurich, Switzerland",20:45,23:15,2h 30m
+British Airways,BR935,"Barcelona, Spain","Zurich, Switzerland",15:45,18:15,2h 30m
+EasyJet,EA977,"Barcelona, Spain","Zurich, Switzerland",22:30,01:00,2h 30m
+Lufthansa,LU964,"Barcelona, Spain","Berlin, Germany",21:15,23:45,2h 30m
+Ryanair,RY902,"Barcelona, Spain","Berlin, Germany",08:30,11:00,2h 30m
+KLM,KL331,"Barcelona, Spain","Berlin, Germany",15:30,18:00,2h 30m
+British Airways,BR548,"Barcelona, Spain","Berlin, Germany",09:15,11:45,2h 30m
+Ryanair,RY616,"Barcelona, Spain","Munich, Germany",22:00,00:30,2h 30m
+Lufthansa,LU410,"Barcelona, Spain","Munich, Germany",15:00,17:30,2h 30m
+Lufthansa,LU750,"Barcelona, Spain","Munich, Germany",21:00,23:30,2h 30m
+KLM,KL648,"Barcelona, Spain","Munich, Germany",06:30,09:00,2h 30m
+EasyJet,EA943,"Barcelona, Spain","Paris, France",10:15,12:45,2h 30m
+British Airways,BR430,"Barcelona, Spain","Paris, France",21:45,00:15,2h 30m
+KLM,KL543,"Barcelona, Spain","Paris, France",11:45,14:15,2h 30m
+EasyJet,EA847,"Barcelona, Spain","Paris, France",16:00,18:30,2h 30m
+EasyJet,EA407,"Barcelona, Spain","Istanbul, Turkey",17:45,20:15,2h 30m
+Ryanair,RY712,"Barcelona, Spain","Istanbul, Turkey",15:15,17:45,2h 30m
+Lufthansa,LU250,"Barcelona, Spain","Istanbul, Turkey",18:00,20:30,2h 30m
+KLM,KL170,"Barcelona, Spain","Istanbul, Turkey",18:15,20:45,2h 30m
+EasyJet,EA745,"Barcelona, Spain","Athens, Greece",10:45,13:15,2h 30m
+Ryanair,RY101,"Barcelona, Spain","Athens, Greece",22:30,01:00,2h 30m
+EasyJet,EA689,"Barcelona, Spain","Athens, Greece",20:45,23:15,2h 30m
+British Airways,BR732,"Barcelona, Spain","Athens, Greece",12:45,15:15,2h 30m
+British Airways,BR153,"Barcelona, Spain","Oslo, Norway",18:15,20:45,2h 30m
+Ryanair,RY143,"Barcelona, Spain","Oslo, Norway",10:30,13:00,2h 30m
+Lufthansa,LU531,"Barcelona, Spain","Oslo, Norway",18:45,21:15,2h 30m
+British Airways,BR377,"Barcelona, Spain","Oslo, Norway",09:30,12:00,2h 30m
+British Airways,BR504,"Barcelona, Spain","Copenhagen, Denmark",13:15,15:45,2h 30m
+Ryanair,RY104,"Barcelona, Spain","Copenhagen, Denmark",19:45,22:15,2h 30m
+British Airways,BR875,"Barcelona, Spain","Copenhagen, Denmark",21:00,23:30,2h 30m
+KLM,KL814,"Barcelona, Spain","Copenhagen, Denmark",21:15,23:45,2h 30m
+Ryanair,RY144,"Barcelona, Spain","Budapest, Hungary",19:30,22:00,2h 30m
+KLM,KL906,"Barcelona, Spain","Budapest, Hungary",07:45,10:15,2h 30m
+Lufthansa,LU250,"Barcelona, Spain","Budapest, Hungary",09:00,11:30,2h 30m
+Ryanair,RY629,"Barcelona, Spain","Budapest, Hungary",22:15,00:45,2h 30m
+Ryanair,RY706,"Barcelona, Spain","Krakow, Poland",20:00,22:30,2h 30m
+EasyJet,EA444,"Barcelona, Spain","Krakow, Poland",11:30,14:00,2h 30m
+Ryanair,RY997,"Barcelona, Spain","Krakow, Poland",11:45,14:15,2h 30m
+Lufthansa,LU587,"Barcelona, Spain","Krakow, Poland",16:15,18:45,2h 30m
+Lufthansa,LU253,"Barcelona, Spain","Vienna, Austria",11:45,14:15,2h 30m
+British Airways,BR394,"Barcelona, Spain","Vienna, Austria",14:45,17:15,2h 30m
+Ryanair,RY655,"Barcelona, Spain","Vienna, Austria",08:30,11:00,2h 30m
+Ryanair,RY958,"Barcelona, Spain","Vienna, Austria",12:00,14:30,2h 30m
+Ryanair,RY260,"Barcelona, Spain","Prague, Czech Republic",06:15,08:45,2h 30m
+British Airways,BR463,"Barcelona, Spain","Prague, Czech Republic",06:30,09:00,2h 30m
+KLM,KL999,"Barcelona, Spain","Prague, Czech Republic",13:45,16:15,2h 30m
+British Airways,BR403,"Barcelona, Spain","Prague, Czech Republic",15:15,17:45,2h 30m
+British Airways,BR338,"Madrid, Spain","London, UK",07:00,08:00,1h 0m
+KLM,KL134,"Madrid, Spain","London, UK",15:45,16:45,1h 0m
+Ryanair,RY772,"Madrid, Spain","London, UK",08:00,09:00,1h 0m
+KLM,KL181,"Madrid, Spain","London, UK",06:15,07:15,1h 0m
+British Airways,BR433,"Madrid, Spain","Edinburgh, UK",12:45,15:15,2h 30m
+EasyJet,EA136,"Madrid, Spain","Edinburgh, UK",13:15,15:45,2h 30m
+British Airways,BR289,"Madrid, Spain","Edinburgh, UK",18:00,20:30,2h 30m
+Ryanair,RY993,"Madrid, Spain","Edinburgh, UK",20:00,22:30,2h 30m
+Ryanair,RY821,"Madrid, Spain","Dublin, Ireland",07:00,09:30,2h 30m
+British Airways,BR649,"Madrid, Spain","Dublin, Ireland",12:45,15:15,2h 30m
+Lufthansa,LU948,"Madrid, Spain","Dublin, Ireland",15:30,18:00,2h 30m
+KLM,KL379,"Madrid, Spain","Dublin, Ireland",19:30,22:00,2h 30m
+EasyJet,EA653,"Madrid, Spain","Brussels, Belgium",09:30,12:00,2h 30m
+KLM,KL482,"Madrid, Spain","Brussels, Belgium",17:30,20:00,2h 30m
+British Airways,BR329,"Madrid, Spain","Brussels, Belgium",14:15,16:45,2h 30m
+KLM,KL227,"Madrid, Spain","Brussels, Belgium",12:30,15:00,2h 30m
+British Airways,BR218,"Madrid, Spain","Bruges, Belgium",14:00,16:30,2h 30m
+KLM,KL954,"Madrid, Spain","Bruges, Belgium",17:45,20:15,2h 30m
+EasyJet,EA736,"Madrid, Spain","Bruges, Belgium",21:30,00:00,2h 30m
+Ryanair,RY246,"Madrid, Spain","Bruges, Belgium",19:45,22:15,2h 30m
+British Airways,BR911,"Madrid, Spain","Amsterdam, Netherlands",12:30,15:00,2h 30m
+British Airways,BR192,"Madrid, Spain","Amsterdam, Netherlands",10:00,12:30,2h 30m
+EasyJet,EA414,"Madrid, Spain","Amsterdam, Netherlands",10:30,13:00,2h 30m
+Lufthansa,LU320,"Madrid, Spain","Amsterdam, Netherlands",09:45,12:15,2h 30m
+EasyJet,EA985,"Madrid, Spain","Rome, Italy",10:45,13:15,2h 30m
+British Airways,BR818,"Madrid, Spain","Rome, Italy",15:00,17:30,2h 30m
+KLM,KL277,"Madrid, Spain","Rome, Italy",07:30,10:00,2h 30m
+British Airways,BR494,"Madrid, Spain","Rome, Italy",11:30,14:00,2h 30m
+KLM,KL433,"Madrid, Spain","Florence, Italy",09:00,11:30,2h 30m
+KLM,KL411,"Madrid, Spain","Florence, Italy",09:00,11:30,2h 30m
+British Airways,BR405,"Madrid, Spain","Florence, Italy",06:45,09:15,2h 30m
+Lufthansa,LU641,"Madrid, Spain","Florence, Italy",09:15,11:45,2h 30m
+Ryanair,RY124,"Madrid, Spain","Venice, Italy",13:30,16:00,2h 30m
+British Airways,BR680,"Madrid, Spain","Venice, Italy",14:15,16:45,2h 30m
+British Airways,BR478,"Madrid, Spain","Venice, Italy",18:15,20:45,2h 30m
+KLM,KL443,"Madrid, Spain","Venice, Italy",22:30,01:00,2h 30m
+KLM,KL380,"Madrid, Spain","Milan, Italy",21:15,23:45,2h 30m
+Ryanair,RY842,"Madrid, Spain","Milan, Italy",06:30,09:00,2h 30m
+British Airways,BR146,"Madrid, Spain","Milan, Italy",19:15,21:45,2h 30m
+Ryanair,RY338,"Madrid, Spain","Milan, Italy",07:00,09:30,2h 30m
+EasyJet,EA718,"Madrid, Spain","Barcelona, Spain",14:15,16:45,2h 30m
+Ryanair,RY602,"Madrid, Spain","Barcelona, Spain",06:15,08:45,2h 30m
+Ryanair,RY993,"Madrid, Spain","Barcelona, Spain",10:00,12:30,2h 30m
+Lufthansa,LU291,"Madrid, Spain","Barcelona, Spain",11:15,13:45,2h 30m
+British Airways,BR650,"Madrid, Spain","Lisbon, Portugal",14:00,16:30,2h 30m
+Ryanair,RY719,"Madrid, Spain","Lisbon, Portugal",18:30,21:00,2h 30m
+Ryanair,RY110,"Madrid, Spain","Lisbon, Portugal",21:45,00:15,2h 30m
+Lufthansa,LU521,"Madrid, Spain","Lisbon, Portugal",22:15,00:45,2h 30m
+Ryanair,RY240,"Madrid, Spain","Zurich, Switzerland",11:00,13:30,2h 30m
+Ryanair,RY127,"Madrid, Spain","Zurich, Switzerland",14:30,17:00,2h 30m
+Lufthansa,LU550,"Madrid, Spain","Zurich, Switzerland",09:45,12:15,2h 30m
+Lufthansa,LU882,"Madrid, Spain","Zurich, Switzerland",16:15,18:45,2h 30m
+Lufthansa,LU305,"Madrid, Spain","Berlin, Germany",09:45,12:15,2h 30m
+Lufthansa,LU164,"Madrid, Spain","Berlin, Germany",14:00,16:30,2h 30m
+Lufthansa,LU197,"Madrid, Spain","Berlin, Germany",13:00,15:30,2h 30m
+Ryanair,RY192,"Madrid, Spain","Berlin, Germany",22:30,01:00,2h 30m
+KLM,KL228,"Madrid, Spain","Munich, Germany",21:00,23:30,2h 30m
+EasyJet,EA888,"Madrid, Spain","Munich, Germany",17:30,20:00,2h 30m
+British Airways,BR250,"Madrid, Spain","Munich, Germany",19:45,22:15,2h 30m
+British Airways,BR646,"Madrid, Spain","Munich, Germany",13:30,16:00,2h 30m
+KLM,KL217,"Madrid, Spain","Paris, France",18:15,20:45,2h 30m
+Ryanair,RY451,"Madrid, Spain","Paris, France",10:30,13:00,2h 30m
+EasyJet,EA557,"Madrid, Spain","Paris, France",18:00,20:30,2h 30m
+Lufthansa,LU775,"Madrid, Spain","Paris, France",11:00,13:30,2h 30m
+British Airways,BR890,"Madrid, Spain","Istanbul, Turkey",21:45,00:15,2h 30m
+British Airways,BR807,"Madrid, Spain","Istanbul, Turkey",20:15,22:45,2h 30m
+EasyJet,EA662,"Madrid, Spain","Istanbul, Turkey",18:30,21:00,2h 30m
+KLM,KL765,"Madrid, Spain","Istanbul, Turkey",14:15,16:45,2h 30m
+Lufthansa,LU218,"Madrid, Spain","Athens, Greece",19:15,21:45,2h 30m
+British Airways,BR246,"Madrid, Spain","Athens, Greece",21:45,00:15,2h 30m
+British Airways,BR645,"Madrid, Spain","Athens, Greece",17:15,19:45,2h 30m
+Lufthansa,LU701,"Madrid, Spain","Athens, Greece",22:30,01:00,2h 30m
+EasyJet,EA945,"Madrid, Spain","Oslo, Norway",16:15,18:45,2h 30m
+EasyJet,EA984,"Madrid, Spain","Oslo, Norway",22:15,00:45,2h 30m
+Ryanair,RY431,"Madrid, Spain","Oslo, Norway",19:00,21:30,2h 30m
+EasyJet,EA392,"Madrid, Spain","Oslo, Norway",08:15,10:45,2h 30m
+EasyJet,EA279,"Madrid, Spain","Copenhagen, Denmark",20:00,22:30,2h 30m
+Ryanair,RY509,"Madrid, Spain","Copenhagen, Denmark",16:15,18:45,2h 30m
+KLM,KL110,"Madrid, Spain","Copenhagen, Denmark",22:30,01:00,2h 30m
+British Airways,BR213,"Madrid, Spain","Copenhagen, Denmark",15:30,18:00,2h 30m
+EasyJet,EA345,"Madrid, Spain","Budapest, Hungary",06:45,09:15,2h 30m
+Lufthansa,LU343,"Madrid, Spain","Budapest, Hungary",18:15,20:45,2h 30m
+Ryanair,RY517,"Madrid, Spain","Budapest, Hungary",17:45,20:15,2h 30m
+Ryanair,RY890,"Madrid, Spain","Budapest, Hungary",09:45,12:15,2h 30m
+British Airways,BR163,"Madrid, Spain","Krakow, Poland",19:15,21:45,2h 30m
+EasyJet,EA633,"Madrid, Spain","Krakow, Poland",17:15,19:45,2h 30m
+British Airways,BR608,"Madrid, Spain","Krakow, Poland",06:30,09:00,2h 30m
+Ryanair,RY929,"Madrid, Spain","Krakow, Poland",08:15,10:45,2h 30m
+Lufthansa,LU666,"Madrid, Spain","Vienna, Austria",15:00,17:30,2h 30m
+EasyJet,EA594,"Madrid, Spain","Vienna, Austria",10:00,12:30,2h 30m
+British Airways,BR739,"Madrid, Spain","Vienna, Austria",18:30,21:00,2h 30m
+KLM,KL678,"Madrid, Spain","Vienna, Austria",14:45,17:15,2h 30m
+British Airways,BR599,"Madrid, Spain","Prague, Czech Republic",20:45,23:15,2h 30m
+Lufthansa,LU699,"Madrid, Spain","Prague, Czech Republic",06:00,08:30,2h 30m
+KLM,KL120,"Madrid, Spain","Prague, Czech Republic",16:30,19:00,2h 30m
+British Airways,BR885,"Madrid, Spain","Prague, Czech Republic",13:45,16:15,2h 30m
+EasyJet,EA855,"Lisbon, Portugal","London, UK",11:45,12:45,1h 0m
+KLM,KL800,"Lisbon, Portugal","London, UK",20:30,21:30,1h 0m
+Lufthansa,LU553,"Lisbon, Portugal","London, UK",07:00,08:00,1h 0m
+KLM,KL931,"Lisbon, Portugal","London, UK",09:45,10:45,1h 0m
+Ryanair,RY176,"Lisbon, Portugal","Edinburgh, UK",07:30,10:00,2h 30m
+EasyJet,EA963,"Lisbon, Portugal","Edinburgh, UK",20:45,23:15,2h 30m
+British Airways,BR113,"Lisbon, Portugal","Edinburgh, UK",10:00,12:30,2h 30m
+Ryanair,RY650,"Lisbon, Portugal","Edinburgh, UK",11:00,13:30,2h 30m
+EasyJet,EA110,"Lisbon, Portugal","Dublin, Ireland",08:00,10:30,2h 30m
+Ryanair,RY409,"Lisbon, Portugal","Dublin, Ireland",14:45,17:15,2h 30m
+British Airways,BR334,"Lisbon, Portugal","Dublin, Ireland",14:15,16:45,2h 30m
+KLM,KL619,"Lisbon, Portugal","Dublin, Ireland",08:30,11:00,2h 30m
+Ryanair,RY553,"Lisbon, Portugal","Brussels, Belgium",22:45,01:15,2h 30m
+EasyJet,EA366,"Lisbon, Portugal","Brussels, Belgium",21:30,00:00,2h 30m
+Lufthansa,LU976,"Lisbon, Portugal","Brussels, Belgium",08:45,11:15,2h 30m
+KLM,KL181,"Lisbon, Portugal","Brussels, Belgium",12:30,15:00,2h 30m
+EasyJet,EA718,"Lisbon, Portugal","Bruges, Belgium",12:30,15:00,2h 30m
+KLM,KL449,"Lisbon, Portugal","Bruges, Belgium",06:00,08:30,2h 30m
+KLM,KL841,"Lisbon, Portugal","Bruges, Belgium",13:30,16:00,2h 30m
+EasyJet,EA529,"Lisbon, Portugal","Bruges, Belgium",06:15,08:45,2h 30m
+Ryanair,RY390,"Lisbon, Portugal","Amsterdam, Netherlands",12:30,15:00,2h 30m
+Ryanair,RY170,"Lisbon, Portugal","Amsterdam, Netherlands",06:45,09:15,2h 30m
+EasyJet,EA464,"Lisbon, Portugal","Amsterdam, Netherlands",16:30,19:00,2h 30m
+Lufthansa,LU195,"Lisbon, Portugal","Amsterdam, Netherlands",13:45,16:15,2h 30m
+British Airways,BR149,"Lisbon, Portugal","Rome, Italy",11:00,13:30,2h 30m
+KLM,KL739,"Lisbon, Portugal","Rome, Italy",10:45,13:15,2h 30m
+Ryanair,RY592,"Lisbon, Portugal","Rome, Italy",15:30,18:00,2h 30m
+Lufthansa,LU245,"Lisbon, Portugal","Rome, Italy",09:00,11:30,2h 30m
+KLM,KL860,"Lisbon, Portugal","Florence, Italy",10:15,12:45,2h 30m
+KLM,KL449,"Lisbon, Portugal","Florence, Italy",08:30,11:00,2h 30m
+KLM,KL229,"Lisbon, Portugal","Florence, Italy",21:15,23:45,2h 30m
+KLM,KL319,"Lisbon, Portugal","Florence, Italy",15:00,17:30,2h 30m
+Lufthansa,LU344,"Lisbon, Portugal","Venice, Italy",14:45,17:15,2h 30m
+British Airways,BR408,"Lisbon, Portugal","Venice, Italy",15:15,17:45,2h 30m
+KLM,KL572,"Lisbon, Portugal","Venice, Italy",16:45,19:15,2h 30m
+EasyJet,EA105,"Lisbon, Portugal","Venice, Italy",15:15,17:45,2h 30m
+Ryanair,RY837,"Lisbon, Portugal","Milan, Italy",13:15,15:45,2h 30m
+British Airways,BR293,"Lisbon, Portugal","Milan, Italy",19:00,21:30,2h 30m
+British Airways,BR157,"Lisbon, Portugal","Milan, Italy",10:45,13:15,2h 30m
+EasyJet,EA643,"Lisbon, Portugal","Milan, Italy",12:00,14:30,2h 30m
+Ryanair,RY343,"Lisbon, Portugal","Barcelona, Spain",06:15,08:45,2h 30m
+KLM,KL654,"Lisbon, Portugal","Barcelona, Spain",22:45,01:15,2h 30m
+Lufthansa,LU712,"Lisbon, Portugal","Barcelona, Spain",12:00,14:30,2h 30m
+Lufthansa,LU433,"Lisbon, Portugal","Barcelona, Spain",08:30,11:00,2h 30m
+KLM,KL898,"Lisbon, Portugal","Madrid, Spain",13:45,16:15,2h 30m
+Ryanair,RY902,"Lisbon, Portugal","Madrid, Spain",21:45,00:15,2h 30m
+KLM,KL870,"Lisbon, Portugal","Madrid, Spain",18:15,20:45,2h 30m
+Lufthansa,LU162,"Lisbon, Portugal","Madrid, Spain",20:15,22:45,2h 30m
+British Airways,BR691,"Lisbon, Portugal","Zurich, Switzerland",16:00,18:30,2h 30m
+EasyJet,EA648,"Lisbon, Portugal","Zurich, Switzerland",09:15,11:45,2h 30m
+Lufthansa,LU487,"Lisbon, Portugal","Zurich, Switzerland",21:45,00:15,2h 30m
+British Airways,BR553,"Lisbon, Portugal","Zurich, Switzerland",20:15,22:45,2h 30m
+Ryanair,RY396,"Lisbon, Portugal","Berlin, Germany",11:15,13:45,2h 30m
+EasyJet,EA266,"Lisbon, Portugal","Berlin, Germany",19:15,21:45,2h 30m
+Ryanair,RY579,"Lisbon, Portugal","Berlin, Germany",12:45,15:15,2h 30m
+Lufthansa,LU815,"Lisbon, Portugal","Berlin, Germany",13:45,16:15,2h 30m
+KLM,KL132,"Lisbon, Portugal","Munich, Germany",22:45,01:15,2h 30m
+KLM,KL667,"Lisbon, Portugal","Munich, Germany",12:15,14:45,2h 30m
+EasyJet,EA770,"Lisbon, Portugal","Munich, Germany",19:30,22:00,2h 30m
+Ryanair,RY811,"Lisbon, Portugal","Munich, Germany",20:00,22:30,2h 30m
+Ryanair,RY479,"Lisbon, Portugal","Paris, France",21:45,00:15,2h 30m
+Ryanair,RY955,"Lisbon, Portugal","Paris, France",21:00,23:30,2h 30m
+EasyJet,EA423,"Lisbon, Portugal","Paris, France",06:15,08:45,2h 30m
+EasyJet,EA612,"Lisbon, Portugal","Paris, France",10:15,12:45,2h 30m
+Lufthansa,LU124,"Lisbon, Portugal","Istanbul, Turkey",07:30,10:00,2h 30m
+British Airways,BR870,"Lisbon, Portugal","Istanbul, Turkey",15:15,17:45,2h 30m
+British Airways,BR154,"Lisbon, Portugal","Istanbul, Turkey",08:15,10:45,2h 30m
+British Airways,BR372,"Lisbon, Portugal","Istanbul, Turkey",07:45,10:15,2h 30m
+Lufthansa,LU487,"Lisbon, Portugal","Athens, Greece",12:30,15:00,2h 30m
+British Airways,BR931,"Lisbon, Portugal","Athens, Greece",07:00,09:30,2h 30m
+Lufthansa,LU233,"Lisbon, Portugal","Athens, Greece",13:30,16:00,2h 30m
+EasyJet,EA872,"Lisbon, Portugal","Athens, Greece",09:45,12:15,2h 30m
+KLM,KL196,"Lisbon, Portugal","Oslo, Norway",19:00,21:30,2h 30m
+Lufthansa,LU609,"Lisbon, Portugal","Oslo, Norway",13:45,16:15,2h 30m
+KLM,KL845,"Lisbon, Portugal","Oslo, Norway",09:15,11:45,2h 30m
+EasyJet,EA650,"Lisbon, Portugal","Oslo, Norway",19:30,22:00,2h 30m
+Ryanair,RY436,"Lisbon, Portugal","Copenhagen, Denmark",22:45,01:15,2h 30m
+KLM,KL125,"Lisbon, Portugal","Copenhagen, Denmark",07:00,09:30,2h 30m
+EasyJet,EA331,"Lisbon, Portugal","Copenhagen, Denmark",18:45,21:15,2h 30m
+British Airways,BR322,"Lisbon, Portugal","Copenhagen, Denmark",11:00,13:30,2h 30m
+British Airways,BR565,"Lisbon, Portugal","Budapest, Hungary",08:45,11:15,2h 30m
+Lufthansa,LU682,"Lisbon, Portugal","Budapest, Hungary",13:15,15:45,2h 30m
+KLM,KL737,"Lisbon, Portugal","Budapest, Hungary",11:00,13:30,2h 30m
+Ryanair,RY376,"Lisbon, Portugal","Budapest, Hungary",19:00,21:30,2h 30m
+KLM,KL325,"Lisbon, Portugal","Krakow, Poland",20:30,23:00,2h 30m
+Ryanair,RY929,"Lisbon, Portugal","Krakow, Poland",10:30,13:00,2h 30m
+Ryanair,RY668,"Lisbon, Portugal","Krakow, Poland",06:45,09:15,2h 30m
+EasyJet,EA746,"Lisbon, Portugal","Krakow, Poland",19:45,22:15,2h 30m
+Ryanair,RY175,"Lisbon, Portugal","Vienna, Austria",14:00,16:30,2h 30m
+EasyJet,EA795,"Lisbon, Portugal","Vienna, Austria",10:00,12:30,2h 30m
+Lufthansa,LU545,"Lisbon, Portugal","Vienna, Austria",08:30,11:00,2h 30m
+Lufthansa,LU889,"Lisbon, Portugal","Vienna, Austria",06:00,08:30,2h 30m
+British Airways,BR620,"Lisbon, Portugal","Prague, Czech Republic",06:30,09:00,2h 30m
+EasyJet,EA399,"Lisbon, Portugal","Prague, Czech Republic",19:30,22:00,2h 30m
+Ryanair,RY244,"Lisbon, Portugal","Prague, Czech Republic",19:30,22:00,2h 30m
+EasyJet,EA899,"Lisbon, Portugal","Prague, Czech Republic",21:15,23:45,2h 30m
+EasyJet,EA459,"Zurich, Switzerland","London, UK",12:15,13:15,1h 0m
+Ryanair,RY171,"Zurich, Switzerland","London, UK",20:45,21:45,1h 0m
+Ryanair,RY650,"Zurich, Switzerland","London, UK",11:45,12:45,1h 0m
+KLM,KL105,"Zurich, Switzerland","London, UK",10:30,11:30,1h 0m
+KLM,KL472,"Zurich, Switzerland","Edinburgh, UK",11:15,13:45,2h 30m
+Ryanair,RY570,"Zurich, Switzerland","Edinburgh, UK",17:45,20:15,2h 30m
+Ryanair,RY812,"Zurich, Switzerland","Edinburgh, UK",20:45,23:15,2h 30m
+British Airways,BR154,"Zurich, Switzerland","Edinburgh, UK",17:30,20:00,2h 30m
+EasyJet,EA617,"Zurich, Switzerland","Dublin, Ireland",16:15,18:45,2h 30m
+KLM,KL920,"Zurich, Switzerland","Dublin, Ireland",20:30,23:00,2h 30m
+Ryanair,RY119,"Zurich, Switzerland","Dublin, Ireland",10:15,12:45,2h 30m
+Ryanair,RY464,"Zurich, Switzerland","Dublin, Ireland",14:15,16:45,2h 30m
+Ryanair,RY441,"Zurich, Switzerland","Brussels, Belgium",21:30,00:00,2h 30m
+Ryanair,RY521,"Zurich, Switzerland","Brussels, Belgium",08:30,11:00,2h 30m
+Ryanair,RY645,"Zurich, Switzerland","Brussels, Belgium",11:45,14:15,2h 30m
+Ryanair,RY948,"Zurich, Switzerland","Brussels, Belgium",18:15,20:45,2h 30m
+Lufthansa,LU814,"Zurich, Switzerland","Bruges, Belgium",11:00,13:30,2h 30m
+Ryanair,RY644,"Zurich, Switzerland","Bruges, Belgium",13:30,16:00,2h 30m
+Lufthansa,LU207,"Zurich, Switzerland","Bruges, Belgium",19:45,22:15,2h 30m
+Lufthansa,LU161,"Zurich, Switzerland","Bruges, Belgium",15:45,18:15,2h 30m
+EasyJet,EA232,"Zurich, Switzerland","Amsterdam, Netherlands",18:45,21:15,2h 30m
+British Airways,BR373,"Zurich, Switzerland","Amsterdam, Netherlands",06:00,08:30,2h 30m
+EasyJet,EA165,"Zurich, Switzerland","Amsterdam, Netherlands",20:45,23:15,2h 30m
+EasyJet,EA417,"Zurich, Switzerland","Amsterdam, Netherlands",06:00,08:30,2h 30m
+Ryanair,RY284,"Zurich, Switzerland","Rome, Italy",07:30,10:00,2h 30m
+EasyJet,EA113,"Zurich, Switzerland","Rome, Italy",16:15,18:45,2h 30m
+Lufthansa,LU500,"Zurich, Switzerland","Rome, Italy",20:45,23:15,2h 30m
+Ryanair,RY673,"Zurich, Switzerland","Rome, Italy",16:45,19:15,2h 30m
+Lufthansa,LU664,"Zurich, Switzerland","Florence, Italy",15:45,18:15,2h 30m
+British Airways,BR746,"Zurich, Switzerland","Florence, Italy",18:00,20:30,2h 30m
+Lufthansa,LU155,"Zurich, Switzerland","Florence, Italy",18:15,20:45,2h 30m
+Lufthansa,LU186,"Zurich, Switzerland","Florence, Italy",10:15,12:45,2h 30m
+Lufthansa,LU746,"Zurich, Switzerland","Venice, Italy",14:45,17:15,2h 30m
+British Airways,BR202,"Zurich, Switzerland","Venice, Italy",09:15,11:45,2h 30m
+EasyJet,EA855,"Zurich, Switzerland","Venice, Italy",13:45,16:15,2h 30m
+EasyJet,EA844,"Zurich, Switzerland","Venice, Italy",06:15,08:45,2h 30m
+Ryanair,RY111,"Zurich, Switzerland","Milan, Italy",17:45,20:15,2h 30m
+Ryanair,RY738,"Zurich, Switzerland","Milan, Italy",07:00,09:30,2h 30m
+British Airways,BR546,"Zurich, Switzerland","Milan, Italy",08:45,11:15,2h 30m
+EasyJet,EA103,"Zurich, Switzerland","Milan, Italy",08:00,10:30,2h 30m
+British Airways,BR651,"Zurich, Switzerland","Barcelona, Spain",14:45,17:15,2h 30m
+Ryanair,RY929,"Zurich, Switzerland","Barcelona, Spain",14:00,16:30,2h 30m
+EasyJet,EA247,"Zurich, Switzerland","Barcelona, Spain",08:45,11:15,2h 30m
+KLM,KL588,"Zurich, Switzerland","Barcelona, Spain",06:30,09:00,2h 30m
+KLM,KL877,"Zurich, Switzerland","Madrid, Spain",17:30,20:00,2h 30m
+Ryanair,RY617,"Zurich, Switzerland","Madrid, Spain",10:00,12:30,2h 30m
+Ryanair,RY979,"Zurich, Switzerland","Madrid, Spain",21:30,00:00,2h 30m
+EasyJet,EA187,"Zurich, Switzerland","Madrid, Spain",17:30,20:00,2h 30m
+British Airways,BR176,"Zurich, Switzerland","Lisbon, Portugal",15:00,17:30,2h 30m
+British Airways,BR299,"Zurich, Switzerland","Lisbon, Portugal",22:00,00:30,2h 30m
+EasyJet,EA573,"Zurich, Switzerland","Lisbon, Portugal",22:15,00:45,2h 30m
+Ryanair,RY503,"Zurich, Switzerland","Lisbon, Portugal",17:45,20:15,2h 30m
+EasyJet,EA195,"Zurich, Switzerland","Berlin, Germany",08:30,11:00,2h 30m
+EasyJet,EA297,"Zurich, Switzerland","Berlin, Germany",21:15,23:45,2h 30m
+KLM,KL105,"Zurich, Switzerland","Berlin, Germany",19:00,21:30,2h 30m
+EasyJet,EA936,"Zurich, Switzerland","Berlin, Germany",15:30,18:00,2h 30m
+Ryanair,RY958,"Zurich, Switzerland","Munich, Germany",07:30,10:00,2h 30m
+British Airways,BR477,"Zurich, Switzerland","Munich, Germany",17:45,20:15,2h 30m
+EasyJet,EA673,"Zurich, Switzerland","Munich, Germany",13:45,16:15,2h 30m
+Lufthansa,LU205,"Zurich, Switzerland","Munich, Germany",16:45,19:15,2h 30m
+KLM,KL722,"Zurich, Switzerland","Paris, France",10:00,12:30,2h 30m
+KLM,KL141,"Zurich, Switzerland","Paris, France",06:30,09:00,2h 30m
+British Airways,BR756,"Zurich, Switzerland","Paris, France",13:00,15:30,2h 30m
+EasyJet,EA452,"Zurich, Switzerland","Paris, France",15:00,17:30,2h 30m
+EasyJet,EA797,"Zurich, Switzerland","Istanbul, Turkey",20:00,22:30,2h 30m
+British Airways,BR570,"Zurich, Switzerland","Istanbul, Turkey",14:45,17:15,2h 30m
+EasyJet,EA679,"Zurich, Switzerland","Istanbul, Turkey",13:15,15:45,2h 30m
+EasyJet,EA684,"Zurich, Switzerland","Istanbul, Turkey",12:00,14:30,2h 30m
+Ryanair,RY391,"Zurich, Switzerland","Athens, Greece",15:45,18:15,2h 30m
+Ryanair,RY545,"Zurich, Switzerland","Athens, Greece",13:30,16:00,2h 30m
+British Airways,BR611,"Zurich, Switzerland","Athens, Greece",15:15,17:45,2h 30m
+British Airways,BR353,"Zurich, Switzerland","Athens, Greece",20:45,23:15,2h 30m
+KLM,KL153,"Zurich, Switzerland","Oslo, Norway",20:30,23:00,2h 30m
+Lufthansa,LU129,"Zurich, Switzerland","Oslo, Norway",08:00,10:30,2h 30m
+Ryanair,RY319,"Zurich, Switzerland","Oslo, Norway",11:30,14:00,2h 30m
+EasyJet,EA477,"Zurich, Switzerland","Oslo, Norway",15:45,18:15,2h 30m
+Ryanair,RY212,"Zurich, Switzerland","Copenhagen, Denmark",15:00,17:30,2h 30m
+EasyJet,EA624,"Zurich, Switzerland","Copenhagen, Denmark",11:15,13:45,2h 30m
+KLM,KL272,"Zurich, Switzerland","Copenhagen, Denmark",14:30,17:00,2h 30m
+British Airways,BR493,"Zurich, Switzerland","Copenhagen, Denmark",09:15,11:45,2h 30m
+KLM,KL342,"Zurich, Switzerland","Budapest, Hungary",21:30,00:00,2h 30m
+Ryanair,RY138,"Zurich, Switzerland","Budapest, Hungary",19:30,22:00,2h 30m
+EasyJet,EA184,"Zurich, Switzerland","Budapest, Hungary",10:15,12:45,2h 30m
+Lufthansa,LU365,"Zurich, Switzerland","Budapest, Hungary",09:45,12:15,2h 30m
+Ryanair,RY395,"Zurich, Switzerland","Krakow, Poland",14:45,17:15,2h 30m
+Lufthansa,LU264,"Zurich, Switzerland","Krakow, Poland",14:15,16:45,2h 30m
+Ryanair,RY250,"Zurich, Switzerland","Krakow, Poland",10:45,13:15,2h 30m
+British Airways,BR122,"Zurich, Switzerland","Krakow, Poland",22:30,01:00,2h 30m
+British Airways,BR265,"Zurich, Switzerland","Vienna, Austria",06:00,08:30,2h 30m
+British Airways,BR383,"Zurich, Switzerland","Vienna, Austria",06:00,08:30,2h 30m
+KLM,KL798,"Zurich, Switzerland","Vienna, Austria",17:15,19:45,2h 30m
+EasyJet,EA533,"Zurich, Switzerland","Vienna, Austria",18:15,20:45,2h 30m
+Ryanair,RY632,"Zurich, Switzerland","Prague, Czech Republic",17:15,19:45,2h 30m
+EasyJet,EA318,"Zurich, Switzerland","Prague, Czech Republic",17:00,19:30,2h 30m
+Lufthansa,LU372,"Zurich, Switzerland","Prague, Czech Republic",11:30,14:00,2h 30m
+Lufthansa,LU598,"Zurich, Switzerland","Prague, Czech Republic",18:45,21:15,2h 30m
+Ryanair,RY675,"Berlin, Germany","London, UK",18:45,19:45,1h 0m
+EasyJet,EA855,"Berlin, Germany","London, UK",13:30,14:30,1h 0m
+KLM,KL957,"Berlin, Germany","London, UK",12:00,13:00,1h 0m
+Ryanair,RY293,"Berlin, Germany","London, UK",07:15,08:15,1h 0m
+KLM,KL739,"Berlin, Germany","Edinburgh, UK",18:00,20:30,2h 30m
+KLM,KL383,"Berlin, Germany","Edinburgh, UK",09:45,12:15,2h 30m
+British Airways,BR768,"Berlin, Germany","Edinburgh, UK",10:30,13:00,2h 30m
+KLM,KL716,"Berlin, Germany","Edinburgh, UK",11:15,13:45,2h 30m
+British Airways,BR996,"Berlin, Germany","Dublin, Ireland",12:00,14:30,2h 30m
+British Airways,BR549,"Berlin, Germany","Dublin, Ireland",21:15,23:45,2h 30m
+EasyJet,EA824,"Berlin, Germany","Dublin, Ireland",19:15,21:45,2h 30m
+KLM,KL143,"Berlin, Germany","Dublin, Ireland",16:15,18:45,2h 30m
+EasyJet,EA881,"Berlin, Germany","Brussels, Belgium",14:00,16:30,2h 30m
+Lufthansa,LU796,"Berlin, Germany","Brussels, Belgium",13:15,15:45,2h 30m
+EasyJet,EA301,"Berlin, Germany","Brussels, Belgium",18:30,21:00,2h 30m
+EasyJet,EA817,"Berlin, Germany","Brussels, Belgium",16:45,19:15,2h 30m
+Lufthansa,LU877,"Berlin, Germany","Bruges, Belgium",16:30,19:00,2h 30m
+EasyJet,EA620,"Berlin, Germany","Bruges, Belgium",08:45,11:15,2h 30m
+British Airways,BR894,"Berlin, Germany","Bruges, Belgium",09:15,11:45,2h 30m
+Lufthansa,LU639,"Berlin, Germany","Bruges, Belgium",20:45,23:15,2h 30m
+Ryanair,RY814,"Berlin, Germany","Amsterdam, Netherlands",19:30,22:00,2h 30m
+KLM,KL257,"Berlin, Germany","Amsterdam, Netherlands",07:15,09:45,2h 30m
+Ryanair,RY724,"Berlin, Germany","Amsterdam, Netherlands",18:30,21:00,2h 30m
+Lufthansa,LU898,"Berlin, Germany","Amsterdam, Netherlands",15:15,17:45,2h 30m
+EasyJet,EA861,"Berlin, Germany","Rome, Italy",11:15,13:45,2h 30m
+EasyJet,EA878,"Berlin, Germany","Rome, Italy",11:00,13:30,2h 30m
+Ryanair,RY838,"Berlin, Germany","Rome, Italy",08:00,10:30,2h 30m
+Lufthansa,LU972,"Berlin, Germany","Rome, Italy",12:30,15:00,2h 30m
+Ryanair,RY188,"Berlin, Germany","Florence, Italy",20:00,22:30,2h 30m
+Ryanair,RY324,"Berlin, Germany","Florence, Italy",13:15,15:45,2h 30m
+KLM,KL159,"Berlin, Germany","Florence, Italy",17:15,19:45,2h 30m
+British Airways,BR940,"Berlin, Germany","Florence, Italy",21:15,23:45,2h 30m
+Lufthansa,LU166,"Berlin, Germany","Venice, Italy",09:45,12:15,2h 30m
+KLM,KL207,"Berlin, Germany","Venice, Italy",06:30,09:00,2h 30m
+British Airways,BR752,"Berlin, Germany","Venice, Italy",15:00,17:30,2h 30m
+KLM,KL633,"Berlin, Germany","Venice, Italy",20:30,23:00,2h 30m
+Ryanair,RY941,"Berlin, Germany","Milan, Italy",10:00,12:30,2h 30m
+Ryanair,RY536,"Berlin, Germany","Milan, Italy",10:00,12:30,2h 30m
+British Airways,BR402,"Berlin, Germany","Milan, Italy",18:00,20:30,2h 30m
+Ryanair,RY636,"Berlin, Germany","Milan, Italy",10:00,12:30,2h 30m
+British Airways,BR352,"Berlin, Germany","Barcelona, Spain",13:15,15:45,2h 30m
+Ryanair,RY349,"Berlin, Germany","Barcelona, Spain",16:30,19:00,2h 30m
+Ryanair,RY319,"Berlin, Germany","Barcelona, Spain",18:00,20:30,2h 30m
+Lufthansa,LU403,"Berlin, Germany","Barcelona, Spain",18:00,20:30,2h 30m
+Ryanair,RY697,"Berlin, Germany","Madrid, Spain",17:45,20:15,2h 30m
+KLM,KL876,"Berlin, Germany","Madrid, Spain",20:15,22:45,2h 30m
+Lufthansa,LU724,"Berlin, Germany","Madrid, Spain",13:00,15:30,2h 30m
+Ryanair,RY811,"Berlin, Germany","Madrid, Spain",06:30,09:00,2h 30m
+Lufthansa,LU312,"Berlin, Germany","Lisbon, Portugal",21:30,00:00,2h 30m
+British Airways,BR173,"Berlin, Germany","Lisbon, Portugal",16:30,19:00,2h 30m
+British Airways,BR942,"Berlin, Germany","Lisbon, Portugal",07:30,10:00,2h 30m
+Ryanair,RY471,"Berlin, Germany","Lisbon, Portugal",10:30,13:00,2h 30m
+Lufthansa,LU626,"Berlin, Germany","Zurich, Switzerland",12:30,15:00,2h 30m
+Lufthansa,LU562,"Berlin, Germany","Zurich, Switzerland",18:00,20:30,2h 30m
+Ryanair,RY625,"Berlin, Germany","Zurich, Switzerland",06:15,08:45,2h 30m
+Ryanair,RY641,"Berlin, Germany","Zurich, Switzerland",14:30,17:00,2h 30m
+British Airways,BR907,"Berlin, Germany","Munich, Germany",14:45,17:15,2h 30m
+British Airways,BR258,"Berlin, Germany","Munich, Germany",13:45,16:15,2h 30m
+KLM,KL730,"Berlin, Germany","Munich, Germany",12:00,14:30,2h 30m
+EasyJet,EA733,"Berlin, Germany","Munich, Germany",07:15,09:45,2h 30m
+EasyJet,EA403,"Berlin, Germany","Paris, France",17:00,19:30,2h 30m
+Lufthansa,LU738,"Berlin, Germany","Paris, France",14:00,16:30,2h 30m
+Ryanair,RY651,"Berlin, Germany","Paris, France",19:45,22:15,2h 30m
+Lufthansa,LU630,"Berlin, Germany","Paris, France",08:15,10:45,2h 30m
+Lufthansa,LU747,"Berlin, Germany","Istanbul, Turkey",08:30,11:00,2h 30m
+KLM,KL616,"Berlin, Germany","Istanbul, Turkey",07:45,10:15,2h 30m
+Lufthansa,LU256,"Berlin, Germany","Istanbul, Turkey",12:00,14:30,2h 30m
+Lufthansa,LU968,"Berlin, Germany","Istanbul, Turkey",09:30,12:00,2h 30m
+Ryanair,RY393,"Berlin, Germany","Athens, Greece",21:30,00:00,2h 30m
+British Airways,BR529,"Berlin, Germany","Athens, Greece",12:45,15:15,2h 30m
+EasyJet,EA703,"Berlin, Germany","Athens, Greece",22:45,01:15,2h 30m
+Lufthansa,LU890,"Berlin, Germany","Athens, Greece",20:00,22:30,2h 30m
+British Airways,BR392,"Berlin, Germany","Oslo, Norway",06:45,09:15,2h 30m
+Ryanair,RY672,"Berlin, Germany","Oslo, Norway",12:15,14:45,2h 30m
+Ryanair,RY702,"Berlin, Germany","Oslo, Norway",15:45,18:15,2h 30m
+British Airways,BR647,"Berlin, Germany","Oslo, Norway",07:45,10:15,2h 30m
+KLM,KL874,"Berlin, Germany","Copenhagen, Denmark",20:30,23:00,2h 30m
+British Airways,BR899,"Berlin, Germany","Copenhagen, Denmark",11:15,13:45,2h 30m
+KLM,KL177,"Berlin, Germany","Copenhagen, Denmark",16:15,18:45,2h 30m
+KLM,KL699,"Berlin, Germany","Copenhagen, Denmark",17:45,20:15,2h 30m
+KLM,KL824,"Berlin, Germany","Budapest, Hungary",13:15,15:45,2h 30m
+Lufthansa,LU287,"Berlin, Germany","Budapest, Hungary",19:45,22:15,2h 30m
+Ryanair,RY999,"Berlin, Germany","Budapest, Hungary",21:15,23:45,2h 30m
+British Airways,BR959,"Berlin, Germany","Budapest, Hungary",21:30,00:00,2h 30m
+Lufthansa,LU410,"Berlin, Germany","Krakow, Poland",11:45,14:15,2h 30m
+EasyJet,EA791,"Berlin, Germany","Krakow, Poland",21:30,00:00,2h 30m
+British Airways,BR965,"Berlin, Germany","Krakow, Poland",16:30,19:00,2h 30m
+Lufthansa,LU431,"Berlin, Germany","Krakow, Poland",22:00,00:30,2h 30m
+Ryanair,RY100,"Berlin, Germany","Vienna, Austria",10:15,12:45,2h 30m
+KLM,KL220,"Berlin, Germany","Vienna, Austria",19:30,22:00,2h 30m
+EasyJet,EA987,"Berlin, Germany","Vienna, Austria",14:45,17:15,2h 30m
+British Airways,BR278,"Berlin, Germany","Vienna, Austria",06:15,08:45,2h 30m
+KLM,KL750,"Berlin, Germany","Prague, Czech Republic",07:15,09:45,2h 30m
+KLM,KL763,"Berlin, Germany","Prague, Czech Republic",12:30,15:00,2h 30m
+British Airways,BR329,"Berlin, Germany","Prague, Czech Republic",12:45,15:15,2h 30m
+Lufthansa,LU163,"Berlin, Germany","Prague, Czech Republic",18:30,21:00,2h 30m
+Lufthansa,LU966,"Munich, Germany","London, UK",20:15,21:15,1h 0m
+Ryanair,RY118,"Munich, Germany","London, UK",15:30,16:30,1h 0m
+British Airways,BR776,"Munich, Germany","London, UK",06:15,07:15,1h 0m
+Ryanair,RY363,"Munich, Germany","London, UK",08:00,09:00,1h 0m
+British Airways,BR692,"Munich, Germany","Edinburgh, UK",19:00,21:30,2h 30m
+Lufthansa,LU847,"Munich, Germany","Edinburgh, UK",17:15,19:45,2h 30m
+Lufthansa,LU679,"Munich, Germany","Edinburgh, UK",12:15,14:45,2h 30m
+Ryanair,RY350,"Munich, Germany","Edinburgh, UK",10:15,12:45,2h 30m
+Lufthansa,LU916,"Munich, Germany","Dublin, Ireland",21:45,00:15,2h 30m
+Lufthansa,LU619,"Munich, Germany","Dublin, Ireland",18:15,20:45,2h 30m
+EasyJet,EA349,"Munich, Germany","Dublin, Ireland",10:00,12:30,2h 30m
+Ryanair,RY696,"Munich, Germany","Dublin, Ireland",19:45,22:15,2h 30m
+Lufthansa,LU845,"Munich, Germany","Brussels, Belgium",20:30,23:00,2h 30m
+Lufthansa,LU167,"Munich, Germany","Brussels, Belgium",13:30,16:00,2h 30m
+Ryanair,RY307,"Munich, Germany","Brussels, Belgium",12:15,14:45,2h 30m
+British Airways,BR371,"Munich, Germany","Brussels, Belgium",16:30,19:00,2h 30m
+EasyJet,EA893,"Munich, Germany","Bruges, Belgium",17:15,19:45,2h 30m
+KLM,KL474,"Munich, Germany","Bruges, Belgium",22:00,00:30,2h 30m
+British Airways,BR114,"Munich, Germany","Bruges, Belgium",22:15,00:45,2h 30m
+Ryanair,RY333,"Munich, Germany","Bruges, Belgium",17:15,19:45,2h 30m
+British Airways,BR852,"Munich, Germany","Amsterdam, Netherlands",11:30,14:00,2h 30m
+Ryanair,RY693,"Munich, Germany","Amsterdam, Netherlands",15:45,18:15,2h 30m
+KLM,KL993,"Munich, Germany","Amsterdam, Netherlands",16:30,19:00,2h 30m
+Ryanair,RY341,"Munich, Germany","Amsterdam, Netherlands",15:30,18:00,2h 30m
+British Airways,BR971,"Munich, Germany","Rome, Italy",14:15,16:45,2h 30m
+British Airways,BR689,"Munich, Germany","Rome, Italy",06:15,08:45,2h 30m
+British Airways,BR226,"Munich, Germany","Rome, Italy",16:45,19:15,2h 30m
+EasyJet,EA776,"Munich, Germany","Rome, Italy",22:45,01:15,2h 30m
+KLM,KL954,"Munich, Germany","Florence, Italy",21:15,23:45,2h 30m
+Ryanair,RY953,"Munich, Germany","Florence, Italy",19:15,21:45,2h 30m
+KLM,KL806,"Munich, Germany","Florence, Italy",21:30,00:00,2h 30m
+Lufthansa,LU811,"Munich, Germany","Florence, Italy",18:00,20:30,2h 30m
+British Airways,BR247,"Munich, Germany","Venice, Italy",18:45,21:15,2h 30m
+Lufthansa,LU433,"Munich, Germany","Venice, Italy",09:30,12:00,2h 30m
+British Airways,BR929,"Munich, Germany","Venice, Italy",19:00,21:30,2h 30m
+Lufthansa,LU983,"Munich, Germany","Venice, Italy",18:45,21:15,2h 30m
+KLM,KL491,"Munich, Germany","Milan, Italy",16:45,19:15,2h 30m
+Ryanair,RY289,"Munich, Germany","Milan, Italy",19:30,22:00,2h 30m
+Lufthansa,LU755,"Munich, Germany","Milan, Italy",12:30,15:00,2h 30m
+British Airways,BR754,"Munich, Germany","Milan, Italy",09:30,12:00,2h 30m
+KLM,KL353,"Munich, Germany","Barcelona, Spain",20:15,22:45,2h 30m
+British Airways,BR920,"Munich, Germany","Barcelona, Spain",15:00,17:30,2h 30m
+KLM,KL539,"Munich, Germany","Barcelona, Spain",10:30,13:00,2h 30m
+British Airways,BR810,"Munich, Germany","Barcelona, Spain",12:00,14:30,2h 30m
+British Airways,BR795,"Munich, Germany","Madrid, Spain",14:30,17:00,2h 30m
+KLM,KL793,"Munich, Germany","Madrid, Spain",15:30,18:00,2h 30m
+KLM,KL983,"Munich, Germany","Madrid, Spain",15:45,18:15,2h 30m
+Lufthansa,LU104,"Munich, Germany","Madrid, Spain",22:45,01:15,2h 30m
+Lufthansa,LU867,"Munich, Germany","Lisbon, Portugal",15:30,18:00,2h 30m
+Ryanair,RY325,"Munich, Germany","Lisbon, Portugal",17:00,19:30,2h 30m
+Ryanair,RY362,"Munich, Germany","Lisbon, Portugal",11:30,14:00,2h 30m
+KLM,KL678,"Munich, Germany","Lisbon, Portugal",19:15,21:45,2h 30m
+British Airways,BR251,"Munich, Germany","Zurich, Switzerland",20:00,22:30,2h 30m
+EasyJet,EA281,"Munich, Germany","Zurich, Switzerland",20:00,22:30,2h 30m
+Ryanair,RY695,"Munich, Germany","Zurich, Switzerland",12:45,15:15,2h 30m
+Lufthansa,LU341,"Munich, Germany","Zurich, Switzerland",22:00,00:30,2h 30m
+EasyJet,EA468,"Munich, Germany","Berlin, Germany",14:00,16:30,2h 30m
+British Airways,BR858,"Munich, Germany","Berlin, Germany",19:00,21:30,2h 30m
+EasyJet,EA702,"Munich, Germany","Berlin, Germany",19:00,21:30,2h 30m
+KLM,KL391,"Munich, Germany","Berlin, Germany",14:45,17:15,2h 30m
+Ryanair,RY675,"Munich, Germany","Paris, France",16:15,18:45,2h 30m
+British Airways,BR842,"Munich, Germany","Paris, France",22:00,00:30,2h 30m
+Ryanair,RY113,"Munich, Germany","Paris, France",13:15,15:45,2h 30m
+EasyJet,EA262,"Munich, Germany","Paris, France",08:45,11:15,2h 30m
+Lufthansa,LU604,"Munich, Germany","Istanbul, Turkey",11:00,13:30,2h 30m
+Ryanair,RY744,"Munich, Germany","Istanbul, Turkey",16:45,19:15,2h 30m
+EasyJet,EA443,"Munich, Germany","Istanbul, Turkey",10:30,13:00,2h 30m
+Ryanair,RY773,"Munich, Germany","Istanbul, Turkey",11:30,14:00,2h 30m
+British Airways,BR446,"Munich, Germany","Athens, Greece",07:00,09:30,2h 30m
+KLM,KL498,"Munich, Germany","Athens, Greece",15:30,18:00,2h 30m
+EasyJet,EA752,"Munich, Germany","Athens, Greece",08:30,11:00,2h 30m
+EasyJet,EA891,"Munich, Germany","Athens, Greece",17:30,20:00,2h 30m
+KLM,KL936,"Munich, Germany","Oslo, Norway",16:30,19:00,2h 30m
+British Airways,BR927,"Munich, Germany","Oslo, Norway",09:15,11:45,2h 30m
+British Airways,BR881,"Munich, Germany","Oslo, Norway",12:15,14:45,2h 30m
+Ryanair,RY869,"Munich, Germany","Oslo, Norway",16:45,19:15,2h 30m
+British Airways,BR120,"Munich, Germany","Copenhagen, Denmark",08:30,11:00,2h 30m
+Ryanair,RY220,"Munich, Germany","Copenhagen, Denmark",08:30,11:00,2h 30m
+EasyJet,EA402,"Munich, Germany","Copenhagen, Denmark",21:00,23:30,2h 30m
+EasyJet,EA246,"Munich, Germany","Copenhagen, Denmark",20:00,22:30,2h 30m
+EasyJet,EA542,"Munich, Germany","Budapest, Hungary",14:00,16:30,2h 30m
+Lufthansa,LU220,"Munich, Germany","Budapest, Hungary",11:00,13:30,2h 30m
+British Airways,BR193,"Munich, Germany","Budapest, Hungary",10:15,12:45,2h 30m
+British Airways,BR106,"Munich, Germany","Budapest, Hungary",18:00,20:30,2h 30m
+EasyJet,EA846,"Munich, Germany","Krakow, Poland",08:45,11:15,2h 30m
+Lufthansa,LU572,"Munich, Germany","Krakow, Poland",17:45,20:15,2h 30m
+Ryanair,RY520,"Munich, Germany","Krakow, Poland",22:00,00:30,2h 30m
+Lufthansa,LU385,"Munich, Germany","Krakow, Poland",07:30,10:00,2h 30m
+EasyJet,EA890,"Munich, Germany","Vienna, Austria",16:30,19:00,2h 30m
+British Airways,BR922,"Munich, Germany","Vienna, Austria",15:00,17:30,2h 30m
+EasyJet,EA685,"Munich, Germany","Vienna, Austria",07:00,09:30,2h 30m
+KLM,KL248,"Munich, Germany","Vienna, Austria",11:00,13:30,2h 30m
+EasyJet,EA498,"Munich, Germany","Prague, Czech Republic",13:00,15:30,2h 30m
+Ryanair,RY705,"Munich, Germany","Prague, Czech Republic",20:30,23:00,2h 30m
+EasyJet,EA264,"Munich, Germany","Prague, Czech Republic",08:30,11:00,2h 30m
+KLM,KL717,"Munich, Germany","Prague, Czech Republic",14:15,16:45,2h 30m
+Lufthansa,LU802,"Paris, France","London, UK",13:00,14:00,1h 0m
+EasyJet,EA538,"Paris, France","London, UK",08:30,09:30,1h 0m
+Lufthansa,LU886,"Paris, France","London, UK",09:15,10:15,1h 0m
+EasyJet,EA869,"Paris, France","London, UK",11:30,12:30,1h 0m
+British Airways,BR366,"Paris, France","Edinburgh, UK",09:45,12:15,2h 30m
+Ryanair,RY131,"Paris, France","Edinburgh, UK",13:45,16:15,2h 30m
+Ryanair,RY988,"Paris, France","Edinburgh, UK",22:15,00:45,2h 30m
+British Airways,BR723,"Paris, France","Edinburgh, UK",20:45,23:15,2h 30m
+British Airways,BR636,"Paris, France","Dublin, Ireland",14:00,16:30,2h 30m
+Lufthansa,LU383,"Paris, France","Dublin, Ireland",17:45,20:15,2h 30m
+British Airways,BR632,"Paris, France","Dublin, Ireland",13:30,16:00,2h 30m
+EasyJet,EA762,"Paris, France","Dublin, Ireland",22:00,00:30,2h 30m
+EasyJet,EA725,"Paris, France","Brussels, Belgium",16:45,19:15,2h 30m
+EasyJet,EA976,"Paris, France","Brussels, Belgium",16:45,19:15,2h 30m
+EasyJet,EA755,"Paris, France","Brussels, Belgium",08:45,11:15,2h 30m
+Ryanair,RY370,"Paris, France","Brussels, Belgium",15:45,18:15,2h 30m
+KLM,KL637,"Paris, France","Bruges, Belgium",22:45,01:15,2h 30m
+EasyJet,EA138,"Paris, France","Bruges, Belgium",06:45,09:15,2h 30m
+Ryanair,RY508,"Paris, France","Bruges, Belgium",17:15,19:45,2h 30m
+Lufthansa,LU712,"Paris, France","Bruges, Belgium",17:45,20:15,2h 30m
+British Airways,BR187,"Paris, France","Amsterdam, Netherlands",12:45,15:15,2h 30m
+KLM,KL504,"Paris, France","Amsterdam, Netherlands",16:45,19:15,2h 30m
+Ryanair,RY478,"Paris, France","Amsterdam, Netherlands",06:45,09:15,2h 30m
+Lufthansa,LU436,"Paris, France","Amsterdam, Netherlands",19:45,22:15,2h 30m
+Lufthansa,LU514,"Paris, France","Rome, Italy",08:30,11:00,2h 30m
+KLM,KL995,"Paris, France","Rome, Italy",06:15,08:45,2h 30m
+Ryanair,RY159,"Paris, France","Rome, Italy",14:45,17:15,2h 30m
+British Airways,BR580,"Paris, France","Rome, Italy",16:00,18:30,2h 30m
+British Airways,BR610,"Paris, France","Florence, Italy",18:30,21:00,2h 30m
+KLM,KL482,"Paris, France","Florence, Italy",20:45,23:15,2h 30m
+Lufthansa,LU114,"Paris, France","Florence, Italy",22:00,00:30,2h 30m
+KLM,KL489,"Paris, France","Florence, Italy",19:15,21:45,2h 30m
+Ryanair,RY134,"Paris, France","Venice, Italy",17:15,19:45,2h 30m
+Lufthansa,LU452,"Paris, France","Venice, Italy",20:45,23:15,2h 30m
+KLM,KL209,"Paris, France","Venice, Italy",09:00,11:30,2h 30m
+Lufthansa,LU935,"Paris, France","Venice, Italy",13:15,15:45,2h 30m
+British Airways,BR678,"Paris, France","Milan, Italy",13:45,16:15,2h 30m
+KLM,KL439,"Paris, France","Milan, Italy",22:45,01:15,2h 30m
+Lufthansa,LU589,"Paris, France","Milan, Italy",15:15,17:45,2h 30m
+Lufthansa,LU168,"Paris, France","Milan, Italy",06:00,08:30,2h 30m
+KLM,KL419,"Paris, France","Barcelona, Spain",07:00,09:30,2h 30m
+Lufthansa,LU456,"Paris, France","Barcelona, Spain",17:45,20:15,2h 30m
+EasyJet,EA872,"Paris, France","Barcelona, Spain",16:15,18:45,2h 30m
+EasyJet,EA577,"Paris, France","Barcelona, Spain",11:45,14:15,2h 30m
+British Airways,BR813,"Paris, France","Madrid, Spain",13:00,15:30,2h 30m
+Lufthansa,LU927,"Paris, France","Madrid, Spain",12:45,15:15,2h 30m
+KLM,KL484,"Paris, France","Madrid, Spain",14:15,16:45,2h 30m
+Ryanair,RY131,"Paris, France","Madrid, Spain",10:30,13:00,2h 30m
+Lufthansa,LU483,"Paris, France","Lisbon, Portugal",11:15,13:45,2h 30m
+EasyJet,EA655,"Paris, France","Lisbon, Portugal",17:00,19:30,2h 30m
+Lufthansa,LU455,"Paris, France","Lisbon, Portugal",06:15,08:45,2h 30m
+Ryanair,RY818,"Paris, France","Lisbon, Portugal",22:15,00:45,2h 30m
+Lufthansa,LU238,"Paris, France","Zurich, Switzerland",16:30,19:00,2h 30m
+KLM,KL466,"Paris, France","Zurich, Switzerland",21:00,23:30,2h 30m
+KLM,KL300,"Paris, France","Zurich, Switzerland",22:30,01:00,2h 30m
+EasyJet,EA310,"Paris, France","Zurich, Switzerland",20:45,23:15,2h 30m
+Ryanair,RY733,"Paris, France","Berlin, Germany",07:45,10:15,2h 30m
+KLM,KL917,"Paris, France","Berlin, Germany",07:30,10:00,2h 30m
+Ryanair,RY565,"Paris, France","Berlin, Germany",11:30,14:00,2h 30m
+British Airways,BR354,"Paris, France","Berlin, Germany",12:45,15:15,2h 30m
+Ryanair,RY271,"Paris, France","Munich, Germany",17:00,19:30,2h 30m
+Ryanair,RY666,"Paris, France","Munich, Germany",06:15,08:45,2h 30m
+British Airways,BR290,"Paris, France","Munich, Germany",20:30,23:00,2h 30m
+KLM,KL712,"Paris, France","Munich, Germany",08:30,11:00,2h 30m
+Lufthansa,LU388,"Paris, France","Istanbul, Turkey",10:15,12:45,2h 30m
+EasyJet,EA912,"Paris, France","Istanbul, Turkey",13:15,15:45,2h 30m
+British Airways,BR736,"Paris, France","Istanbul, Turkey",09:30,12:00,2h 30m
+British Airways,BR166,"Paris, France","Istanbul, Turkey",16:30,19:00,2h 30m
+KLM,KL427,"Paris, France","Athens, Greece",16:45,19:15,2h 30m
+British Airways,BR975,"Paris, France","Athens, Greece",21:30,00:00,2h 30m
+British Airways,BR102,"Paris, France","Athens, Greece",15:15,17:45,2h 30m
+EasyJet,EA898,"Paris, France","Athens, Greece",18:30,21:00,2h 30m
+British Airways,BR162,"Paris, France","Oslo, Norway",20:15,22:45,2h 30m
+British Airways,BR761,"Paris, France","Oslo, Norway",22:00,00:30,2h 30m
+EasyJet,EA211,"Paris, France","Oslo, Norway",13:45,16:15,2h 30m
+KLM,KL198,"Paris, France","Oslo, Norway",09:30,12:00,2h 30m
+Ryanair,RY978,"Paris, France","Copenhagen, Denmark",21:30,00:00,2h 30m
+KLM,KL439,"Paris, France","Copenhagen, Denmark",20:15,22:45,2h 30m
+Lufthansa,LU943,"Paris, France","Copenhagen, Denmark",12:00,14:30,2h 30m
+KLM,KL712,"Paris, France","Copenhagen, Denmark",07:30,10:00,2h 30m
+British Airways,BR298,"Paris, France","Budapest, Hungary",13:00,15:30,2h 30m
+KLM,KL231,"Paris, France","Budapest, Hungary",22:00,00:30,2h 30m
+Ryanair,RY670,"Paris, France","Budapest, Hungary",10:15,12:45,2h 30m
+KLM,KL987,"Paris, France","Budapest, Hungary",14:45,17:15,2h 30m
+British Airways,BR192,"Paris, France","Krakow, Poland",14:30,17:00,2h 30m
+Lufthansa,LU384,"Paris, France","Krakow, Poland",21:45,00:15,2h 30m
+Lufthansa,LU727,"Paris, France","Krakow, Poland",14:15,16:45,2h 30m
+Lufthansa,LU292,"Paris, France","Krakow, Poland",14:45,17:15,2h 30m
+Ryanair,RY648,"Paris, France","Vienna, Austria",18:15,20:45,2h 30m
+EasyJet,EA160,"Paris, France","Vienna, Austria",14:45,17:15,2h 30m
+Ryanair,RY146,"Paris, France","Vienna, Austria",19:30,22:00,2h 30m
+KLM,KL450,"Paris, France","Vienna, Austria",21:45,00:15,2h 30m
+KLM,KL224,"Paris, France","Prague, Czech Republic",16:15,18:45,2h 30m
+Ryanair,RY595,"Paris, France","Prague, Czech Republic",16:45,19:15,2h 30m
+British Airways,BR948,"Paris, France","Prague, Czech Republic",13:45,16:15,2h 30m
+British Airways,BR231,"Paris, France","Prague, Czech Republic",21:15,23:45,2h 30m
+KLM,KL611,"Istanbul, Turkey","London, UK",10:00,11:00,1h 0m
+KLM,KL231,"Istanbul, Turkey","London, UK",19:00,20:00,1h 0m
+British Airways,BR969,"Istanbul, Turkey","London, UK",10:15,11:15,1h 0m
+KLM,KL276,"Istanbul, Turkey","London, UK",07:15,08:15,1h 0m
+Lufthansa,LU182,"Istanbul, Turkey","Edinburgh, UK",17:30,20:00,2h 30m
+KLM,KL638,"Istanbul, Turkey","Edinburgh, UK",22:15,00:45,2h 30m
+KLM,KL469,"Istanbul, Turkey","Edinburgh, UK",20:15,22:45,2h 30m
+KLM,KL736,"Istanbul, Turkey","Edinburgh, UK",15:45,18:15,2h 30m
+KLM,KL909,"Istanbul, Turkey","Dublin, Ireland",07:45,10:15,2h 30m
+Lufthansa,LU303,"Istanbul, Turkey","Dublin, Ireland",10:15,12:45,2h 30m
+EasyJet,EA621,"Istanbul, Turkey","Dublin, Ireland",13:15,15:45,2h 30m
+EasyJet,EA716,"Istanbul, Turkey","Dublin, Ireland",13:30,16:00,2h 30m
+British Airways,BR861,"Istanbul, Turkey","Brussels, Belgium",21:00,23:30,2h 30m
+Ryanair,RY901,"Istanbul, Turkey","Brussels, Belgium",16:15,18:45,2h 30m
+British Airways,BR942,"Istanbul, Turkey","Brussels, Belgium",08:45,11:15,2h 30m
+EasyJet,EA342,"Istanbul, Turkey","Brussels, Belgium",06:00,08:30,2h 30m
+Lufthansa,LU970,"Istanbul, Turkey","Bruges, Belgium",06:15,08:45,2h 30m
+Lufthansa,LU803,"Istanbul, Turkey","Bruges, Belgium",08:00,10:30,2h 30m
+Lufthansa,LU308,"Istanbul, Turkey","Bruges, Belgium",06:15,08:45,2h 30m
+Lufthansa,LU577,"Istanbul, Turkey","Bruges, Belgium",11:15,13:45,2h 30m
+KLM,KL977,"Istanbul, Turkey","Amsterdam, Netherlands",07:00,09:30,2h 30m
+Ryanair,RY778,"Istanbul, Turkey","Amsterdam, Netherlands",16:15,18:45,2h 30m
+British Airways,BR203,"Istanbul, Turkey","Amsterdam, Netherlands",07:00,09:30,2h 30m
+Ryanair,RY242,"Istanbul, Turkey","Amsterdam, Netherlands",06:00,08:30,2h 30m
+KLM,KL527,"Istanbul, Turkey","Rome, Italy",08:00,10:30,2h 30m
+KLM,KL409,"Istanbul, Turkey","Rome, Italy",21:45,00:15,2h 30m
+Ryanair,RY576,"Istanbul, Turkey","Rome, Italy",19:15,21:45,2h 30m
+KLM,KL457,"Istanbul, Turkey","Rome, Italy",20:30,23:00,2h 30m
+Ryanair,RY588,"Istanbul, Turkey","Florence, Italy",22:45,01:15,2h 30m
+KLM,KL854,"Istanbul, Turkey","Florence, Italy",06:00,08:30,2h 30m
+KLM,KL798,"Istanbul, Turkey","Florence, Italy",17:45,20:15,2h 30m
+EasyJet,EA590,"Istanbul, Turkey","Florence, Italy",21:00,23:30,2h 30m
+KLM,KL551,"Istanbul, Turkey","Venice, Italy",11:45,14:15,2h 30m
+British Airways,BR468,"Istanbul, Turkey","Venice, Italy",20:00,22:30,2h 30m
+KLM,KL652,"Istanbul, Turkey","Venice, Italy",11:45,14:15,2h 30m
+Lufthansa,LU421,"Istanbul, Turkey","Venice, Italy",08:30,11:00,2h 30m
+KLM,KL707,"Istanbul, Turkey","Milan, Italy",15:15,17:45,2h 30m
+KLM,KL719,"Istanbul, Turkey","Milan, Italy",14:15,16:45,2h 30m
+British Airways,BR133,"Istanbul, Turkey","Milan, Italy",22:30,01:00,2h 30m
+Lufthansa,LU267,"Istanbul, Turkey","Milan, Italy",18:45,21:15,2h 30m
+British Airways,BR520,"Istanbul, Turkey","Barcelona, Spain",22:15,00:45,2h 30m
+EasyJet,EA290,"Istanbul, Turkey","Barcelona, Spain",14:15,16:45,2h 30m
+British Airways,BR792,"Istanbul, Turkey","Barcelona, Spain",21:45,00:15,2h 30m
+KLM,KL515,"Istanbul, Turkey","Barcelona, Spain",18:00,20:30,2h 30m
+EasyJet,EA332,"Istanbul, Turkey","Madrid, Spain",09:30,12:00,2h 30m
+EasyJet,EA285,"Istanbul, Turkey","Madrid, Spain",11:15,13:45,2h 30m
+Ryanair,RY573,"Istanbul, Turkey","Madrid, Spain",22:30,01:00,2h 30m
+Ryanair,RY518,"Istanbul, Turkey","Madrid, Spain",17:30,20:00,2h 30m
+Lufthansa,LU340,"Istanbul, Turkey","Lisbon, Portugal",14:15,16:45,2h 30m
+Lufthansa,LU288,"Istanbul, Turkey","Lisbon, Portugal",07:30,10:00,2h 30m
+Lufthansa,LU902,"Istanbul, Turkey","Lisbon, Portugal",07:45,10:15,2h 30m
+EasyJet,EA799,"Istanbul, Turkey","Lisbon, Portugal",07:45,10:15,2h 30m
+British Airways,BR920,"Istanbul, Turkey","Zurich, Switzerland",20:45,23:15,2h 30m
+Ryanair,RY921,"Istanbul, Turkey","Zurich, Switzerland",11:00,13:30,2h 30m
+Lufthansa,LU783,"Istanbul, Turkey","Zurich, Switzerland",17:00,19:30,2h 30m
+EasyJet,EA694,"Istanbul, Turkey","Zurich, Switzerland",16:45,19:15,2h 30m
+EasyJet,EA506,"Istanbul, Turkey","Berlin, Germany",10:45,13:15,2h 30m
+EasyJet,EA298,"Istanbul, Turkey","Berlin, Germany",22:45,01:15,2h 30m
+British Airways,BR422,"Istanbul, Turkey","Berlin, Germany",14:30,17:00,2h 30m
+Lufthansa,LU594,"Istanbul, Turkey","Berlin, Germany",09:00,11:30,2h 30m
+British Airways,BR327,"Istanbul, Turkey","Munich, Germany",06:45,09:15,2h 30m
+KLM,KL205,"Istanbul, Turkey","Munich, Germany",17:15,19:45,2h 30m
+Ryanair,RY711,"Istanbul, Turkey","Munich, Germany",22:30,01:00,2h 30m
+EasyJet,EA899,"Istanbul, Turkey","Munich, Germany",19:45,22:15,2h 30m
+Lufthansa,LU773,"Istanbul, Turkey","Paris, France",12:30,15:00,2h 30m
+KLM,KL507,"Istanbul, Turkey","Paris, France",08:30,11:00,2h 30m
+Lufthansa,LU778,"Istanbul, Turkey","Paris, France",15:00,17:30,2h 30m
+EasyJet,EA773,"Istanbul, Turkey","Paris, France",18:45,21:15,2h 30m
+Lufthansa,LU681,"Istanbul, Turkey","Athens, Greece",08:30,11:00,2h 30m
+Ryanair,RY489,"Istanbul, Turkey","Athens, Greece",16:15,18:45,2h 30m
+Ryanair,RY689,"Istanbul, Turkey","Athens, Greece",19:30,22:00,2h 30m
+EasyJet,EA229,"Istanbul, Turkey","Athens, Greece",13:15,15:45,2h 30m
+British Airways,BR961,"Istanbul, Turkey","Oslo, Norway",14:00,16:30,2h 30m
+Ryanair,RY584,"Istanbul, Turkey","Oslo, Norway",11:45,14:15,2h 30m
+Lufthansa,LU584,"Istanbul, Turkey","Oslo, Norway",22:45,01:15,2h 30m
+Lufthansa,LU804,"Istanbul, Turkey","Oslo, Norway",15:30,18:00,2h 30m
+KLM,KL810,"Istanbul, Turkey","Copenhagen, Denmark",06:45,09:15,2h 30m
+EasyJet,EA831,"Istanbul, Turkey","Copenhagen, Denmark",10:00,12:30,2h 30m
+KLM,KL468,"Istanbul, Turkey","Copenhagen, Denmark",07:15,09:45,2h 30m
+Lufthansa,LU924,"Istanbul, Turkey","Copenhagen, Denmark",09:15,11:45,2h 30m
+Ryanair,RY692,"Istanbul, Turkey","Budapest, Hungary",14:30,17:00,2h 30m
+EasyJet,EA590,"Istanbul, Turkey","Budapest, Hungary",08:15,10:45,2h 30m
+EasyJet,EA387,"Istanbul, Turkey","Budapest, Hungary",16:00,18:30,2h 30m
+KLM,KL611,"Istanbul, Turkey","Budapest, Hungary",19:00,21:30,2h 30m
+Ryanair,RY949,"Istanbul, Turkey","Krakow, Poland",06:45,09:15,2h 30m
+Lufthansa,LU440,"Istanbul, Turkey","Krakow, Poland",06:00,08:30,2h 30m
+EasyJet,EA327,"Istanbul, Turkey","Krakow, Poland",20:00,22:30,2h 30m
+Ryanair,RY353,"Istanbul, Turkey","Krakow, Poland",15:45,18:15,2h 30m
+KLM,KL896,"Istanbul, Turkey","Vienna, Austria",21:30,00:00,2h 30m
+Ryanair,RY815,"Istanbul, Turkey","Vienna, Austria",18:30,21:00,2h 30m
+Lufthansa,LU620,"Istanbul, Turkey","Vienna, Austria",15:15,17:45,2h 30m
+KLM,KL878,"Istanbul, Turkey","Vienna, Austria",10:45,13:15,2h 30m
+EasyJet,EA919,"Istanbul, Turkey","Prague, Czech Republic",12:00,14:30,2h 30m
+Lufthansa,LU934,"Istanbul, Turkey","Prague, Czech Republic",09:45,12:15,2h 30m
+Ryanair,RY191,"Istanbul, Turkey","Prague, Czech Republic",11:30,14:00,2h 30m
+Lufthansa,LU552,"Istanbul, Turkey","Prague, Czech Republic",21:45,00:15,2h 30m
+British Airways,BR267,"Athens, Greece","London, UK",14:00,15:00,1h 0m
+KLM,KL418,"Athens, Greece","London, UK",16:30,17:30,1h 0m
+EasyJet,EA175,"Athens, Greece","London, UK",06:45,07:45,1h 0m
+Ryanair,RY240,"Athens, Greece","London, UK",09:00,10:00,1h 0m
+EasyJet,EA649,"Athens, Greece","Edinburgh, UK",07:15,09:45,2h 30m
+EasyJet,EA605,"Athens, Greece","Edinburgh, UK",13:00,15:30,2h 30m
+EasyJet,EA340,"Athens, Greece","Edinburgh, UK",11:45,14:15,2h 30m
+Lufthansa,LU851,"Athens, Greece","Edinburgh, UK",14:45,17:15,2h 30m
+British Airways,BR178,"Athens, Greece","Dublin, Ireland",19:45,22:15,2h 30m
+Lufthansa,LU362,"Athens, Greece","Dublin, Ireland",08:15,10:45,2h 30m
+EasyJet,EA896,"Athens, Greece","Dublin, Ireland",14:30,17:00,2h 30m
+Lufthansa,LU976,"Athens, Greece","Dublin, Ireland",14:30,17:00,2h 30m
+EasyJet,EA645,"Athens, Greece","Brussels, Belgium",07:15,09:45,2h 30m
+KLM,KL993,"Athens, Greece","Brussels, Belgium",22:30,01:00,2h 30m
+Lufthansa,LU828,"Athens, Greece","Brussels, Belgium",22:00,00:30,2h 30m
+British Airways,BR587,"Athens, Greece","Brussels, Belgium",10:30,13:00,2h 30m
+Ryanair,RY159,"Athens, Greece","Bruges, Belgium",16:00,18:30,2h 30m
+Ryanair,RY231,"Athens, Greece","Bruges, Belgium",10:00,12:30,2h 30m
+Ryanair,RY545,"Athens, Greece","Bruges, Belgium",12:00,14:30,2h 30m
+EasyJet,EA947,"Athens, Greece","Bruges, Belgium",14:00,16:30,2h 30m
+EasyJet,EA634,"Athens, Greece","Amsterdam, Netherlands",15:45,18:15,2h 30m
+Ryanair,RY893,"Athens, Greece","Amsterdam, Netherlands",13:45,16:15,2h 30m
+Lufthansa,LU727,"Athens, Greece","Amsterdam, Netherlands",11:00,13:30,2h 30m
+EasyJet,EA809,"Athens, Greece","Amsterdam, Netherlands",20:30,23:00,2h 30m
+Lufthansa,LU951,"Athens, Greece","Rome, Italy",16:45,19:15,2h 30m
+Ryanair,RY875,"Athens, Greece","Rome, Italy",14:30,17:00,2h 30m
+EasyJet,EA833,"Athens, Greece","Rome, Italy",16:00,18:30,2h 30m
+KLM,KL834,"Athens, Greece","Rome, Italy",14:15,16:45,2h 30m
+Lufthansa,LU162,"Athens, Greece","Florence, Italy",07:45,10:15,2h 30m
+Ryanair,RY286,"Athens, Greece","Florence, Italy",16:15,18:45,2h 30m
+Lufthansa,LU716,"Athens, Greece","Florence, Italy",11:45,14:15,2h 30m
+KLM,KL708,"Athens, Greece","Florence, Italy",21:15,23:45,2h 30m
+Ryanair,RY291,"Athens, Greece","Venice, Italy",12:45,15:15,2h 30m
+EasyJet,EA206,"Athens, Greece","Venice, Italy",11:00,13:30,2h 30m
+EasyJet,EA596,"Athens, Greece","Venice, Italy",14:00,16:30,2h 30m
+British Airways,BR506,"Athens, Greece","Venice, Italy",06:00,08:30,2h 30m
+Lufthansa,LU294,"Athens, Greece","Milan, Italy",21:00,23:30,2h 30m
+Lufthansa,LU521,"Athens, Greece","Milan, Italy",19:00,21:30,2h 30m
+KLM,KL960,"Athens, Greece","Milan, Italy",17:30,20:00,2h 30m
+British Airways,BR147,"Athens, Greece","Milan, Italy",08:30,11:00,2h 30m
+Ryanair,RY680,"Athens, Greece","Barcelona, Spain",06:15,08:45,2h 30m
+EasyJet,EA287,"Athens, Greece","Barcelona, Spain",21:30,00:00,2h 30m
+Ryanair,RY358,"Athens, Greece","Barcelona, Spain",11:30,14:00,2h 30m
+British Airways,BR231,"Athens, Greece","Barcelona, Spain",12:00,14:30,2h 30m
+Ryanair,RY299,"Athens, Greece","Madrid, Spain",20:45,23:15,2h 30m
+Ryanair,RY906,"Athens, Greece","Madrid, Spain",11:45,14:15,2h 30m
+KLM,KL258,"Athens, Greece","Madrid, Spain",17:30,20:00,2h 30m
+EasyJet,EA275,"Athens, Greece","Madrid, Spain",07:00,09:30,2h 30m
+Lufthansa,LU795,"Athens, Greece","Lisbon, Portugal",06:00,08:30,2h 30m
+Lufthansa,LU672,"Athens, Greece","Lisbon, Portugal",19:45,22:15,2h 30m
+British Airways,BR829,"Athens, Greece","Lisbon, Portugal",12:30,15:00,2h 30m
+EasyJet,EA174,"Athens, Greece","Lisbon, Portugal",15:30,18:00,2h 30m
+Ryanair,RY126,"Athens, Greece","Zurich, Switzerland",18:00,20:30,2h 30m
+KLM,KL698,"Athens, Greece","Zurich, Switzerland",11:15,13:45,2h 30m
+British Airways,BR285,"Athens, Greece","Zurich, Switzerland",11:15,13:45,2h 30m
+British Airways,BR142,"Athens, Greece","Zurich, Switzerland",07:15,09:45,2h 30m
+Lufthansa,LU980,"Athens, Greece","Berlin, Germany",19:45,22:15,2h 30m
+KLM,KL357,"Athens, Greece","Berlin, Germany",18:00,20:30,2h 30m
+British Airways,BR966,"Athens, Greece","Berlin, Germany",11:00,13:30,2h 30m
+Lufthansa,LU215,"Athens, Greece","Berlin, Germany",17:00,19:30,2h 30m
+Lufthansa,LU302,"Athens, Greece","Munich, Germany",20:30,23:00,2h 30m
+EasyJet,EA655,"Athens, Greece","Munich, Germany",22:30,01:00,2h 30m
+Ryanair,RY716,"Athens, Greece","Munich, Germany",22:30,01:00,2h 30m
+EasyJet,EA192,"Athens, Greece","Munich, Germany",13:30,16:00,2h 30m
+KLM,KL758,"Athens, Greece","Paris, France",21:00,23:30,2h 30m
+Ryanair,RY842,"Athens, Greece","Paris, France",10:30,13:00,2h 30m
+EasyJet,EA961,"Athens, Greece","Paris, France",11:15,13:45,2h 30m
+KLM,KL365,"Athens, Greece","Paris, France",20:15,22:45,2h 30m
+Ryanair,RY648,"Athens, Greece","Istanbul, Turkey",19:00,21:30,2h 30m
+Lufthansa,LU290,"Athens, Greece","Istanbul, Turkey",06:30,09:00,2h 30m
+Ryanair,RY813,"Athens, Greece","Istanbul, Turkey",18:15,20:45,2h 30m
+Lufthansa,LU962,"Athens, Greece","Istanbul, Turkey",08:30,11:00,2h 30m
+Ryanair,RY114,"Athens, Greece","Oslo, Norway",18:45,21:15,2h 30m
+Lufthansa,LU998,"Athens, Greece","Oslo, Norway",21:00,23:30,2h 30m
+Ryanair,RY690,"Athens, Greece","Oslo, Norway",20:30,23:00,2h 30m
+British Airways,BR453,"Athens, Greece","Oslo, Norway",18:30,21:00,2h 30m
+EasyJet,EA901,"Athens, Greece","Copenhagen, Denmark",07:30,10:00,2h 30m
+EasyJet,EA436,"Athens, Greece","Copenhagen, Denmark",09:30,12:00,2h 30m
+Lufthansa,LU545,"Athens, Greece","Copenhagen, Denmark",19:15,21:45,2h 30m
+EasyJet,EA807,"Athens, Greece","Copenhagen, Denmark",06:15,08:45,2h 30m
+Lufthansa,LU491,"Athens, Greece","Budapest, Hungary",10:00,12:30,2h 30m
+British Airways,BR390,"Athens, Greece","Budapest, Hungary",11:15,13:45,2h 30m
+British Airways,BR109,"Athens, Greece","Budapest, Hungary",10:00,12:30,2h 30m
+KLM,KL541,"Athens, Greece","Budapest, Hungary",06:45,09:15,2h 30m
+British Airways,BR302,"Athens, Greece","Krakow, Poland",18:00,20:30,2h 30m
+Lufthansa,LU939,"Athens, Greece","Krakow, Poland",09:00,11:30,2h 30m
+British Airways,BR413,"Athens, Greece","Krakow, Poland",22:00,00:30,2h 30m
+Ryanair,RY108,"Athens, Greece","Krakow, Poland",11:30,14:00,2h 30m
+KLM,KL523,"Athens, Greece","Vienna, Austria",09:00,11:30,2h 30m
+EasyJet,EA270,"Athens, Greece","Vienna, Austria",08:15,10:45,2h 30m
+Ryanair,RY400,"Athens, Greece","Vienna, Austria",17:45,20:15,2h 30m
+Ryanair,RY504,"Athens, Greece","Vienna, Austria",17:00,19:30,2h 30m
+KLM,KL691,"Athens, Greece","Prague, Czech Republic",10:15,12:45,2h 30m
+British Airways,BR272,"Athens, Greece","Prague, Czech Republic",11:15,13:45,2h 30m
+Lufthansa,LU111,"Athens, Greece","Prague, Czech Republic",12:15,14:45,2h 30m
+Ryanair,RY775,"Athens, Greece","Prague, Czech Republic",21:45,00:15,2h 30m
+Ryanair,RY969,"Oslo, Norway","London, UK",17:45,18:45,1h 0m
+EasyJet,EA387,"Oslo, Norway","London, UK",16:15,17:15,1h 0m
+KLM,KL600,"Oslo, Norway","London, UK",12:00,13:00,1h 0m
+KLM,KL208,"Oslo, Norway","London, UK",15:15,16:15,1h 0m
+British Airways,BR288,"Oslo, Norway","Edinburgh, UK",21:30,00:00,2h 30m
+Lufthansa,LU592,"Oslo, Norway","Edinburgh, UK",19:15,21:45,2h 30m
+Ryanair,RY572,"Oslo, Norway","Edinburgh, UK",08:45,11:15,2h 30m
+EasyJet,EA152,"Oslo, Norway","Edinburgh, UK",20:00,22:30,2h 30m
+EasyJet,EA952,"Oslo, Norway","Dublin, Ireland",15:30,18:00,2h 30m
+Lufthansa,LU373,"Oslo, Norway","Dublin, Ireland",09:15,11:45,2h 30m
+Lufthansa,LU124,"Oslo, Norway","Dublin, Ireland",14:45,17:15,2h 30m
+Lufthansa,LU551,"Oslo, Norway","Dublin, Ireland",11:30,14:00,2h 30m
+KLM,KL285,"Oslo, Norway","Brussels, Belgium",21:45,00:15,2h 30m
+Lufthansa,LU194,"Oslo, Norway","Brussels, Belgium",10:45,13:15,2h 30m
+Lufthansa,LU466,"Oslo, Norway","Brussels, Belgium",07:00,09:30,2h 30m
+KLM,KL503,"Oslo, Norway","Brussels, Belgium",17:00,19:30,2h 30m
+Ryanair,RY535,"Oslo, Norway","Bruges, Belgium",13:45,16:15,2h 30m
+Lufthansa,LU870,"Oslo, Norway","Bruges, Belgium",22:00,00:30,2h 30m
+British Airways,BR944,"Oslo, Norway","Bruges, Belgium",09:30,12:00,2h 30m
+KLM,KL714,"Oslo, Norway","Bruges, Belgium",22:00,00:30,2h 30m
+EasyJet,EA111,"Oslo, Norway","Amsterdam, Netherlands",10:15,12:45,2h 30m
+EasyJet,EA434,"Oslo, Norway","Amsterdam, Netherlands",18:30,21:00,2h 30m
+British Airways,BR509,"Oslo, Norway","Amsterdam, Netherlands",14:15,16:45,2h 30m
+British Airways,BR352,"Oslo, Norway","Amsterdam, Netherlands",21:00,23:30,2h 30m
+KLM,KL371,"Oslo, Norway","Rome, Italy",07:30,10:00,2h 30m
+Lufthansa,LU490,"Oslo, Norway","Rome, Italy",20:00,22:30,2h 30m
+KLM,KL175,"Oslo, Norway","Rome, Italy",20:00,22:30,2h 30m
+Lufthansa,LU619,"Oslo, Norway","Rome, Italy",18:30,21:00,2h 30m
+KLM,KL268,"Oslo, Norway","Florence, Italy",10:45,13:15,2h 30m
+EasyJet,EA489,"Oslo, Norway","Florence, Italy",20:45,23:15,2h 30m
+Lufthansa,LU506,"Oslo, Norway","Florence, Italy",08:30,11:00,2h 30m
+Ryanair,RY830,"Oslo, Norway","Florence, Italy",16:45,19:15,2h 30m
+KLM,KL478,"Oslo, Norway","Venice, Italy",12:30,15:00,2h 30m
+Lufthansa,LU936,"Oslo, Norway","Venice, Italy",13:30,16:00,2h 30m
+British Airways,BR996,"Oslo, Norway","Venice, Italy",11:15,13:45,2h 30m
+Lufthansa,LU620,"Oslo, Norway","Venice, Italy",08:00,10:30,2h 30m
+Ryanair,RY690,"Oslo, Norway","Milan, Italy",22:30,01:00,2h 30m
+Ryanair,RY519,"Oslo, Norway","Milan, Italy",16:45,19:15,2h 30m
+British Airways,BR838,"Oslo, Norway","Milan, Italy",20:45,23:15,2h 30m
+Ryanair,RY991,"Oslo, Norway","Milan, Italy",14:45,17:15,2h 30m
+Ryanair,RY313,"Oslo, Norway","Barcelona, Spain",12:45,15:15,2h 30m
+Lufthansa,LU352,"Oslo, Norway","Barcelona, Spain",11:00,13:30,2h 30m
+EasyJet,EA165,"Oslo, Norway","Barcelona, Spain",19:00,21:30,2h 30m
+KLM,KL788,"Oslo, Norway","Barcelona, Spain",15:00,17:30,2h 30m
+Ryanair,RY274,"Oslo, Norway","Madrid, Spain",15:30,18:00,2h 30m
+KLM,KL587,"Oslo, Norway","Madrid, Spain",13:00,15:30,2h 30m
+KLM,KL808,"Oslo, Norway","Madrid, Spain",14:00,16:30,2h 30m
+Ryanair,RY302,"Oslo, Norway","Madrid, Spain",08:30,11:00,2h 30m
+Lufthansa,LU217,"Oslo, Norway","Lisbon, Portugal",12:30,15:00,2h 30m
+Ryanair,RY851,"Oslo, Norway","Lisbon, Portugal",07:15,09:45,2h 30m
+EasyJet,EA315,"Oslo, Norway","Lisbon, Portugal",22:30,01:00,2h 30m
+Lufthansa,LU631,"Oslo, Norway","Lisbon, Portugal",07:15,09:45,2h 30m
+Lufthansa,LU308,"Oslo, Norway","Zurich, Switzerland",16:30,19:00,2h 30m
+EasyJet,EA738,"Oslo, Norway","Zurich, Switzerland",08:15,10:45,2h 30m
+Ryanair,RY888,"Oslo, Norway","Zurich, Switzerland",12:45,15:15,2h 30m
+Lufthansa,LU292,"Oslo, Norway","Zurich, Switzerland",07:30,10:00,2h 30m
+British Airways,BR831,"Oslo, Norway","Berlin, Germany",12:45,15:15,2h 30m
+KLM,KL977,"Oslo, Norway","Berlin, Germany",19:45,22:15,2h 30m
+British Airways,BR737,"Oslo, Norway","Berlin, Germany",16:15,18:45,2h 30m
+Lufthansa,LU445,"Oslo, Norway","Berlin, Germany",20:45,23:15,2h 30m
+EasyJet,EA552,"Oslo, Norway","Munich, Germany",19:00,21:30,2h 30m
+Lufthansa,LU925,"Oslo, Norway","Munich, Germany",12:15,14:45,2h 30m
+EasyJet,EA771,"Oslo, Norway","Munich, Germany",19:00,21:30,2h 30m
+KLM,KL687,"Oslo, Norway","Munich, Germany",07:15,09:45,2h 30m
+EasyJet,EA449,"Oslo, Norway","Paris, France",06:15,08:45,2h 30m
+Ryanair,RY911,"Oslo, Norway","Paris, France",09:15,11:45,2h 30m
+British Airways,BR980,"Oslo, Norway","Paris, France",08:15,10:45,2h 30m
+British Airways,BR476,"Oslo, Norway","Paris, France",18:15,20:45,2h 30m
+Lufthansa,LU963,"Oslo, Norway","Istanbul, Turkey",22:30,01:00,2h 30m
+British Airways,BR799,"Oslo, Norway","Istanbul, Turkey",15:30,18:00,2h 30m
+KLM,KL393,"Oslo, Norway","Istanbul, Turkey",14:00,16:30,2h 30m
+EasyJet,EA818,"Oslo, Norway","Istanbul, Turkey",20:00,22:30,2h 30m
+KLM,KL359,"Oslo, Norway","Athens, Greece",18:00,20:30,2h 30m
+Lufthansa,LU900,"Oslo, Norway","Athens, Greece",20:45,23:15,2h 30m
+KLM,KL669,"Oslo, Norway","Athens, Greece",12:45,15:15,2h 30m
+KLM,KL265,"Oslo, Norway","Athens, Greece",16:30,19:00,2h 30m
+Lufthansa,LU705,"Oslo, Norway","Copenhagen, Denmark",14:45,17:15,2h 30m
+Lufthansa,LU612,"Oslo, Norway","Copenhagen, Denmark",15:15,17:45,2h 30m
+KLM,KL381,"Oslo, Norway","Copenhagen, Denmark",20:30,23:00,2h 30m
+British Airways,BR292,"Oslo, Norway","Copenhagen, Denmark",12:45,15:15,2h 30m
+KLM,KL190,"Oslo, Norway","Budapest, Hungary",09:30,12:00,2h 30m
+British Airways,BR209,"Oslo, Norway","Budapest, Hungary",22:15,00:45,2h 30m
+Lufthansa,LU138,"Oslo, Norway","Budapest, Hungary",20:15,22:45,2h 30m
+British Airways,BR142,"Oslo, Norway","Budapest, Hungary",11:00,13:30,2h 30m
+KLM,KL991,"Oslo, Norway","Krakow, Poland",08:30,11:00,2h 30m
+Ryanair,RY880,"Oslo, Norway","Krakow, Poland",06:00,08:30,2h 30m
+Ryanair,RY529,"Oslo, Norway","Krakow, Poland",11:30,14:00,2h 30m
+Ryanair,RY549,"Oslo, Norway","Krakow, Poland",21:00,23:30,2h 30m
+Ryanair,RY153,"Oslo, Norway","Vienna, Austria",14:15,16:45,2h 30m
+Lufthansa,LU334,"Oslo, Norway","Vienna, Austria",22:15,00:45,2h 30m
+Ryanair,RY215,"Oslo, Norway","Vienna, Austria",08:30,11:00,2h 30m
+KLM,KL388,"Oslo, Norway","Vienna, Austria",12:45,15:15,2h 30m
+Lufthansa,LU956,"Oslo, Norway","Prague, Czech Republic",12:30,15:00,2h 30m
+EasyJet,EA391,"Oslo, Norway","Prague, Czech Republic",11:45,14:15,2h 30m
+Ryanair,RY851,"Oslo, Norway","Prague, Czech Republic",15:45,18:15,2h 30m
+EasyJet,EA310,"Oslo, Norway","Prague, Czech Republic",10:30,13:00,2h 30m
+British Airways,BR684,"Copenhagen, Denmark","London, UK",20:30,21:30,1h 0m
+British Airways,BR516,"Copenhagen, Denmark","London, UK",12:30,13:30,1h 0m
+British Airways,BR920,"Copenhagen, Denmark","London, UK",10:15,11:15,1h 0m
+KLM,KL545,"Copenhagen, Denmark","London, UK",08:30,09:30,1h 0m
+KLM,KL158,"Copenhagen, Denmark","Edinburgh, UK",19:45,22:15,2h 30m
+Ryanair,RY476,"Copenhagen, Denmark","Edinburgh, UK",21:15,23:45,2h 30m
+British Airways,BR950,"Copenhagen, Denmark","Edinburgh, UK",22:45,01:15,2h 30m
+KLM,KL463,"Copenhagen, Denmark","Edinburgh, UK",13:30,16:00,2h 30m
+British Airways,BR964,"Copenhagen, Denmark","Dublin, Ireland",08:30,11:00,2h 30m
+EasyJet,EA738,"Copenhagen, Denmark","Dublin, Ireland",12:45,15:15,2h 30m
+Ryanair,RY552,"Copenhagen, Denmark","Dublin, Ireland",12:45,15:15,2h 30m
+British Airways,BR298,"Copenhagen, Denmark","Dublin, Ireland",13:45,16:15,2h 30m
+Lufthansa,LU418,"Copenhagen, Denmark","Brussels, Belgium",20:30,23:00,2h 30m
+Lufthansa,LU763,"Copenhagen, Denmark","Brussels, Belgium",07:45,10:15,2h 30m
+EasyJet,EA670,"Copenhagen, Denmark","Brussels, Belgium",17:00,19:30,2h 30m
+Lufthansa,LU853,"Copenhagen, Denmark","Brussels, Belgium",14:15,16:45,2h 30m
+KLM,KL973,"Copenhagen, Denmark","Bruges, Belgium",16:30,19:00,2h 30m
+Lufthansa,LU373,"Copenhagen, Denmark","Bruges, Belgium",17:15,19:45,2h 30m
+KLM,KL216,"Copenhagen, Denmark","Bruges, Belgium",20:00,22:30,2h 30m
+Ryanair,RY486,"Copenhagen, Denmark","Bruges, Belgium",16:45,19:15,2h 30m
+KLM,KL960,"Copenhagen, Denmark","Amsterdam, Netherlands",21:00,23:30,2h 30m
+Ryanair,RY167,"Copenhagen, Denmark","Amsterdam, Netherlands",09:00,11:30,2h 30m
+Lufthansa,LU114,"Copenhagen, Denmark","Amsterdam, Netherlands",13:30,16:00,2h 30m
+Lufthansa,LU294,"Copenhagen, Denmark","Amsterdam, Netherlands",18:00,20:30,2h 30m
+Lufthansa,LU309,"Copenhagen, Denmark","Rome, Italy",14:45,17:15,2h 30m
+EasyJet,EA738,"Copenhagen, Denmark","Rome, Italy",21:15,23:45,2h 30m
+Ryanair,RY478,"Copenhagen, Denmark","Rome, Italy",14:00,16:30,2h 30m
+KLM,KL433,"Copenhagen, Denmark","Rome, Italy",07:00,09:30,2h 30m
+Ryanair,RY147,"Copenhagen, Denmark","Florence, Italy",19:30,22:00,2h 30m
+KLM,KL451,"Copenhagen, Denmark","Florence, Italy",12:45,15:15,2h 30m
+EasyJet,EA843,"Copenhagen, Denmark","Florence, Italy",13:45,16:15,2h 30m
+KLM,KL180,"Copenhagen, Denmark","Florence, Italy",08:45,11:15,2h 30m
+British Airways,BR705,"Copenhagen, Denmark","Venice, Italy",19:00,21:30,2h 30m
+British Airways,BR646,"Copenhagen, Denmark","Venice, Italy",20:45,23:15,2h 30m
+Lufthansa,LU414,"Copenhagen, Denmark","Venice, Italy",16:45,19:15,2h 30m
+Lufthansa,LU566,"Copenhagen, Denmark","Venice, Italy",17:45,20:15,2h 30m
+Ryanair,RY716,"Copenhagen, Denmark","Milan, Italy",09:30,12:00,2h 30m
+Lufthansa,LU641,"Copenhagen, Denmark","Milan, Italy",12:45,15:15,2h 30m
+KLM,KL821,"Copenhagen, Denmark","Milan, Italy",10:15,12:45,2h 30m
+Lufthansa,LU178,"Copenhagen, Denmark","Milan, Italy",22:15,00:45,2h 30m
+KLM,KL438,"Copenhagen, Denmark","Barcelona, Spain",16:45,19:15,2h 30m
+British Airways,BR795,"Copenhagen, Denmark","Barcelona, Spain",08:30,11:00,2h 30m
+Ryanair,RY859,"Copenhagen, Denmark","Barcelona, Spain",06:00,08:30,2h 30m
+Ryanair,RY315,"Copenhagen, Denmark","Barcelona, Spain",19:30,22:00,2h 30m
+British Airways,BR211,"Copenhagen, Denmark","Madrid, Spain",12:15,14:45,2h 30m
+British Airways,BR764,"Copenhagen, Denmark","Madrid, Spain",16:15,18:45,2h 30m
+British Airways,BR429,"Copenhagen, Denmark","Madrid, Spain",08:45,11:15,2h 30m
+Ryanair,RY474,"Copenhagen, Denmark","Madrid, Spain",09:30,12:00,2h 30m
+EasyJet,EA387,"Copenhagen, Denmark","Lisbon, Portugal",16:30,19:00,2h 30m
+Lufthansa,LU140,"Copenhagen, Denmark","Lisbon, Portugal",08:30,11:00,2h 30m
+KLM,KL647,"Copenhagen, Denmark","Lisbon, Portugal",07:30,10:00,2h 30m
+KLM,KL253,"Copenhagen, Denmark","Lisbon, Portugal",09:00,11:30,2h 30m
+EasyJet,EA982,"Copenhagen, Denmark","Zurich, Switzerland",11:45,14:15,2h 30m
+KLM,KL732,"Copenhagen, Denmark","Zurich, Switzerland",10:00,12:30,2h 30m
+British Airways,BR896,"Copenhagen, Denmark","Zurich, Switzerland",09:00,11:30,2h 30m
+Ryanair,RY318,"Copenhagen, Denmark","Zurich, Switzerland",07:45,10:15,2h 30m
+Lufthansa,LU953,"Copenhagen, Denmark","Berlin, Germany",14:30,17:00,2h 30m
+EasyJet,EA487,"Copenhagen, Denmark","Berlin, Germany",08:45,11:15,2h 30m
+Lufthansa,LU739,"Copenhagen, Denmark","Berlin, Germany",21:45,00:15,2h 30m
+KLM,KL345,"Copenhagen, Denmark","Berlin, Germany",09:15,11:45,2h 30m
+Lufthansa,LU750,"Copenhagen, Denmark","Munich, Germany",06:00,08:30,2h 30m
+EasyJet,EA250,"Copenhagen, Denmark","Munich, Germany",14:00,16:30,2h 30m
+EasyJet,EA504,"Copenhagen, Denmark","Munich, Germany",20:45,23:15,2h 30m
+Ryanair,RY134,"Copenhagen, Denmark","Munich, Germany",19:45,22:15,2h 30m
+British Airways,BR141,"Copenhagen, Denmark","Paris, France",12:00,14:30,2h 30m
+Ryanair,RY634,"Copenhagen, Denmark","Paris, France",17:45,20:15,2h 30m
+British Airways,BR766,"Copenhagen, Denmark","Paris, France",19:00,21:30,2h 30m
+Ryanair,RY217,"Copenhagen, Denmark","Paris, France",16:15,18:45,2h 30m
+Ryanair,RY129,"Copenhagen, Denmark","Istanbul, Turkey",22:15,00:45,2h 30m
+British Airways,BR458,"Copenhagen, Denmark","Istanbul, Turkey",06:00,08:30,2h 30m
+Ryanair,RY958,"Copenhagen, Denmark","Istanbul, Turkey",19:15,21:45,2h 30m
+KLM,KL187,"Copenhagen, Denmark","Istanbul, Turkey",06:45,09:15,2h 30m
+Lufthansa,LU827,"Copenhagen, Denmark","Athens, Greece",19:30,22:00,2h 30m
+Lufthansa,LU265,"Copenhagen, Denmark","Athens, Greece",19:15,21:45,2h 30m
+KLM,KL140,"Copenhagen, Denmark","Athens, Greece",18:45,21:15,2h 30m
+Ryanair,RY485,"Copenhagen, Denmark","Athens, Greece",06:45,09:15,2h 30m
+Lufthansa,LU622,"Copenhagen, Denmark","Oslo, Norway",18:15,20:45,2h 30m
+Lufthansa,LU668,"Copenhagen, Denmark","Oslo, Norway",12:30,15:00,2h 30m
+KLM,KL429,"Copenhagen, Denmark","Oslo, Norway",07:00,09:30,2h 30m
+EasyJet,EA713,"Copenhagen, Denmark","Oslo, Norway",06:15,08:45,2h 30m
+Lufthansa,LU263,"Copenhagen, Denmark","Budapest, Hungary",13:30,16:00,2h 30m
+Lufthansa,LU730,"Copenhagen, Denmark","Budapest, Hungary",22:30,01:00,2h 30m
+Lufthansa,LU137,"Copenhagen, Denmark","Budapest, Hungary",15:30,18:00,2h 30m
+KLM,KL570,"Copenhagen, Denmark","Budapest, Hungary",16:15,18:45,2h 30m
+British Airways,BR966,"Copenhagen, Denmark","Krakow, Poland",06:30,09:00,2h 30m
+KLM,KL679,"Copenhagen, Denmark","Krakow, Poland",22:30,01:00,2h 30m
+EasyJet,EA188,"Copenhagen, Denmark","Krakow, Poland",22:00,00:30,2h 30m
+Lufthansa,LU488,"Copenhagen, Denmark","Krakow, Poland",08:45,11:15,2h 30m
+EasyJet,EA726,"Copenhagen, Denmark","Vienna, Austria",11:45,14:15,2h 30m
+Ryanair,RY515,"Copenhagen, Denmark","Vienna, Austria",13:15,15:45,2h 30m
+EasyJet,EA904,"Copenhagen, Denmark","Vienna, Austria",22:45,01:15,2h 30m
+Lufthansa,LU794,"Copenhagen, Denmark","Vienna, Austria",11:15,13:45,2h 30m
+Lufthansa,LU988,"Copenhagen, Denmark","Prague, Czech Republic",09:45,12:15,2h 30m
+Ryanair,RY963,"Copenhagen, Denmark","Prague, Czech Republic",06:00,08:30,2h 30m
+Ryanair,RY611,"Copenhagen, Denmark","Prague, Czech Republic",15:45,18:15,2h 30m
+EasyJet,EA510,"Copenhagen, Denmark","Prague, Czech Republic",13:45,16:15,2h 30m
+EasyJet,EA176,"Budapest, Hungary","London, UK",19:30,20:30,1h 0m
+Ryanair,RY267,"Budapest, Hungary","London, UK",20:45,21:45,1h 0m
+EasyJet,EA476,"Budapest, Hungary","London, UK",15:00,16:00,1h 0m
+KLM,KL732,"Budapest, Hungary","London, UK",06:45,07:45,1h 0m
+EasyJet,EA431,"Budapest, Hungary","Edinburgh, UK",17:15,19:45,2h 30m
+EasyJet,EA568,"Budapest, Hungary","Edinburgh, UK",17:30,20:00,2h 30m
+British Airways,BR728,"Budapest, Hungary","Edinburgh, UK",22:45,01:15,2h 30m
+EasyJet,EA208,"Budapest, Hungary","Edinburgh, UK",20:30,23:00,2h 30m
+Ryanair,RY860,"Budapest, Hungary","Dublin, Ireland",10:30,13:00,2h 30m
+Ryanair,RY294,"Budapest, Hungary","Dublin, Ireland",16:00,18:30,2h 30m
+British Airways,BR730,"Budapest, Hungary","Dublin, Ireland",17:30,20:00,2h 30m
+KLM,KL975,"Budapest, Hungary","Dublin, Ireland",17:15,19:45,2h 30m
+EasyJet,EA721,"Budapest, Hungary","Brussels, Belgium",12:00,14:30,2h 30m
+KLM,KL947,"Budapest, Hungary","Brussels, Belgium",20:15,22:45,2h 30m
+EasyJet,EA482,"Budapest, Hungary","Brussels, Belgium",21:15,23:45,2h 30m
+Lufthansa,LU226,"Budapest, Hungary","Brussels, Belgium",07:30,10:00,2h 30m
+Lufthansa,LU714,"Budapest, Hungary","Bruges, Belgium",20:30,23:00,2h 30m
+Ryanair,RY558,"Budapest, Hungary","Bruges, Belgium",12:45,15:15,2h 30m
+EasyJet,EA860,"Budapest, Hungary","Bruges, Belgium",11:15,13:45,2h 30m
+Ryanair,RY656,"Budapest, Hungary","Bruges, Belgium",18:30,21:00,2h 30m
+EasyJet,EA148,"Budapest, Hungary","Amsterdam, Netherlands",11:00,13:30,2h 30m
+EasyJet,EA117,"Budapest, Hungary","Amsterdam, Netherlands",10:15,12:45,2h 30m
+Lufthansa,LU743,"Budapest, Hungary","Amsterdam, Netherlands",21:15,23:45,2h 30m
+EasyJet,EA691,"Budapest, Hungary","Amsterdam, Netherlands",20:45,23:15,2h 30m
+Lufthansa,LU992,"Budapest, Hungary","Rome, Italy",14:30,17:00,2h 30m
+KLM,KL904,"Budapest, Hungary","Rome, Italy",22:00,00:30,2h 30m
+EasyJet,EA730,"Budapest, Hungary","Rome, Italy",18:30,21:00,2h 30m
+British Airways,BR740,"Budapest, Hungary","Rome, Italy",14:00,16:30,2h 30m
+Lufthansa,LU328,"Budapest, Hungary","Florence, Italy",21:00,23:30,2h 30m
+EasyJet,EA337,"Budapest, Hungary","Florence, Italy",12:00,14:30,2h 30m
+KLM,KL332,"Budapest, Hungary","Florence, Italy",19:45,22:15,2h 30m
+KLM,KL971,"Budapest, Hungary","Florence, Italy",22:15,00:45,2h 30m
+KLM,KL572,"Budapest, Hungary","Venice, Italy",19:15,21:45,2h 30m
+British Airways,BR466,"Budapest, Hungary","Venice, Italy",19:00,21:30,2h 30m
+British Airways,BR575,"Budapest, Hungary","Venice, Italy",18:15,20:45,2h 30m
+EasyJet,EA455,"Budapest, Hungary","Venice, Italy",18:45,21:15,2h 30m
+KLM,KL882,"Budapest, Hungary","Milan, Italy",18:45,21:15,2h 30m
+Ryanair,RY128,"Budapest, Hungary","Milan, Italy",14:30,17:00,2h 30m
+EasyJet,EA189,"Budapest, Hungary","Milan, Italy",10:45,13:15,2h 30m
+EasyJet,EA725,"Budapest, Hungary","Milan, Italy",18:30,21:00,2h 30m
+British Airways,BR353,"Budapest, Hungary","Barcelona, Spain",09:45,12:15,2h 30m
+Lufthansa,LU115,"Budapest, Hungary","Barcelona, Spain",17:45,20:15,2h 30m
+EasyJet,EA742,"Budapest, Hungary","Barcelona, Spain",07:00,09:30,2h 30m
+KLM,KL436,"Budapest, Hungary","Barcelona, Spain",10:30,13:00,2h 30m
+Lufthansa,LU273,"Budapest, Hungary","Madrid, Spain",06:00,08:30,2h 30m
+KLM,KL252,"Budapest, Hungary","Madrid, Spain",22:00,00:30,2h 30m
+KLM,KL969,"Budapest, Hungary","Madrid, Spain",08:15,10:45,2h 30m
+Ryanair,RY124,"Budapest, Hungary","Madrid, Spain",09:45,12:15,2h 30m
+Lufthansa,LU157,"Budapest, Hungary","Lisbon, Portugal",20:15,22:45,2h 30m
+KLM,KL930,"Budapest, Hungary","Lisbon, Portugal",17:45,20:15,2h 30m
+British Airways,BR344,"Budapest, Hungary","Lisbon, Portugal",15:15,17:45,2h 30m
+KLM,KL210,"Budapest, Hungary","Lisbon, Portugal",07:15,09:45,2h 30m
+Lufthansa,LU738,"Budapest, Hungary","Zurich, Switzerland",10:30,13:00,2h 30m
+EasyJet,EA391,"Budapest, Hungary","Zurich, Switzerland",10:15,12:45,2h 30m
+British Airways,BR691,"Budapest, Hungary","Zurich, Switzerland",17:00,19:30,2h 30m
+KLM,KL762,"Budapest, Hungary","Zurich, Switzerland",20:30,23:00,2h 30m
+Lufthansa,LU680,"Budapest, Hungary","Berlin, Germany",22:00,00:30,2h 30m
+Lufthansa,LU906,"Budapest, Hungary","Berlin, Germany",13:00,15:30,2h 30m
+Lufthansa,LU581,"Budapest, Hungary","Berlin, Germany",20:45,23:15,2h 30m
+Ryanair,RY158,"Budapest, Hungary","Berlin, Germany",08:30,11:00,2h 30m
+Lufthansa,LU593,"Budapest, Hungary","Munich, Germany",11:15,13:45,2h 30m
+Ryanair,RY784,"Budapest, Hungary","Munich, Germany",06:00,08:30,2h 30m
+British Airways,BR344,"Budapest, Hungary","Munich, Germany",10:30,13:00,2h 30m
+KLM,KL125,"Budapest, Hungary","Munich, Germany",17:15,19:45,2h 30m
+KLM,KL709,"Budapest, Hungary","Paris, France",14:15,16:45,2h 30m
+Ryanair,RY840,"Budapest, Hungary","Paris, France",14:15,16:45,2h 30m
+Ryanair,RY497,"Budapest, Hungary","Paris, France",18:15,20:45,2h 30m
+Ryanair,RY865,"Budapest, Hungary","Paris, France",10:00,12:30,2h 30m
+EasyJet,EA461,"Budapest, Hungary","Istanbul, Turkey",13:30,16:00,2h 30m
+Lufthansa,LU407,"Budapest, Hungary","Istanbul, Turkey",12:00,14:30,2h 30m
+British Airways,BR558,"Budapest, Hungary","Istanbul, Turkey",17:30,20:00,2h 30m
+EasyJet,EA348,"Budapest, Hungary","Istanbul, Turkey",19:45,22:15,2h 30m
+Lufthansa,LU533,"Budapest, Hungary","Athens, Greece",08:00,10:30,2h 30m
+Lufthansa,LU502,"Budapest, Hungary","Athens, Greece",14:45,17:15,2h 30m
+Ryanair,RY202,"Budapest, Hungary","Athens, Greece",12:15,14:45,2h 30m
+EasyJet,EA738,"Budapest, Hungary","Athens, Greece",11:00,13:30,2h 30m
+Ryanair,RY770,"Budapest, Hungary","Oslo, Norway",09:30,12:00,2h 30m
+British Airways,BR759,"Budapest, Hungary","Oslo, Norway",16:30,19:00,2h 30m
+KLM,KL220,"Budapest, Hungary","Oslo, Norway",13:45,16:15,2h 30m
+KLM,KL524,"Budapest, Hungary","Oslo, Norway",07:00,09:30,2h 30m
+KLM,KL245,"Budapest, Hungary","Copenhagen, Denmark",15:15,17:45,2h 30m
+British Airways,BR411,"Budapest, Hungary","Copenhagen, Denmark",10:00,12:30,2h 30m
+Ryanair,RY588,"Budapest, Hungary","Copenhagen, Denmark",20:15,22:45,2h 30m
+EasyJet,EA933,"Budapest, Hungary","Copenhagen, Denmark",07:00,09:30,2h 30m
+EasyJet,EA946,"Budapest, Hungary","Krakow, Poland",08:45,11:15,2h 30m
+EasyJet,EA380,"Budapest, Hungary","Krakow, Poland",15:45,18:15,2h 30m
+KLM,KL209,"Budapest, Hungary","Krakow, Poland",10:30,13:00,2h 30m
+EasyJet,EA249,"Budapest, Hungary","Krakow, Poland",12:15,14:45,2h 30m
+KLM,KL465,"Budapest, Hungary","Vienna, Austria",21:00,23:30,2h 30m
+EasyJet,EA169,"Budapest, Hungary","Vienna, Austria",10:15,12:45,2h 30m
+Ryanair,RY438,"Budapest, Hungary","Vienna, Austria",11:30,14:00,2h 30m
+EasyJet,EA518,"Budapest, Hungary","Vienna, Austria",06:15,08:45,2h 30m
+KLM,KL575,"Budapest, Hungary","Prague, Czech Republic",22:30,01:00,2h 30m
+EasyJet,EA236,"Budapest, Hungary","Prague, Czech Republic",09:15,11:45,2h 30m
+British Airways,BR683,"Budapest, Hungary","Prague, Czech Republic",22:15,00:45,2h 30m
+Lufthansa,LU793,"Budapest, Hungary","Prague, Czech Republic",21:45,00:15,2h 30m
+EasyJet,EA879,"Krakow, Poland","London, UK",06:15,07:15,1h 0m
+EasyJet,EA364,"Krakow, Poland","London, UK",06:45,07:45,1h 0m
+Ryanair,RY579,"Krakow, Poland","London, UK",13:45,14:45,1h 0m
+EasyJet,EA442,"Krakow, Poland","London, UK",06:15,07:15,1h 0m
+KLM,KL560,"Krakow, Poland","Edinburgh, UK",20:45,23:15,2h 30m
+Ryanair,RY363,"Krakow, Poland","Edinburgh, UK",20:45,23:15,2h 30m
+Lufthansa,LU457,"Krakow, Poland","Edinburgh, UK",07:15,09:45,2h 30m
+KLM,KL344,"Krakow, Poland","Edinburgh, UK",06:15,08:45,2h 30m
+EasyJet,EA256,"Krakow, Poland","Dublin, Ireland",16:45,19:15,2h 30m
+KLM,KL944,"Krakow, Poland","Dublin, Ireland",13:30,16:00,2h 30m
+British Airways,BR881,"Krakow, Poland","Dublin, Ireland",15:15,17:45,2h 30m
+EasyJet,EA938,"Krakow, Poland","Dublin, Ireland",11:15,13:45,2h 30m
+Lufthansa,LU894,"Krakow, Poland","Brussels, Belgium",22:45,01:15,2h 30m
+EasyJet,EA852,"Krakow, Poland","Brussels, Belgium",11:15,13:45,2h 30m
+Lufthansa,LU928,"Krakow, Poland","Brussels, Belgium",14:30,17:00,2h 30m
+Ryanair,RY648,"Krakow, Poland","Brussels, Belgium",08:30,11:00,2h 30m
+Lufthansa,LU903,"Krakow, Poland","Bruges, Belgium",13:15,15:45,2h 30m
+Ryanair,RY760,"Krakow, Poland","Bruges, Belgium",11:45,14:15,2h 30m
+Lufthansa,LU778,"Krakow, Poland","Bruges, Belgium",18:45,21:15,2h 30m
+British Airways,BR843,"Krakow, Poland","Bruges, Belgium",07:45,10:15,2h 30m
+EasyJet,EA620,"Krakow, Poland","Amsterdam, Netherlands",07:00,09:30,2h 30m
+British Airways,BR407,"Krakow, Poland","Amsterdam, Netherlands",12:30,15:00,2h 30m
+Lufthansa,LU720,"Krakow, Poland","Amsterdam, Netherlands",22:30,01:00,2h 30m
+EasyJet,EA226,"Krakow, Poland","Amsterdam, Netherlands",12:45,15:15,2h 30m
+British Airways,BR822,"Krakow, Poland","Rome, Italy",12:45,15:15,2h 30m
+EasyJet,EA135,"Krakow, Poland","Rome, Italy",06:15,08:45,2h 30m
+Lufthansa,LU190,"Krakow, Poland","Rome, Italy",13:30,16:00,2h 30m
+EasyJet,EA471,"Krakow, Poland","Rome, Italy",10:15,12:45,2h 30m
+KLM,KL991,"Krakow, Poland","Florence, Italy",21:00,23:30,2h 30m
+KLM,KL376,"Krakow, Poland","Florence, Italy",13:45,16:15,2h 30m
+KLM,KL384,"Krakow, Poland","Florence, Italy",21:45,00:15,2h 30m
+EasyJet,EA124,"Krakow, Poland","Florence, Italy",11:00,13:30,2h 30m
+British Airways,BR795,"Krakow, Poland","Venice, Italy",19:00,21:30,2h 30m
+KLM,KL552,"Krakow, Poland","Venice, Italy",12:00,14:30,2h 30m
+British Airways,BR999,"Krakow, Poland","Venice, Italy",19:30,22:00,2h 30m
+EasyJet,EA542,"Krakow, Poland","Venice, Italy",18:15,20:45,2h 30m
+EasyJet,EA853,"Krakow, Poland","Milan, Italy",09:00,11:30,2h 30m
+KLM,KL246,"Krakow, Poland","Milan, Italy",19:15,21:45,2h 30m
+KLM,KL916,"Krakow, Poland","Milan, Italy",21:45,00:15,2h 30m
+Ryanair,RY245,"Krakow, Poland","Milan, Italy",11:15,13:45,2h 30m
+EasyJet,EA394,"Krakow, Poland","Barcelona, Spain",22:45,01:15,2h 30m
+Ryanair,RY130,"Krakow, Poland","Barcelona, Spain",22:45,01:15,2h 30m
+Ryanair,RY234,"Krakow, Poland","Barcelona, Spain",11:00,13:30,2h 30m
+KLM,KL117,"Krakow, Poland","Barcelona, Spain",13:45,16:15,2h 30m
+KLM,KL446,"Krakow, Poland","Madrid, Spain",17:15,19:45,2h 30m
+KLM,KL622,"Krakow, Poland","Madrid, Spain",15:15,17:45,2h 30m
+Ryanair,RY299,"Krakow, Poland","Madrid, Spain",20:45,23:15,2h 30m
+Ryanair,RY391,"Krakow, Poland","Madrid, Spain",14:15,16:45,2h 30m
+Ryanair,RY466,"Krakow, Poland","Lisbon, Portugal",18:15,20:45,2h 30m
+Lufthansa,LU992,"Krakow, Poland","Lisbon, Portugal",10:30,13:00,2h 30m
+Ryanair,RY547,"Krakow, Poland","Lisbon, Portugal",08:15,10:45,2h 30m
+Ryanair,RY395,"Krakow, Poland","Lisbon, Portugal",22:30,01:00,2h 30m
+KLM,KL598,"Krakow, Poland","Zurich, Switzerland",21:00,23:30,2h 30m
+EasyJet,EA854,"Krakow, Poland","Zurich, Switzerland",14:15,16:45,2h 30m
+Lufthansa,LU729,"Krakow, Poland","Zurich, Switzerland",09:00,11:30,2h 30m
+EasyJet,EA692,"Krakow, Poland","Zurich, Switzerland",15:00,17:30,2h 30m
+British Airways,BR112,"Krakow, Poland","Berlin, Germany",17:45,20:15,2h 30m
+Ryanair,RY881,"Krakow, Poland","Berlin, Germany",07:45,10:15,2h 30m
+EasyJet,EA666,"Krakow, Poland","Berlin, Germany",22:30,01:00,2h 30m
+KLM,KL543,"Krakow, Poland","Berlin, Germany",22:45,01:15,2h 30m
+EasyJet,EA232,"Krakow, Poland","Munich, Germany",07:30,10:00,2h 30m
+Ryanair,RY799,"Krakow, Poland","Munich, Germany",19:30,22:00,2h 30m
+Ryanair,RY292,"Krakow, Poland","Munich, Germany",22:00,00:30,2h 30m
+EasyJet,EA344,"Krakow, Poland","Munich, Germany",12:15,14:45,2h 30m
+Lufthansa,LU105,"Krakow, Poland","Paris, France",09:15,11:45,2h 30m
+Ryanair,RY419,"Krakow, Poland","Paris, France",18:30,21:00,2h 30m
+British Airways,BR593,"Krakow, Poland","Paris, France",17:15,19:45,2h 30m
+British Airways,BR925,"Krakow, Poland","Paris, France",09:45,12:15,2h 30m
+Ryanair,RY864,"Krakow, Poland","Istanbul, Turkey",21:45,00:15,2h 30m
+British Airways,BR405,"Krakow, Poland","Istanbul, Turkey",18:00,20:30,2h 30m
+EasyJet,EA375,"Krakow, Poland","Istanbul, Turkey",06:15,08:45,2h 30m
+Lufthansa,LU277,"Krakow, Poland","Istanbul, Turkey",21:30,00:00,2h 30m
+Ryanair,RY115,"Krakow, Poland","Athens, Greece",22:45,01:15,2h 30m
+Ryanair,RY126,"Krakow, Poland","Athens, Greece",19:30,22:00,2h 30m
+Ryanair,RY971,"Krakow, Poland","Athens, Greece",12:15,14:45,2h 30m
+Ryanair,RY267,"Krakow, Poland","Athens, Greece",22:00,00:30,2h 30m
+EasyJet,EA543,"Krakow, Poland","Oslo, Norway",18:15,20:45,2h 30m
+Ryanair,RY463,"Krakow, Poland","Oslo, Norway",06:15,08:45,2h 30m
+Ryanair,RY841,"Krakow, Poland","Oslo, Norway",09:45,12:15,2h 30m
+Lufthansa,LU459,"Krakow, Poland","Oslo, Norway",07:45,10:15,2h 30m
+EasyJet,EA713,"Krakow, Poland","Copenhagen, Denmark",09:15,11:45,2h 30m
+EasyJet,EA987,"Krakow, Poland","Copenhagen, Denmark",15:15,17:45,2h 30m
+Ryanair,RY423,"Krakow, Poland","Copenhagen, Denmark",17:00,19:30,2h 30m
+Ryanair,RY745,"Krakow, Poland","Copenhagen, Denmark",06:45,09:15,2h 30m
+EasyJet,EA710,"Krakow, Poland","Budapest, Hungary",16:30,19:00,2h 30m
+Lufthansa,LU539,"Krakow, Poland","Budapest, Hungary",17:45,20:15,2h 30m
+EasyJet,EA757,"Krakow, Poland","Budapest, Hungary",20:45,23:15,2h 30m
+Ryanair,RY972,"Krakow, Poland","Budapest, Hungary",20:45,23:15,2h 30m
+EasyJet,EA689,"Krakow, Poland","Vienna, Austria",19:00,21:30,2h 30m
+British Airways,BR522,"Krakow, Poland","Vienna, Austria",19:15,21:45,2h 30m
+British Airways,BR541,"Krakow, Poland","Vienna, Austria",21:30,00:00,2h 30m
+KLM,KL507,"Krakow, Poland","Vienna, Austria",20:30,23:00,2h 30m
+British Airways,BR481,"Krakow, Poland","Prague, Czech Republic",09:45,12:15,2h 30m
+British Airways,BR384,"Krakow, Poland","Prague, Czech Republic",21:15,23:45,2h 30m
+Ryanair,RY156,"Krakow, Poland","Prague, Czech Republic",07:15,09:45,2h 30m
+British Airways,BR434,"Krakow, Poland","Prague, Czech Republic",08:00,10:30,2h 30m
+British Airways,BR454,"Vienna, Austria","London, UK",22:45,23:45,1h 0m
+KLM,KL319,"Vienna, Austria","London, UK",12:45,13:45,1h 0m
+KLM,KL945,"Vienna, Austria","London, UK",08:30,09:30,1h 0m
+British Airways,BR266,"Vienna, Austria","London, UK",17:30,18:30,1h 0m
+British Airways,BR537,"Vienna, Austria","Edinburgh, UK",10:15,12:45,2h 30m
+Ryanair,RY757,"Vienna, Austria","Edinburgh, UK",11:00,13:30,2h 30m
+Ryanair,RY566,"Vienna, Austria","Edinburgh, UK",15:00,17:30,2h 30m
+KLM,KL238,"Vienna, Austria","Edinburgh, UK",17:15,19:45,2h 30m
+Ryanair,RY445,"Vienna, Austria","Dublin, Ireland",20:45,23:15,2h 30m
+British Airways,BR488,"Vienna, Austria","Dublin, Ireland",20:00,22:30,2h 30m
+EasyJet,EA535,"Vienna, Austria","Dublin, Ireland",09:30,12:00,2h 30m
+Lufthansa,LU182,"Vienna, Austria","Dublin, Ireland",21:30,00:00,2h 30m
+Ryanair,RY175,"Vienna, Austria","Brussels, Belgium",09:15,11:45,2h 30m
+British Airways,BR426,"Vienna, Austria","Brussels, Belgium",17:30,20:00,2h 30m
+KLM,KL347,"Vienna, Austria","Brussels, Belgium",11:45,14:15,2h 30m
+Ryanair,RY126,"Vienna, Austria","Brussels, Belgium",13:00,15:30,2h 30m
+British Airways,BR178,"Vienna, Austria","Bruges, Belgium",20:15,22:45,2h 30m
+Ryanair,RY304,"Vienna, Austria","Bruges, Belgium",06:45,09:15,2h 30m
+Lufthansa,LU391,"Vienna, Austria","Bruges, Belgium",10:45,13:15,2h 30m
+Ryanair,RY216,"Vienna, Austria","Bruges, Belgium",06:15,08:45,2h 30m
+Lufthansa,LU564,"Vienna, Austria","Amsterdam, Netherlands",08:45,11:15,2h 30m
+British Airways,BR697,"Vienna, Austria","Amsterdam, Netherlands",08:00,10:30,2h 30m
+British Airways,BR715,"Vienna, Austria","Amsterdam, Netherlands",15:30,18:00,2h 30m
+Ryanair,RY126,"Vienna, Austria","Amsterdam, Netherlands",06:00,08:30,2h 30m
+Lufthansa,LU783,"Vienna, Austria","Rome, Italy",16:30,19:00,2h 30m
+EasyJet,EA559,"Vienna, Austria","Rome, Italy",18:15,20:45,2h 30m
+EasyJet,EA697,"Vienna, Austria","Rome, Italy",12:30,15:00,2h 30m
+British Airways,BR220,"Vienna, Austria","Rome, Italy",14:45,17:15,2h 30m
+KLM,KL314,"Vienna, Austria","Florence, Italy",10:45,13:15,2h 30m
+Ryanair,RY604,"Vienna, Austria","Florence, Italy",20:30,23:00,2h 30m
+EasyJet,EA983,"Vienna, Austria","Florence, Italy",15:15,17:45,2h 30m
+Lufthansa,LU374,"Vienna, Austria","Florence, Italy",11:45,14:15,2h 30m
+British Airways,BR314,"Vienna, Austria","Venice, Italy",13:00,15:30,2h 30m
+EasyJet,EA687,"Vienna, Austria","Venice, Italy",06:00,08:30,2h 30m
+British Airways,BR753,"Vienna, Austria","Venice, Italy",11:00,13:30,2h 30m
+British Airways,BR815,"Vienna, Austria","Venice, Italy",10:00,12:30,2h 30m
+British Airways,BR293,"Vienna, Austria","Milan, Italy",14:45,17:15,2h 30m
+KLM,KL877,"Vienna, Austria","Milan, Italy",07:45,10:15,2h 30m
+EasyJet,EA450,"Vienna, Austria","Milan, Italy",14:15,16:45,2h 30m
+Lufthansa,LU840,"Vienna, Austria","Milan, Italy",18:00,20:30,2h 30m
+British Airways,BR351,"Vienna, Austria","Barcelona, Spain",19:45,22:15,2h 30m
+British Airways,BR645,"Vienna, Austria","Barcelona, Spain",10:45,13:15,2h 30m
+Lufthansa,LU277,"Vienna, Austria","Barcelona, Spain",10:15,12:45,2h 30m
+Ryanair,RY205,"Vienna, Austria","Barcelona, Spain",13:15,15:45,2h 30m
+British Airways,BR242,"Vienna, Austria","Madrid, Spain",09:45,12:15,2h 30m
+KLM,KL363,"Vienna, Austria","Madrid, Spain",16:00,18:30,2h 30m
+Ryanair,RY156,"Vienna, Austria","Madrid, Spain",15:30,18:00,2h 30m
+KLM,KL341,"Vienna, Austria","Madrid, Spain",17:00,19:30,2h 30m
+EasyJet,EA357,"Vienna, Austria","Lisbon, Portugal",21:45,00:15,2h 30m
+Lufthansa,LU797,"Vienna, Austria","Lisbon, Portugal",15:45,18:15,2h 30m
+Ryanair,RY219,"Vienna, Austria","Lisbon, Portugal",17:45,20:15,2h 30m
+EasyJet,EA700,"Vienna, Austria","Lisbon, Portugal",09:00,11:30,2h 30m
+KLM,KL447,"Vienna, Austria","Zurich, Switzerland",10:15,12:45,2h 30m
+Ryanair,RY600,"Vienna, Austria","Zurich, Switzerland",09:00,11:30,2h 30m
+Ryanair,RY281,"Vienna, Austria","Zurich, Switzerland",12:15,14:45,2h 30m
+British Airways,BR215,"Vienna, Austria","Zurich, Switzerland",22:45,01:15,2h 30m
+Lufthansa,LU499,"Vienna, Austria","Berlin, Germany",06:45,09:15,2h 30m
+KLM,KL416,"Vienna, Austria","Berlin, Germany",06:30,09:00,2h 30m
+KLM,KL468,"Vienna, Austria","Berlin, Germany",17:15,19:45,2h 30m
+EasyJet,EA189,"Vienna, Austria","Berlin, Germany",22:45,01:15,2h 30m
+British Airways,BR208,"Vienna, Austria","Munich, Germany",15:30,18:00,2h 30m
+British Airways,BR843,"Vienna, Austria","Munich, Germany",09:45,12:15,2h 30m
+EasyJet,EA601,"Vienna, Austria","Munich, Germany",15:00,17:30,2h 30m
+EasyJet,EA602,"Vienna, Austria","Munich, Germany",14:30,17:00,2h 30m
+British Airways,BR529,"Vienna, Austria","Paris, France",11:15,13:45,2h 30m
+British Airways,BR858,"Vienna, Austria","Paris, France",15:45,18:15,2h 30m
+KLM,KL411,"Vienna, Austria","Paris, France",10:30,13:00,2h 30m
+EasyJet,EA252,"Vienna, Austria","Paris, France",20:30,23:00,2h 30m
+British Airways,BR165,"Vienna, Austria","Istanbul, Turkey",09:15,11:45,2h 30m
+Ryanair,RY855,"Vienna, Austria","Istanbul, Turkey",13:15,15:45,2h 30m
+British Airways,BR814,"Vienna, Austria","Istanbul, Turkey",06:00,08:30,2h 30m
+KLM,KL147,"Vienna, Austria","Istanbul, Turkey",13:30,16:00,2h 30m
+Lufthansa,LU905,"Vienna, Austria","Athens, Greece",11:30,14:00,2h 30m
+EasyJet,EA590,"Vienna, Austria","Athens, Greece",09:45,12:15,2h 30m
+Lufthansa,LU648,"Vienna, Austria","Athens, Greece",19:30,22:00,2h 30m
+British Airways,BR139,"Vienna, Austria","Athens, Greece",14:15,16:45,2h 30m
+British Airways,BR378,"Vienna, Austria","Oslo, Norway",14:45,17:15,2h 30m
+Ryanair,RY172,"Vienna, Austria","Oslo, Norway",15:30,18:00,2h 30m
+Ryanair,RY736,"Vienna, Austria","Oslo, Norway",10:00,12:30,2h 30m
+KLM,KL532,"Vienna, Austria","Oslo, Norway",22:45,01:15,2h 30m
+EasyJet,EA959,"Vienna, Austria","Copenhagen, Denmark",08:15,10:45,2h 30m
+Lufthansa,LU252,"Vienna, Austria","Copenhagen, Denmark",13:15,15:45,2h 30m
+KLM,KL153,"Vienna, Austria","Copenhagen, Denmark",18:00,20:30,2h 30m
+Ryanair,RY376,"Vienna, Austria","Copenhagen, Denmark",21:45,00:15,2h 30m
+Ryanair,RY201,"Vienna, Austria","Budapest, Hungary",07:45,10:15,2h 30m
+EasyJet,EA723,"Vienna, Austria","Budapest, Hungary",14:15,16:45,2h 30m
+KLM,KL123,"Vienna, Austria","Budapest, Hungary",11:15,13:45,2h 30m
+British Airways,BR380,"Vienna, Austria","Budapest, Hungary",17:15,19:45,2h 30m
+Lufthansa,LU107,"Vienna, Austria","Krakow, Poland",09:00,11:30,2h 30m
+Lufthansa,LU214,"Vienna, Austria","Krakow, Poland",21:45,00:15,2h 30m
+EasyJet,EA947,"Vienna, Austria","Krakow, Poland",14:45,17:15,2h 30m
+EasyJet,EA150,"Vienna, Austria","Krakow, Poland",06:45,09:15,2h 30m
+Lufthansa,LU965,"Vienna, Austria","Prague, Czech Republic",15:30,18:00,2h 30m
+Ryanair,RY531,"Vienna, Austria","Prague, Czech Republic",20:00,22:30,2h 30m
+EasyJet,EA798,"Vienna, Austria","Prague, Czech Republic",15:45,18:15,2h 30m
+KLM,KL409,"Vienna, Austria","Prague, Czech Republic",09:30,12:00,2h 30m
+Lufthansa,LU961,"Prague, Czech Republic","London, UK",20:00,21:00,1h 0m
+EasyJet,EA581,"Prague, Czech Republic","London, UK",15:15,16:15,1h 0m
+Ryanair,RY842,"Prague, Czech Republic","London, UK",06:30,07:30,1h 0m
+KLM,KL366,"Prague, Czech Republic","London, UK",14:15,15:15,1h 0m
+Lufthansa,LU700,"Prague, Czech Republic","Edinburgh, UK",22:30,01:00,2h 30m
+EasyJet,EA700,"Prague, Czech Republic","Edinburgh, UK",18:45,21:15,2h 30m
+EasyJet,EA368,"Prague, Czech Republic","Edinburgh, UK",11:15,13:45,2h 30m
+Lufthansa,LU564,"Prague, Czech Republic","Edinburgh, UK",22:30,01:00,2h 30m
+KLM,KL482,"Prague, Czech Republic","Dublin, Ireland",20:45,23:15,2h 30m
+Ryanair,RY910,"Prague, Czech Republic","Dublin, Ireland",19:30,22:00,2h 30m
+Ryanair,RY335,"Prague, Czech Republic","Dublin, Ireland",15:00,17:30,2h 30m
+Ryanair,RY340,"Prague, Czech Republic","Dublin, Ireland",16:45,19:15,2h 30m
+EasyJet,EA782,"Prague, Czech Republic","Brussels, Belgium",21:30,00:00,2h 30m
+Ryanair,RY529,"Prague, Czech Republic","Brussels, Belgium",15:15,17:45,2h 30m
+British Airways,BR351,"Prague, Czech Republic","Brussels, Belgium",22:45,01:15,2h 30m
+Ryanair,RY769,"Prague, Czech Republic","Brussels, Belgium",15:15,17:45,2h 30m
+KLM,KL591,"Prague, Czech Republic","Bruges, Belgium",21:15,23:45,2h 30m
+Ryanair,RY144,"Prague, Czech Republic","Bruges, Belgium",22:45,01:15,2h 30m
+British Airways,BR148,"Prague, Czech Republic","Bruges, Belgium",08:30,11:00,2h 30m
+British Airways,BR813,"Prague, Czech Republic","Bruges, Belgium",19:15,21:45,2h 30m
+Ryanair,RY314,"Prague, Czech Republic","Amsterdam, Netherlands",08:15,10:45,2h 30m
+KLM,KL277,"Prague, Czech Republic","Amsterdam, Netherlands",17:15,19:45,2h 30m
+KLM,KL987,"Prague, Czech Republic","Amsterdam, Netherlands",09:00,11:30,2h 30m
+British Airways,BR872,"Prague, Czech Republic","Amsterdam, Netherlands",12:15,14:45,2h 30m
+KLM,KL841,"Prague, Czech Republic","Rome, Italy",07:00,09:30,2h 30m
+Lufthansa,LU783,"Prague, Czech Republic","Rome, Italy",17:45,20:15,2h 30m
+Lufthansa,LU364,"Prague, Czech Republic","Rome, Italy",12:45,15:15,2h 30m
+KLM,KL177,"Prague, Czech Republic","Rome, Italy",21:15,23:45,2h 30m
+Ryanair,RY365,"Prague, Czech Republic","Florence, Italy",16:15,18:45,2h 30m
+Lufthansa,LU310,"Prague, Czech Republic","Florence, Italy",09:15,11:45,2h 30m
+Ryanair,RY925,"Prague, Czech Republic","Florence, Italy",22:00,00:30,2h 30m
+Ryanair,RY477,"Prague, Czech Republic","Florence, Italy",15:45,18:15,2h 30m
+Lufthansa,LU189,"Prague, Czech Republic","Venice, Italy",08:00,10:30,2h 30m
+KLM,KL190,"Prague, Czech Republic","Venice, Italy",22:00,00:30,2h 30m
+British Airways,BR880,"Prague, Czech Republic","Venice, Italy",06:30,09:00,2h 30m
+Lufthansa,LU124,"Prague, Czech Republic","Venice, Italy",14:30,17:00,2h 30m
+EasyJet,EA958,"Prague, Czech Republic","Milan, Italy",11:00,13:30,2h 30m
+British Airways,BR257,"Prague, Czech Republic","Milan, Italy",10:45,13:15,2h 30m
+EasyJet,EA108,"Prague, Czech Republic","Milan, Italy",14:30,17:00,2h 30m
+EasyJet,EA643,"Prague, Czech Republic","Milan, Italy",12:30,15:00,2h 30m
+Ryanair,RY852,"Prague, Czech Republic","Barcelona, Spain",06:30,09:00,2h 30m
+British Airways,BR414,"Prague, Czech Republic","Barcelona, Spain",14:45,17:15,2h 30m
+British Airways,BR275,"Prague, Czech Republic","Barcelona, Spain",20:15,22:45,2h 30m
+Lufthansa,LU253,"Prague, Czech Republic","Barcelona, Spain",12:45,15:15,2h 30m
+Ryanair,RY779,"Prague, Czech Republic","Madrid, Spain",12:15,14:45,2h 30m
+KLM,KL347,"Prague, Czech Republic","Madrid, Spain",20:15,22:45,2h 30m
+British Airways,BR254,"Prague, Czech Republic","Madrid, Spain",22:30,01:00,2h 30m
+British Airways,BR237,"Prague, Czech Republic","Madrid, Spain",20:00,22:30,2h 30m
+EasyJet,EA948,"Prague, Czech Republic","Lisbon, Portugal",21:00,23:30,2h 30m
+Lufthansa,LU598,"Prague, Czech Republic","Lisbon, Portugal",15:30,18:00,2h 30m
+EasyJet,EA574,"Prague, Czech Republic","Lisbon, Portugal",21:30,00:00,2h 30m
+Ryanair,RY121,"Prague, Czech Republic","Lisbon, Portugal",21:45,00:15,2h 30m
+EasyJet,EA427,"Prague, Czech Republic","Zurich, Switzerland",21:30,00:00,2h 30m
+Lufthansa,LU829,"Prague, Czech Republic","Zurich, Switzerland",22:45,01:15,2h 30m
+Ryanair,RY724,"Prague, Czech Republic","Zurich, Switzerland",10:30,13:00,2h 30m
+Lufthansa,LU559,"Prague, Czech Republic","Zurich, Switzerland",15:15,17:45,2h 30m
+Ryanair,RY872,"Prague, Czech Republic","Berlin, Germany",09:45,12:15,2h 30m
+Ryanair,RY130,"Prague, Czech Republic","Berlin, Germany",08:30,11:00,2h 30m
+EasyJet,EA767,"Prague, Czech Republic","Berlin, Germany",06:00,08:30,2h 30m
+KLM,KL820,"Prague, Czech Republic","Berlin, Germany",17:45,20:15,2h 30m
+Ryanair,RY699,"Prague, Czech Republic","Munich, Germany",15:30,18:00,2h 30m
+British Airways,BR893,"Prague, Czech Republic","Munich, Germany",10:00,12:30,2h 30m
+British Airways,BR466,"Prague, Czech Republic","Munich, Germany",15:00,17:30,2h 30m
+British Airways,BR631,"Prague, Czech Republic","Munich, Germany",17:00,19:30,2h 30m
+Lufthansa,LU125,"Prague, Czech Republic","Paris, France",11:30,14:00,2h 30m
+EasyJet,EA493,"Prague, Czech Republic","Paris, France",21:00,23:30,2h 30m
+British Airways,BR436,"Prague, Czech Republic","Paris, France",17:00,19:30,2h 30m
+Lufthansa,LU147,"Prague, Czech Republic","Paris, France",20:45,23:15,2h 30m
+British Airways,BR540,"Prague, Czech Republic","Istanbul, Turkey",08:30,11:00,2h 30m
+Ryanair,RY404,"Prague, Czech Republic","Istanbul, Turkey",12:15,14:45,2h 30m
+Lufthansa,LU942,"Prague, Czech Republic","Istanbul, Turkey",16:45,19:15,2h 30m
+EasyJet,EA837,"Prague, Czech Republic","Istanbul, Turkey",16:00,18:30,2h 30m
+KLM,KL739,"Prague, Czech Republic","Athens, Greece",07:00,09:30,2h 30m
+KLM,KL969,"Prague, Czech Republic","Athens, Greece",19:30,22:00,2h 30m
+British Airways,BR638,"Prague, Czech Republic","Athens, Greece",06:45,09:15,2h 30m
+British Airways,BR290,"Prague, Czech Republic","Athens, Greece",14:30,17:00,2h 30m
+KLM,KL365,"Prague, Czech Republic","Oslo, Norway",11:30,14:00,2h 30m
+EasyJet,EA174,"Prague, Czech Republic","Oslo, Norway",22:30,01:00,2h 30m
+British Airways,BR127,"Prague, Czech Republic","Oslo, Norway",18:00,20:30,2h 30m
+British Airways,BR930,"Prague, Czech Republic","Oslo, Norway",17:00,19:30,2h 30m
+EasyJet,EA771,"Prague, Czech Republic","Copenhagen, Denmark",09:30,12:00,2h 30m
+British Airways,BR952,"Prague, Czech Republic","Copenhagen, Denmark",15:00,17:30,2h 30m
+Lufthansa,LU281,"Prague, Czech Republic","Copenhagen, Denmark",18:00,20:30,2h 30m
+Ryanair,RY891,"Prague, Czech Republic","Copenhagen, Denmark",08:45,11:15,2h 30m
+Lufthansa,LU376,"Prague, Czech Republic","Budapest, Hungary",09:15,11:45,2h 30m
+Ryanair,RY841,"Prague, Czech Republic","Budapest, Hungary",11:00,13:30,2h 30m
+Lufthansa,LU495,"Prague, Czech Republic","Budapest, Hungary",07:45,10:15,2h 30m
+Ryanair,RY684,"Prague, Czech Republic","Budapest, Hungary",06:45,09:15,2h 30m
+Ryanair,RY307,"Prague, Czech Republic","Krakow, Poland",12:15,14:45,2h 30m
+KLM,KL822,"Prague, Czech Republic","Krakow, Poland",08:15,10:45,2h 30m
+EasyJet,EA698,"Prague, Czech Republic","Krakow, Poland",17:15,19:45,2h 30m
+Lufthansa,LU238,"Prague, Czech Republic","Krakow, Poland",13:00,15:30,2h 30m
+KLM,KL698,"Prague, Czech Republic","Vienna, Austria",14:15,16:45,2h 30m
+KLM,KL421,"Prague, Czech Republic","Vienna, Austria",11:30,14:00,2h 30m
+KLM,KL558,"Prague, Czech Republic","Vienna, Austria",22:45,01:15,2h 30m
+Ryanair,RY362,"Prague, Czech Republic","Vienna, Austria",16:15,18:45,2h 30m

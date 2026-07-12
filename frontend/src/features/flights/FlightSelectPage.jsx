@@ -5,6 +5,14 @@ import ErrorMessage from '../../components/ErrorMessage'
 import { searchFlights } from './flightsApi'
 import { useTripDraft } from '../trips/useTripDraft'
 
+// Helper to Capitalize first letter of words
+const capitalize = (str) => {
+  if (!str) return '';
+  return str.split(',').map(part => 
+    part.trim().charAt(0).toUpperCase() + part.trim().slice(1).toLowerCase()
+  ).join(', ');
+};
+
 function airlineCode(flightNumber) {
   return (flightNumber || '').split(' ')[0]
 }
@@ -55,7 +63,9 @@ export default function FlightSelectPage() {
 
       <div>
         <h1 className="text-2xl font-bold text-gray-900">
-          {isOutbound ? 'Departure → Destination' : 'Destination → Departure'}
+          {isOutbound 
+            ? `${capitalize(draft.origin)} → ${capitalize(draft.destination)}`
+            : `${capitalize(draft.destination)} → ${capitalize(draft.origin)}`}
         </h1>
         <p className="text-gray-500 text-sm mt-1">
           {isOutbound ? 'Outbound Flight' : 'Return Flight'} &middot; {date || 'No date selected'}

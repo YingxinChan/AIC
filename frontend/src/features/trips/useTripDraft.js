@@ -3,7 +3,7 @@ import { useState } from 'react'
 const STORAGE_KEY = 'tripDraft'
 
 const emptyDraft = {
-  destination: 'London',
+  destination: '',
   origin: '',
   startDate: '',
   endDate: '',

@@ -73,7 +73,7 @@ export default function NewTripPage() {
             <input
               id="origin"
               type="text"
-              value={draft.origin}
+              value={draft.origin || ''}
               onChange={(e) => updateDraft({ origin: e.target.value })}
               placeholder="e.g. London, UK"
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
@@ -87,9 +87,9 @@ export default function NewTripPage() {
             <input
               id="destination"
               type="text"
-              value={draft.destination}
+              value={draft.destination || ''}
               onChange={(e) => updateDraft({ destination: e.target.value })}
-              placeholder="e.g. Tokyo, Japan"
+              placeholder="e.g. Berlin, Germany"
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
               required
             />
@@ -104,7 +104,7 @@ export default function NewTripPage() {
             <input
               id="date-depart"
               type="date"
-              value={draft.startDate}
+              value={draft.startDate || ''}
               onChange={(e) => updateDraft({ startDate: e.target.value })}
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
               required
@@ -117,7 +117,7 @@ export default function NewTripPage() {
             <input
               id="date-return"
               type="date"
-              value={draft.endDate}
+              value={draft.endDate || ''}
               onChange={(e) => updateDraft({ endDate: e.target.value })}
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
               required
@@ -133,7 +133,7 @@ export default function NewTripPage() {
             <input
               id="flight-number"
               type="text"
-              value={draft.flightNumber}
+              value={draft.flightNumber || ''}
               onChange={(e) => updateDraft({ flightNumber: e.target.value })}
               placeholder="e.g. JL 712"
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
@@ -183,7 +183,7 @@ export default function NewTripPage() {
           <input
             id="hotel"
             type="text"
-            value={draft.hotelAddress}
+            value={draft.hotelAddress || ''}
             onChange={(e) => updateDraft({ hotelAddress: e.target.value })}
             placeholder="e.g. Park Hyatt Tokyo"
             className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
@@ -196,7 +196,7 @@ export default function NewTripPage() {
           </label>
           <textarea
             id="places-to-visit"
-            value={draft.placesToVisit}
+            value={draft.placesToVisit || ''}
             onChange={(e) => updateDraft({ placesToVisit: e.target.value })}
             placeholder="e.g. Eiffel Tower, Louvre Museum..."
             rows={3}

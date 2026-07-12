@@ -19,3 +19,6 @@ lightgbm
 pandas
 numpy
 requests
+
+Flask==3.0.0
+flask-cors==4.0.0
