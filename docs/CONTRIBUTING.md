@@ -110,18 +110,37 @@ All endpoints require authentication (JWT cookie). Call `POST /api/auth/login` f
 
 | Method | Path | Body | Response |
 |--------|------|------|----------|
-| GET | `/api/trips/` | — | list of `{id, name, start_date, end_date}` |
-| POST | `/api/trips/` | `{name, start_date, end_date}` | `{id, name, start_date, end_date}` |
-| GET | `/api/trips/{id}` | — | `{id, name, start_date, end_date}` or 404 |
-| DELETE | `/api/trips/{id}` | — | 204 or 403 |
+| GET | `/api/trips/` | — | list of trip objects |
+| POST | `/api/trips/` | `{name, destination?, start_date, end_date, original_plan?, hotel_address?}` — all optional fields default to `""` (`destination` defaults to `"London"`) | `{id}` |
+| GET | `/api/trips/{id}` | — | trip object or 404 |
+| DELETE | `/api/trips/{id}` | — | 204 or 404 |
+| PATCH | `/api/trips/{id}/flight` | `{leg: "arrival"\|"departure", flight_number, airline, time}` | trip object |
+
+Trip object shape:
+```json
+{
+  "id": 1, "user_id": 5, "name": "Summer Trip", "destination": "London",
+  "start_date": "2026-08-01", "end_date": "2026-08-07", "created_at": "...",
+  "arrival_flight_number": "", "arrival_airline": "", "arrival_time": "",
+  "departure_flight_number": "", "departure_airline": "", "departure_time": "",
+  "original_plan": "", "hotel_address": ""
+}
+```
+Flight fields are empty strings until `PATCH .../flight` is called for that leg — check with `if (trip.arrival_time)`, not `!= null`.
+
+`original_plan` is free-text (optional, no UI for it yet) — if a trip has one set, `POST .../itinerary/generate` tells Claude to work around the traveler's existing ideas rather than ignoring them. No form currently sends this field; it's there for whenever the third "your own plan" box gets built.
+
+`hotel_address` is also free-text, also no UI for it yet (the "insert hotel" box). When set, `POST .../itinerary/generate` tells Claude each day's route should start/end near it rather than requiring backtracking. Prompt order when multiple fields are set: day count/destination → arrival/departure time → hotel address → original plan.
+
+**Recommended frontend flow:** after `POST /api/trips/`, navigate to `/trips/{id}/flights` (not straight to `/trips/{id}`) so the user picks their flight before landing on the itinerary page. `FlightsPage` already saves the flight via the endpoint above and navigates to `/trips/{id}` itself once "Select" is clicked — nothing else needs to wire that hop.
 
 ### Flights
 
 | Method | Path | Query params | Response |
 |--------|------|-------------|----------|
-| GET | `/api/flights/search` | `origin`, `departure`, `return_date` | list of flight objects |
+| GET | `/api/flights/search` | `origin`, `departure`, `return_date`, `direction?` (`"arrival"` default \| `"departure"`), `destination?` (default `"London"`) | `{flights: [...]}` |
 
-Each flight object: `{airline, flight_number, departure_city, departure_time, arrival_time, duration, price_gbp}`
+Each flight object: `{airline, flight_number, departure_city, departure_time, arrival_time, duration}` — when `direction=departure`, also includes `destination_city` (the mock data is reframed as originating from `destination` rather than modeling a separate return-flight dataset).
 
 ### Weather
 
@@ -133,9 +152,13 @@ Each flight object: `{airline, flight_number, departure_city, departure_time, ar
 
 | Method | Path | Body | Response |
 |--------|------|------|----------|
-| GET | `/api/trips/{id}/itinerary/` | — | list of activities |
-| POST | `/api/trips/{id}/itinerary/generate` | — | generated itinerary |
-| PATCH | `/api/trips/{id}/itinerary/activities/{aid}/swap` | `{swap_to}` | updated activity |
+| GET | `/api/trips/{id}/itinerary/` | — | `{status: "not_generated"}` or `{days: [{date, activities: [...]}]}` |
+| POST | `/api/trips/{id}/itinerary/generate` | — | `{status: "not_configured"\|"error", message}` (Anthropic key missing/failed) or `{days: [...]}` on success — same shape as GET |
+| PATCH | `/api/trips/{id}/itinerary/activities/{aid}/swap` | `{swap_to}` | `{status: "not_implemented", data: {}}` — still a stub |
+
+Each activity: `{id, name, type: "indoor"|"outdoor", time_slot, location, description, is_swapped}`.
+
+Generation calls Claude Haiku directly and synchronously (no Celery job/polling — see `docs/HOW_IT_WORKS.md`), factoring in `arrival_time`/`departure_time` from the trip if they've been set via the flight-select endpoint.
 
 ### Notifications
 

@@ -7,7 +7,7 @@ class Activity(Base):
     __tablename__ = "activities"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    trip_id: Mapped[int] = mapped_column(ForeignKey("trips.id"), nullable=False)
+    trip_id: Mapped[int] = mapped_column(ForeignKey("trips.id", ondelete="CASCADE"), nullable=False)
     day_date: Mapped[date] = mapped_column(Date, nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     type: Mapped[str] = mapped_column(String(10), nullable=False)  # "indoor" | "outdoor"

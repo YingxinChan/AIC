@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { Plane } from 'lucide-react'
 import { login } from './authApi'
 import { useAuth } from './useAuth'
 import ErrorMessage from '../../components/ErrorMessage'
@@ -28,8 +29,15 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Sign in</h1>
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
+      <div className="flex flex-col items-center text-center mb-6">
+        <div className="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center mb-4">
+          <Plane size={22} className="text-white" />
+        </div>
+        <h1 className="text-xl font-bold text-gray-900">Welcome back</h1>
+        <p className="text-sm text-gray-500 mt-1">Sign in to plan your weather-synced itinerary</p>
+      </div>
+
       {error && <ErrorMessage message={error} />}
       <form className="space-y-4" onSubmit={handleSubmit}>
         <div>
@@ -43,7 +51,7 @@ export default function LoginPage() {
             required
             value={email}
             onChange={e => setEmail(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             placeholder="you@example.com"
           />
         </div>
@@ -58,21 +66,21 @@ export default function LoginPage() {
             required
             value={password}
             onChange={e => setPassword(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             placeholder="••••••••"
           />
         </div>
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-gray-900 text-white py-2 rounded-lg text-sm font-medium hover:bg-gray-700 disabled:opacity-50"
+          className="w-full bg-indigo-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50"
         >
-          {loading ? 'Signing in…' : 'Sign in'}
+          {loading ? 'Signing in…' : 'Login'}
         </button>
       </form>
       <p className="text-sm text-gray-500 mt-4 text-center">
-        No account?{' '}
-        <Link to="/register" className="text-gray-900 underline">
+        Don't have an account?{' '}
+        <Link to="/register" className="text-indigo-600 font-medium hover:underline">
           Register
         </Link>
       </p>
