@@ -8,6 +8,7 @@
     "humidity",
     "pressure",
     "wind",
-    "wind_dir",
+    "wind_dir_cos",
+    "wind_dir_sin",
     "radiation"
 ]

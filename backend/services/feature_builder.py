@@ -47,6 +47,10 @@ def build_features(forecast):
     df["day_sin"] = np.sin(2 * np.pi * df["day_of_year"] / 365)
     df["day_cos"] = np.cos(2 * np.pi * df["day_of_year"] / 365)
 
+    radians = np.radians(df["wind_dir"])
+    df["wind_dir_sin"] = np.sin(radians)
+    df["wind_dir_cos"] = np.cos(radians)
+
     df = df.merge(
         daily_hourly,
         on="date",
