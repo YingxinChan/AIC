@@ -113,10 +113,6 @@ def fetch_open_meteo(lat: float, lon: float, start_year: int, end_year: int):
 
     return daily_df
 
-def fetch_owm_historical(lat: float, lon: float, start_year: int, end_year: int):
-    # STUB
-    raise NotImplementedError("fetch_owm_historical not yet implemented")
-
 if __name__ == "__main__":
     df = fetch_open_meteo(
         lat=51.5074,

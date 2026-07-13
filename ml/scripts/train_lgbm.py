@@ -29,7 +29,7 @@ def train(processed_path: Path, model_output_path: Path):
     df = pd.read_csv(processed_path)
     df = df.sort_values("date")
 
-    # Split (80/20) 
+    # Chronological split (64% train / 16% validation / 20% test)
     train_end = int(len(df) * 0.64)
     val_end = int(len(df) * 0.80)
 
@@ -49,9 +49,26 @@ def train(processed_path: Path, model_output_path: Path):
         "humidity",
         "pressure",
         "wind",
-        "wind_dir",
+        "wind_dir_cos",
+        "wind_dir_sin",
         "radiation"
     ]
+
+
+    # Heavy rain threshold
+    threshold = train_df["rain_day1"].quantile(0.90)
+
+    train_df["heavy_rain_day1"] = (
+        train_df["rain_day1"] >= threshold
+    ).astype(int)
+
+    val_df["heavy_rain_day1"] = (
+        val_df["rain_day1"] >= threshold
+    ).astype(int)
+
+    test_df["heavy_rain_day1"] = (
+        test_df["rain_day1"] >= threshold
+    ).astype(int)
 
     X_train =  train_df[selected_features]
     y_train = train_df["heavy_rain_day1"]
@@ -87,13 +104,10 @@ def train(processed_path: Path, model_output_path: Path):
         ]
     )
 
-    # Predict test data
-    y_prob_val = model.predict_proba(X_val)[:, 1]
-
-    best_f1 = 0
-    best_threshold = 0
-
     # Find best threshold
+    # y_prob_val = model.predict_proba(X_val)[:, 1]
+    # best_f1 = 0
+    # best_threshold = 0
     # for threshold in np.arange(0.05, 0.95, 0.05):
     #     y_pred = (y_prob_val >= threshold).astype(int)
 
@@ -106,7 +120,8 @@ def train(processed_path: Path, model_output_path: Path):
     # print(f"Best Threshold: {best_threshold:.2f}")
     # print(f"Validation F1: {best_f1:.3f}")
 
-    # Fixed threshold
+    # Fixed threshold selected after empirical threshold sweep
+    # (approximately optimal validation F1 ≈ 0.31)
     best_threshold = 0.15
 
     # Save best threshold

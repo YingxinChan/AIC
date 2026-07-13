@@ -30,11 +30,11 @@ def engineer_features(raw_path: Path, output_path: Path):
     # Future rainfall targets
     for day in range(1, 8):
         df[f"rain_day{day}"] = df["rain"].shift(-day)
-    for day in range(1, 8):
-        threshold = df[f"rain_day{day}"].quantile(0.90)
-        df[f"heavy_rain_day{day}"] = (
-            df[f"rain_day{day}"] >= threshold
-        ).astype(int)
+
+    # Encode wind direction cyclically
+    radians = np.radians(df["wind_dir"])
+    df["wind_dir_sin"] = np.sin(radians)
+    df["wind_dir_cos"] = np.cos(radians)
 
     # Clean
     df = df.dropna()
@@ -53,16 +53,11 @@ def engineer_features(raw_path: Path, output_path: Path):
         "humidity",
         "pressure",
         "wind",
-        "wind_dir",
+        "wind_dir_cos",
+        "wind_dir_sin",
         "radiation",
 
-        "heavy_rain_day1",
-        "heavy_rain_day2",
-        "heavy_rain_day3",
-        "heavy_rain_day4",
-        "heavy_rain_day5",
-        "heavy_rain_day6",
-        "heavy_rain_day7",
+        "rain_day1",
     ]
     df = df[ordered_columns]
 
