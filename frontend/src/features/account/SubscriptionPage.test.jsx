@@ -32,9 +32,9 @@ describe('SubscriptionPage', () => {
     expect(screen.getByText('£4.99')).toBeInTheDocument()
 
     expect(
-      screen.getByText('Pro Traveler (Monthly)'),
+      screen.getByText('Monthly Explorer (Monthly)'),
     ).toBeInTheDocument()
-    expect(screen.getByText('£9.99')).toBeInTheDocument()
+    expect(screen.getByText('£8.99')).toBeInTheDocument()
 
     expect(
       screen.getByText('Lifetime Explorer (Lifetime)'),

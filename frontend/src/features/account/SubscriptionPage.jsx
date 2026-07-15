@@ -6,26 +6,26 @@ const plans = [
     name: 'Single Trip Pass',
     cadence: 'One-Time',
     price: '£4.99',
-    badge: null,
-    features: [
-      '1 complete trip itinerary',
-      'Advanced storm predictions',
-      'Smart activity-swapping logic',
-      'Basic email support',
-    ],
-  },
-  {
-    name: 'Pro Traveler',
-    cadence: 'Monthly',
-    price: '£9.99',
-    period: '/mo',
     badge: 'Most Popular',
     featured: true,
     features: [
-      'Unlimited saved trips',
-      'Continuous ML forecasting',
-      'Real-time activity alerts',
-      'Cancel anytime',
+      'Smart itinerary for 1 complete trip',
+      'Weather and climate insights',
+      'Weather-risk alerts',
+      'Activity alternatives and itinerary updates',
+    ],
+  },
+  {
+    name: 'Monthly Explorer',
+    cadence: 'Monthly',
+    price: '£8.99',
+    period: '/mo',
+    badge: null,
+    features: [
+      'Unlimited trips while subscribed',
+      'Weather and climate insights',
+      'Weather-risk alerts',
+      'Activity alternatives and itinerary updates',
     ],
   },
   {
@@ -34,10 +34,10 @@ const plans = [
     price: '£59.99',
     badge: 'Best Value',
     features: [
-      'Pay once, plan forever',
-      'Unlimited everything',
-      'Early access to ML models',
-      'Priority 24/7 support',
+      'Lifetime access to SmartTrip AI',
+      'Unlimited trip planning',
+      'Weather and climate insights',
+      'Activity alternatives and itinerary updates',
     ],
   },
 ]
@@ -164,13 +164,10 @@ export default function SubscriptionPage() {
         </div>
 
         <p className="mt-8 text-center text-sm text-gray-400">
-          All plans include SSL security. Cancel anytime. No hidden fees.
+         Secure payments with no hidden fees. Monthly subscriptions can be cancelled
+         at any time.
         </p>
-
-        {/*
-          TODO: Confirm final plan names, prices, billing periods and
-          feature descriptions with the team before shipping.
-        */}
+        
       </section>
     </div>
   )
