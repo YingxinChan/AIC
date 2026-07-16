@@ -20,7 +20,7 @@ def get_forecast(lat: float, lon: float):
         "temperature_2m_mean",
         "temperature_2m_max",
         "temperature_2m_min",
-        "wind_speed_10m_max",
+        "wind_speed_10m_mean",
         "wind_direction_10m_dominant",
         "relative_humidity_2m_mean"
     ])
@@ -44,6 +44,8 @@ def get_forecast(lat: float, lon: float):
     daily_data = response.json()["daily"]
 
     return {
+        "latitude": lat,
+        "longitude": lon,
         "hourly": hourly_data,
         "daily": daily_data
     }
