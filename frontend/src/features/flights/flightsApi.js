@@ -1,7 +1,7 @@
 import api from '../../lib/api'
 
+// Removed the incorrect Flask comment as requested
 export const searchFlights = (origin, departure, returnDate, direction, destination, flightNumber = '') => {
-  // We use the exact path '/api/flights' to match your Flask @app.route('/api/flights')
   return api.get('/api/flights/search', { 
     params: { 
       origin, 

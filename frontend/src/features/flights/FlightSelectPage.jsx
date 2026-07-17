@@ -1,20 +1,22 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { Plane, ArrowLeft } from 'lucide-react'
 import ErrorMessage from '../../components/ErrorMessage'
 import { searchFlights } from './flightsApi'
 import { useTripDraft } from '../trips/useTripDraft'
 
-// Helper to Capitalize first letter of words
+// P1 Fix: Only uppercase the first letter, leave rest as is (preserves "UK", "USA")
 const capitalize = (str) => {
   if (!str) return '';
-  return str.split(',').map(part => 
-    part.trim().charAt(0).toUpperCase() + part.trim().slice(1).toLowerCase()
-  ).join(', ');
+  return str.split(',').map(part => {
+    const trimmed = part.trim();
+    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+  }).join(', ');
 };
 
 function airlineCode(flightNumber) {
-  return (flightNumber || '').split(' ')[0]
+  // P0 Fix: Works for "BA 112" or "KL346" by just matching letters
+  return (flightNumber || '').match(/^[A-Za-z]+/)?.[0] ?? ''
 }
 
 export default function FlightSelectPage() {
@@ -25,7 +27,9 @@ export default function FlightSelectPage() {
   const isOutbound = leg === 'outbound'
   const direction = isOutbound ? 'arrival' : 'departure'
   const date = isOutbound ? draft.startDate : draft.endDate
-  const flightNumber = isOutbound ? draft.flightNumber : ''
+  
+  // P0 Fix: Pass draft.flightNumber unconditionally (removed isOutbound check)
+  const flightNumber = draft.flightNumber
 
   const [flights, setFlights] = useState([])
   const [loading, setLoading] = useState(true)
@@ -42,7 +46,6 @@ export default function FlightSelectPage() {
       })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leg])
 
   const handleSelect = (flight) => {

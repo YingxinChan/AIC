@@ -13,21 +13,51 @@ GROUP_3 = ["Berlin, Germany", "Munich, Germany", "Paris, France"]
 GROUP_4 = ["Istanbul, Turkey", "Athens, Greece", "Oslo, Norway", "Copenhagen, Denmark", "Budapest, Hungary", "Krakow, Poland", "Vienna, Austria", "Prague, Czech Republic"]
 
 def get_route_duration(origin, destination):
-    # Rule: Same group = 1-1.5h. Adjacent = 2h. Far = 3-4h.
-    # Specific rules for your requirements:
+    # 1. Specific rules for flights involving London:
     if "London, UK" in [origin, destination]:
-        if any(c in [origin, destination] for c in ["Italy", "Spain", "Portugal", "Switzerland"]):
+        if any(c in origin or c in destination for c in ["Italy", "Spain", "Portugal", "Switzerland"]):
             return 90 # 1.5h
-        if any(c in [origin, destination] for c in ["Germany"]):
+        if any(c in origin or c in destination for c in ["Germany"]):
             return 120 # 2h
-        return 60 # 1h for the rest
+        return 60 # 1h for the rest of London flights
     
-    # Default fallback based on region tiers if not London
-    return 150 # 2.5h default
+    # Helper to find which group a city belongs to
+    def get_group(city):
+        if city in GROUP_1: return 1
+        if city in GROUP_2: return 2
+        if city in GROUP_3: return 3
+        if city in GROUP_4: return 4
+        return 4 
+
+    # 2. General rules for all other flights based on Groups
+    group_org = get_group(origin)
+    group_dest = get_group(destination)
+    
+    diff = abs(group_org - group_dest)
+    
+    if diff == 0:
+        # Same group: 1 to 1.5 hours
+        return random.choice([60, 75, 90]) 
+    elif diff == 1:
+        # Adjacent groups (e.g., Group 1 and Group 2): 2 hours
+        return 120 
+    else:
+        # Far (2 or more groups apart): 3 to 4 hours
+        return random.choice([180, 210, 240])
 
 def generate_data():
     cities = GROUP_1 + GROUP_2 + GROUP_3 + GROUP_4
-    airlines = ["British Airways", "EasyJet", "Ryanair", "Lufthansa", "KLM"]
+    
+    # FIX: Use a dictionary mapping to real IATA codes
+    airlines_map = {
+        "British Airways": "BA",
+        "EasyJet": "U2",
+        "Ryanair": "FR",
+        "Lufthansa": "LH",
+        "KLM": "KL"
+    }
+    airline_names = list(airlines_map.keys())
+    
     flights = []
     
     # Cache durations so the same route always has the same duration
@@ -46,8 +76,12 @@ def generate_data():
             
             # Generate 4 flights per route
             for i in range(4):
-                airline = random.choice(airlines)
-                flight_num = f"{airline[0:2].upper()}{random.randint(100, 999)}"
+                airline = random.choice(airline_names)
+                iata_code = airlines_map[airline] # Fetch the real IATA code
+                
+                # FIX: Add a space between the IATA code and the numbers
+                flight_num = f"{iata_code} {random.randint(100, 999)}"
+                
                 dep_hour = random.randint(6, 22)
                 dep_min = random.choice([0, 15, 30, 45])
                 dep_dt = datetime(2026, 7, 16, dep_hour, dep_min)

@@ -8,12 +8,13 @@ import { getItinerary, generateItinerary } from './itineraryApi'
 import { tripStatus, STATUS_STYLES } from './tripStatus'
 import { geocodeCity } from '../../lib/geocode'
 
-// Helper to Capitalize first letter of words
+// Helper to Capitalize first letter of words (Preserves acronyms like UK/USA)
 const capitalize = (str) => {
   if (!str) return '';
-  return str.split(',').map(part => 
-    part.trim().charAt(0).toUpperCase() + part.trim().slice(1).toLowerCase()
-  ).join(', ');
+  return str.split(',').map(part => {
+    const trimmed = part.trim();
+    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+  }).join(', ');
 };
 
 function airlineCode(flightNumber) {
