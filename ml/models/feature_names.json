@@ -1,0 +1,19 @@
+[
+    "latitude",
+    "longitude",
+    "day_sin",
+    "day_cos",
+    "month_sin",
+    "month_cos",
+    "rain",
+    "temp",
+    "temp_max",
+    "temp_min",
+    "temp_range",
+    "humidity",
+    "pressure",
+    "wind",
+    "wind_dir_cos",
+    "wind_dir_sin",
+    "radiation"
+]

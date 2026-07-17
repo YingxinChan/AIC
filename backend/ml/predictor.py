@@ -16,7 +16,7 @@ class WeatherPredictor:
         self.model = Booster(
             model_file=str(MODEL_DIR / "lgbm_heavy_rain.txt")
         )
-
+        
         with open(MODEL_DIR / "feature_names.json", "r") as f:
             self.selected_features = json.load(f)
 
@@ -24,7 +24,7 @@ class WeatherPredictor:
         with open(MODEL_DIR / "model_config.json", "r") as f:
             config = json.load(f)
 
-        self.threshold = config["threshold"] * 100
+        self.threshold = config["threshold"]
 
     def predict(self, weather_features):
         # Create one-row DataFrame
@@ -49,6 +49,17 @@ class WeatherPredictor:
                 "heavy_rain_probability": round(float(probability) * 100, 2),
                 "heavy_rain_warning": bool(warning)
             })
+
+        # Check for missing features
+        missing = [
+            f for f in self.selected_features
+            if f not in features_df.columns
+        ]
+        if missing:
+            raise ValueError(
+                f"Missing features: {missing}"
+            )
+
         return results
 
 

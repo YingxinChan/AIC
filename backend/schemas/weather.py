@@ -5,6 +5,7 @@ class ForecastDayOut(BaseModel):
     date: date
 
     # Weather
+    weather_code: int
     condition: str
     
     temp_min: float

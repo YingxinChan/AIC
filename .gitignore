@@ -13,3 +13,16 @@ dist/
 
 # OS
 .DS_Store
+
+# CatBoost training logs
+catboost_info/
+
+# Generated datasets
+ml/data/raw/
+ml/data/processed/
+
+# models
+ml/models/*.txt
+ml/models/*.json
+ml/models/*.cbm
+ml/models/*.pkl

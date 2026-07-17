@@ -6,20 +6,47 @@ import numpy as np
 
 
 def build_features(forecast):
+    lat = forecast["latitude"]
+    lon = forecast["longitude"]
 
     daily = forecast["daily"]
 
     df = pd.DataFrame({
         "date": daily["time"],
         "weather_code": daily["weather_code"],
+
         "rain": daily["precipitation_sum"],
         "temp": daily["temperature_2m_mean"],
         "temp_max": daily["temperature_2m_max"],
         "temp_min": daily["temperature_2m_min"],
+
         "humidity": daily["relative_humidity_2m_mean"],
-        "wind": daily["wind_speed_10m_max"],
+        "wind": daily["wind_speed_10m_mean"],
         "wind_dir": daily["wind_direction_10m_dominant"],
     })
+
+    # Date
+    df["date"] = pd.to_datetime(df["date"])
+    df["day_of_year"] = pd.to_datetime(df["date"]).dt.dayofyear
+    df["month"] = df["date"].dt.month
+
+    # Cyclic date features
+    df["day_sin"] = np.sin(2 * np.pi * df["day_of_year"] / 365)
+    df["day_cos"] = np.cos(2 * np.pi * df["day_of_year"] / 365)
+    df["month_sin"] = np.sin(2 * np.pi * df["month"] / 12)
+    df["month_cos"] = np.cos(2 * np.pi * df["month"] / 12)
+
+    # Add lat and long
+    df["latitude"] = lat
+    df["longitude"] = lon
+
+    # Temp range
+    df["temp_range"] = (df["temp_max"] - df["temp_min"])
+
+    # Wind direction
+    radians = np.radians(df["wind_dir"])
+    df["wind_dir_sin"] = np.sin(radians)
+    df["wind_dir_cos"] = np.cos(radians)
 
     hourly = forecast["hourly"]
 
@@ -37,15 +64,10 @@ def build_features(forecast):
         .groupby("date")
         .agg({
             "pressure": "mean",
-            "radiation": "mean"
+            "radiation": "sum"
         })
         .reset_index()
     )
-
-    df["date"] = pd.to_datetime(df["date"])
-    df["day_of_year"] = pd.to_datetime(df["date"]).dt.dayofyear
-    df["day_sin"] = np.sin(2 * np.pi * df["day_of_year"] / 365)
-    df["day_cos"] = np.cos(2 * np.pi * df["day_of_year"] / 365)
 
     df = df.merge(
         daily_hourly,

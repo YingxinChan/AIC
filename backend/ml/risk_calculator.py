@@ -48,11 +48,13 @@ def beach_safety(
     if wind > 30:
         score -= 30
     elif wind > 20:
-        score += 15
-    elif wind >= 5:
-        score += 5
+        score -= 15
+    # otherwise no change
 
     if temp < 18:
+        score -= 15
+
+    if heavy_rain_probability > 70:
         score -= 15
 
     score = max(min(score, 100), 0)
