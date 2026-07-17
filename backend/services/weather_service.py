@@ -49,6 +49,7 @@ def get_predictor():
         predictor = WeatherPredictor()
 
     return predictor
+
 # ML daily risk
 def get_weather_prediction(lat: float, lon: float) -> dict:
     forecast = get_forecast(lat, lon)
@@ -57,15 +58,16 @@ def get_weather_prediction(lat: float, lon: float) -> dict:
     predictions = predictor.predict(features)
 
     results = [ ]
-    for i in range(len(predictions)):
+    for i, prediction in enumerate(predictions):
 
         day = {
-            "date": str(features.iloc[i]["date"]),
+            "date": features.iloc[i]["date"].strftime("%Y-%m-%d"),
 
-            # Add weather code
+            # Add weather icon and description
+            "weather_code": int(features.iloc[i]["weather_code"]), # Check code in WEATHER_CODES dict
             "condition": weather_condition( 
                 int(features.iloc[i]["weather_code"])
-            ),
+            ), # weather code description
 
             "temp_min": float(features.iloc[i]["temp_min"]),
             "temp_max": float(features.iloc[i]["temp_max"]),
@@ -73,7 +75,7 @@ def get_weather_prediction(lat: float, lon: float) -> dict:
         }
         
         # Add ML prediction
-        day.update(predictions[i])
+        day.update(prediction)
 
         # Flood risk
         rain_today = features.iloc[i]["rain"]
@@ -83,7 +85,7 @@ def get_weather_prediction(lat: float, lon: float) -> dict:
             rain_tomorrow = 0
 
         flood = flood_risk(
-            heavy_rain_probability=predictions[i]["heavy_rain_probability"],
+            heavy_rain_probability=prediction["heavy_rain_probability"],
             rain_today=rain_today,
             rain_tomorrow=rain_tomorrow
         )
@@ -93,7 +95,7 @@ def get_weather_prediction(lat: float, lon: float) -> dict:
         temp = features.iloc[i]["temp"]
 
         beach = beach_safety(
-            heavy_rain_probability=predictions[i]["heavy_rain_probability"],
+            heavy_rain_probability=prediction["heavy_rain_probability"],
             wind=wind,
             temp=temp
         )
@@ -128,6 +130,7 @@ def get_hourly_weather(lat: float, lon: float):
             "time": hourly["time"][i],
             "temperature": hourly["temperature_2m"][i],
             "rain_mm": hourly["precipitation"][i],
+            "weather_code": hourly["weather_code"][i],
             "condition": weather_condition(
                 hourly["weather_code"][i]
             )

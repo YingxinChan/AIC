@@ -1,3 +1,5 @@
+# Run: python -m pytest tests/test_weather.py
+
 def test_prediction_requires_auth(client):
     response = client.get(
         "/api/weather/prediction?lat=51.5074&lon=-0.1278"
