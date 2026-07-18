@@ -8,7 +8,7 @@ beforeEach(() => {
 test('starts with default draft values', () => {
   const { result } = renderHook(() => useTripDraft())
   expect(result.current.draft).toEqual({
-    destination: 'London',
+    destination: '',
     origin: '',
     startDate: '',
     endDate: '',
@@ -64,6 +64,6 @@ test('clearDraft resets to defaults and clears storage', () => {
     result.current.clearDraft()
   })
 
-  expect(result.current.draft.destination).toBe('London')
+  expect(result.current.draft.destination).toBe('')
   expect(sessionStorage.getItem('tripDraft')).toBeNull()
 })
