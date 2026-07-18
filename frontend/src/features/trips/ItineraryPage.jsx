@@ -8,6 +8,15 @@ import { getItinerary, generateItinerary } from './itineraryApi'
 import { tripStatus, STATUS_STYLES } from './tripStatus'
 import { geocodeCity } from '../../lib/geocode'
 
+// Helper to Capitalize first letter of words (Preserves acronyms like UK/USA)
+const capitalize = (str) => {
+  if (!str) return '';
+  return str.split(',').map(part => {
+    const trimmed = part.trim();
+    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+  }).join(', ');
+};
+
 function airlineCode(flightNumber) {
   return (flightNumber || '').split(' ')[0]
 }
@@ -83,9 +92,9 @@ export default function ItineraryPage() {
             </div>
             <div className="max-w-6xl mx-auto w-full">
               <p className="flex items-center gap-1.5 text-sm text-indigo-200">
-                <MapPin size={14} /> {destination}
+                <MapPin size={14} /> {capitalize(destination)}
               </p>
-              <h2 className="text-3xl font-bold mt-1">{trip.name || `${destination} Trip`}</h2>
+              <h2 className="text-3xl font-bold mt-1">{capitalize(trip.name || `${destination} Trip`)}</h2>
               {trip.start_date && trip.end_date && (
                 <p className="flex items-center gap-1.5 text-sm text-indigo-100 mt-2">
                   <Calendar size={14} /> {trip.start_date} &rarr; {trip.end_date}
@@ -226,7 +235,7 @@ export default function ItineraryPage() {
 
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-800 mb-4">
-          <MapPin size={18} className="text-indigo-600" /> {destination || 'Trip'} Map
+          <MapPin size={18} className="text-indigo-600" /> {capitalize(destination || 'Trip')} Map
         </h2>
         <MapView height="h-80" center={mapCenter} />
       </div>

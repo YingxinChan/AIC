@@ -1,12 +1,22 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { Plane, ArrowLeft } from 'lucide-react'
 import ErrorMessage from '../../components/ErrorMessage'
 import { searchFlights } from './flightsApi'
 import { useTripDraft } from '../trips/useTripDraft'
 
+// P1 Fix: Only uppercase the first letter, leave rest as is (preserves "UK", "USA")
+const capitalize = (str) => {
+  if (!str) return '';
+  return str.split(',').map(part => {
+    const trimmed = part.trim();
+    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+  }).join(', ');
+};
+
 function airlineCode(flightNumber) {
-  return (flightNumber || '').split(' ')[0]
+  // P0 Fix: Works for "BA 112" or "KL346" by just matching letters
+  return (flightNumber || '').match(/^[A-Za-z]+/)?.[0] ?? ''
 }
 
 export default function FlightSelectPage() {
@@ -17,7 +27,9 @@ export default function FlightSelectPage() {
   const isOutbound = leg === 'outbound'
   const direction = isOutbound ? 'arrival' : 'departure'
   const date = isOutbound ? draft.startDate : draft.endDate
-  const flightNumber = isOutbound ? draft.flightNumber : ''
+  
+  // P0 Fix: Pass draft.flightNumber unconditionally (removed isOutbound check)
+  const flightNumber = draft.flightNumber
 
   const [flights, setFlights] = useState([])
   const [loading, setLoading] = useState(true)
@@ -34,7 +46,6 @@ export default function FlightSelectPage() {
       })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leg])
 
   const handleSelect = (flight) => {
@@ -55,7 +66,9 @@ export default function FlightSelectPage() {
 
       <div>
         <h1 className="text-2xl font-bold text-gray-900">
-          {isOutbound ? 'Departure → Destination' : 'Destination → Departure'}
+          {isOutbound 
+            ? `${capitalize(draft.origin)} → ${capitalize(draft.destination)}`
+            : `${capitalize(draft.destination)} → ${capitalize(draft.origin)}`}
         </h1>
         <p className="text-gray-500 text-sm mt-1">
           {isOutbound ? 'Outbound Flight' : 'Return Flight'} &middot; {date || 'No date selected'}
