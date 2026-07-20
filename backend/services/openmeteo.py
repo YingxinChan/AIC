@@ -9,6 +9,7 @@ def get_forecast(lat: float, lon: float):
         "pressure_msl",
         "shortwave_radiation",
         "precipitation",
+        "precipitation_probability",
         "temperature_2m",
         "weather_code"
     ])
