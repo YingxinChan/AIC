@@ -1,48 +1,43 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Check } from 'lucide-react'
 
+const sharedFeatures = [
+  'Weather and climate insights',
+  'Weather-risk alerts',
+  'Activity alternatives and itinerary updates',
+]
+
 const plans = [
   {
+    id: 'single',
+    label: 'Single',
     name: 'Single Trip Pass',
-    cadence: 'One-Time',
     price: '£4.99',
-    badge: 'Most Popular',
-    featured: true,
-    features: [
-      'Smart itinerary for 1 complete trip',
-      'Weather and climate insights',
-      'Weather-risk alerts',
-      'Activity alternatives and itinerary updates',
-    ],
+    cadence: 'one-time',
+    description: 'Access for one complete trip',
   },
   {
+    id: 'monthly',
+    label: 'Monthly',
     name: 'Monthly Explorer',
-    cadence: 'Monthly',
     price: '£8.99',
-    period: '/mo',
-    badge: null,
-    features: [
-      'Unlimited trips while subscribed',
-      'Weather and climate insights',
-      'Weather-risk alerts',
-      'Activity alternatives and itinerary updates',
-    ],
+    cadence: 'per month',
+    description: 'Unlimited trips while subscribed',
   },
   {
+    id: 'lifetime',
+    label: 'Lifetime',
     name: 'Lifetime Explorer',
-    cadence: 'Lifetime',
     price: '£59.99',
-    badge: 'Best Value',
-    features: [
-      'Lifetime access to SmartTrip AI',
-      'Unlimited trip planning',
-      'Weather and climate insights',
-      'Activity alternatives and itinerary updates',
-    ],
+    cadence: 'one-time',
+    description: 'Ongoing lifetime access',
   },
 ]
 
 export default function SubscriptionPage() {
+  const [selectedPlan, setSelectedPlan] = useState('single')
+
   return (
     <div className="space-y-6">
       <Link
@@ -53,121 +48,84 @@ export default function SubscriptionPage() {
         Back to Account
       </Link>
 
-      <section className="pb-8">
-        <header className="mx-auto max-w-2xl text-center">
+      <section className="rounded-3xl border border-gray-300 bg-white px-5 py-10 shadow-sm sm:px-10">
+        <header className="text-center">
           <h1 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-            Upgrade Your Plan
+            Plan
           </h1>
 
-          <p className="mt-3 text-base text-gray-500 sm:text-lg">
-            Choose the plan that fits your travel lifestyle.
+          <p className="mt-3 text-gray-500">
+            Choose how long you would like to use SmartTrip AI.
           </p>
         </header>
 
-        <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3">
+        <div className="mx-auto mt-10 max-w-4xl rounded-2xl border border-gray-300 bg-gray-50 p-6 sm:p-8">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-gray-500">
+            Feature highlights
+          </h2>
+
+          <ul className="mt-6 space-y-5">
+            {sharedFeatures.map((feature) => (
+              <li
+                key={feature}
+                className="flex items-start gap-3 text-base text-gray-700"
+              >
+                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-700">
+                  <Check size={15} strokeWidth={3} aria-hidden="true" />
+                </span>
+
+                <span>{feature}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="mx-auto mt-10 grid max-w-4xl grid-cols-1 gap-5 sm:grid-cols-3">
           {plans.map((plan) => {
-            const featured = plan.featured === true
+            const isSelected = selectedPlan === plan.id
 
             return (
-              <article
-                key={plan.name}
-                className={`relative flex min-h-[390px] flex-col rounded-2xl border-2 p-7 ${
-                  featured
-                    ? 'border-indigo-600 bg-indigo-600 text-white shadow-xl'
-                    : 'border-gray-200 bg-white text-gray-900 shadow-sm'
+              <button
+                key={plan.id}
+                type="button"
+                onClick={() => setSelectedPlan(plan.id)}
+                aria-pressed={isSelected}
+                className={`rounded-2xl border-2 px-5 py-6 text-center transition ${
+                  isSelected
+                    ? 'border-indigo-600 bg-indigo-600 text-white shadow-lg'
+                    : 'border-gray-300 bg-white text-gray-900 hover:border-indigo-400 hover:bg-indigo-50'
                 }`}
               >
-                {plan.badge && (
-                  <span
-                    className={`absolute right-4 top-4 rounded-full px-3 py-1 text-xs font-semibold ${
-                      featured
-                        ? 'bg-white/20 text-white'
-                        : 'bg-indigo-600 text-white'
-                    }`}
-                  >
-                    {plan.badge}
-                  </span>
-                )}
+                <span className="block text-xl font-bold">{plan.label}</span>
 
-                <div className={plan.badge ? 'pr-28' : ''}>
-                  <h2
-                    className={`text-sm font-semibold ${
-                      featured ? 'text-indigo-100' : 'text-gray-500'
-                    }`}
-                  >
-                    {plan.name} ({plan.cadence})
-                  </h2>
-                </div>
+                <span className="mt-3 block text-3xl font-bold">
+                  {plan.price}
+                </span>
 
-                <div className="mt-3 flex items-baseline">
-                  <span className="text-4xl font-bold tracking-tight">
-                    {plan.price}
-                  </span>
-
-                  {plan.period && (
-                    <span
-                      className={`ml-1 text-lg font-semibold ${
-                        featured ? 'text-indigo-100' : 'text-gray-500'
-                      }`}
-                    >
-                      {plan.period}
-                    </span>
-                  )}
-                </div>
-
-                <div className="mt-8 flex-1">
-                  <p
-                    className={`text-xs font-bold tracking-wider ${
-                      featured ? 'text-indigo-100' : 'text-gray-400'
-                    }`}
-                  >
-                    FEATURE HIGHLIGHTS:
-                  </p>
-
-                  <ul className="mt-4 space-y-4">
-                    {plan.features.map((feature) => (
-                      <li
-                        key={feature}
-                        className={`flex items-start gap-3 text-sm ${
-                          featured ? 'text-white' : 'text-gray-600'
-                        }`}
-                      >
-                        <span
-                          className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${
-                            featured
-                              ? 'bg-white/20 text-white'
-                              : 'bg-indigo-50 text-indigo-600'
-                          }`}
-                        >
-                          <Check size={13} strokeWidth={3} aria-hidden="true" />
-                        </span>
-
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <button
-                  type="button"
-                  className={`mt-8 w-full rounded-xl px-4 py-3 text-sm font-semibold transition-colors ${
-                    featured
-                      ? 'bg-white text-indigo-700 hover:bg-indigo-50'
-                      : 'bg-gray-900 text-white hover:bg-gray-800'
+                <span
+                  className={`mt-1 block text-sm ${
+                    isSelected ? 'text-indigo-100' : 'text-gray-500'
                   }`}
                 >
-                  Select Plan
-                </button>
-              </article>
+                  {plan.cadence}
+                </span>
+
+                <span
+                  className={`mt-3 block text-sm ${
+                    isSelected ? 'text-indigo-100' : 'text-gray-600'
+                  }`}
+                >
+                  {plan.description}
+                </span>
+              </button>
             )
           })}
         </div>
 
         <p className="mt-8 text-center text-sm text-gray-400">
-         Secure payments with no hidden fees. Monthly subscriptions can be cancelled
-         at any time.
+          All plans include the same core SmartTrip AI features. Only the access
+          period differs.
         </p>
-        
       </section>
     </div>
   )
