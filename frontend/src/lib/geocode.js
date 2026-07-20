@@ -6,7 +6,8 @@ export async function geocodeCity(query) {
     if (!response.ok) return null
     const results = await response.json()
     if (!results.length) return null
-    return [parseFloat(results[0].lat), parseFloat(results[0].lon)]
+    // CHANGE THIS: Return an object with explicit keys
+    return { lat: parseFloat(results[0].lat), lon: parseFloat(results[0].lon) }
   } catch {
     return null
   }

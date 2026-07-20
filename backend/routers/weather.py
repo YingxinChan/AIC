@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends
 from schemas.weather import ForecastDayOut
 from core.security import get_current_user
@@ -14,15 +14,19 @@ router = APIRouter(
 def prediction(
     lat: float,
     lon: float,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
     current_user: dict = Depends(get_current_user),
 ):
-    return get_weather_prediction(lat, lon)
+    return get_weather_prediction(lat, lon, start_date, end_date)
 
 # Hourly weather
 @router.get("/hourly")
 def hourly(
     lat: float,
     lon: float,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
     current_user: dict = Depends(get_current_user),
 ):
-    return get_hourly_weather(lat, lon)
+    return get_hourly_weather(lat, lon, start_date, end_date)

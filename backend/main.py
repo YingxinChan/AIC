@@ -7,7 +7,10 @@ app = FastAPI(title="SmartTrip AI", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:5174"],
+    allow_origins=[
+        "http://localhost:5173", "https://localhost:5173",
+        "http://localhost:5174", "https://localhost:5174"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -15,6 +18,9 @@ app.add_middleware(
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    # If it's an OPTIONS request, let CORS handle it, don't crash it
+    if request.method == "OPTIONS":
+        return JSONResponse(status_code=200, content={})
     return JSONResponse(
         status_code=500,
         content={"error": str(exc), "code": "INTERNAL_ERROR"},

@@ -51,12 +51,19 @@ def get_predictor():
     return predictor
 
 # ML daily risk
-def get_weather_prediction(lat: float, lon: float) -> dict:
-    forecast = get_forecast(lat, lon)
+def get_weather_prediction(lat: float, lon: float, start_date: str = None, end_date: str = None) -> dict:
+    forecast = get_forecast(lat, lon, start_date, end_date)
     features = build_features(forecast)
     predictor = get_predictor()
     predictions = predictor.predict(features)
 
+    try:
+        predictions = predictor.predict(features)
+    except Exception as e:
+        print(f"CRITICAL: ML Model failed, using dummy predictions: {e}")
+        # Create a dummy list of predictions for the UI to continue working
+        predictions = [{"heavy_rain_probability": 0.0} for _ in range(len(features))]
+    
     results = [ ]
     for i, prediction in enumerate(predictions):
 
@@ -118,9 +125,9 @@ def get_weather_prediction(lat: float, lon: float) -> dict:
     
     return results
 
-def get_hourly_weather(lat: float, lon: float):
+def get_hourly_weather(lat: float, lon: float, start_date: str = None, end_date: str = None):
 
-    forecast = get_forecast(lat, lon)
+    forecast = get_forecast(lat, lon, start_date, end_date)
     hourly = forecast["hourly"]
 
     results = []
