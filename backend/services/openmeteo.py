@@ -6,10 +6,12 @@ def get_forecast(lat: float, lon: float, start_date: str = None, end_date: str =
     if not start_date:
         start_date = datetime.now().strftime("%Y-%m-%d")
 
-    # If no end_date is provided, calculate it based on the start date
+    # If no end_date is provided, calculate it based on the start date.
+    # start_date/end_date are inclusive on both ends, so +6 days gives a
+    # 7-day range (today plus the next 6 days), not +7 (which gives 8).
     if not end_date:
         start_dt = datetime.strptime(start_date, "%Y-%m-%d")
-        end_date = (start_dt + timedelta(days=7)).strftime("%Y-%m-%d")
+        end_date = (start_dt + timedelta(days=6)).strftime("%Y-%m-%d")
 
     # Hourly forecasted variables
     hourly = ",".join([

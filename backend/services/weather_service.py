@@ -57,13 +57,6 @@ def get_weather_prediction(lat: float, lon: float, start_date: str = None, end_d
     predictor = get_predictor()
     predictions = predictor.predict(features)
 
-    try:
-        predictions = predictor.predict(features)
-    except Exception as e:
-        print(f"CRITICAL: ML Model failed, using dummy predictions: {e}")
-        # Create a dummy list of predictions for the UI to continue working
-        predictions = [{"heavy_rain_probability": 0.0} for _ in range(len(features))]
-    
     results = [ ]
     for i, prediction in enumerate(predictions):
 

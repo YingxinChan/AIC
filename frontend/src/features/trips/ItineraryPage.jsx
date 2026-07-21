@@ -80,26 +80,26 @@ export default function ItineraryPage() {
 
   // --- NEW Helper: Get Current or Max Temp ---
   const getDisplayTemp = () => {
-    if (!forecast || !forecast[selectedDayIndex]) return '';
-    
+    if (!forecastDay) return '';
+
     // Get user's local date and hour
     const now = new Date();
     const today = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-    const selectedDate = forecast[selectedDayIndex].date;
-    
+    const selectedDate = forecastDay.date;
+
     // If viewing TODAY'S itinerary, show the current hour's temperature
     if (selectedDate === today && hourlyForecast) {
       const currentHour = now.getHours();
       const timeString = `${selectedDate}T${currentHour.toString().padStart(2, '0')}:00`;
       const currentData = hourlyForecast.find(h => h.time === timeString);
-      
+
       if (currentData) {
         return Math.round(currentData.temperature);
       }
     }
-    
+
     // If viewing a future/past day, fallback to the daily Max temperature
-    return Math.round(forecast[selectedDayIndex].temp_max);
+    return Math.round(forecastDay.temp_max);
   };
 
   // --- SECTION 3: DATA FETCHING LOGIC ---
@@ -122,8 +122,8 @@ export default function ItineraryPage() {
               return;
             }
 
-            const lat = parseFloat(coords.lat ?? coords[0]);
-            const lon = parseFloat(coords.lon ?? coords[1]);
+            const lat = parseFloat(coords[0]);
+            const lon = parseFloat(coords[1]);
             setMapCenter([lat, lon]);
 
             // FIX: Access tripData.start_date directly instead of a missing startDate variable
@@ -185,6 +185,13 @@ export default function ItineraryPage() {
   }
 
   const status = trip?.start_date && trip?.end_date ? tripStatus(trip) : null
+
+  // Match the selected itinerary day to its forecast entry by date, rather than
+  // assuming itinerary.days and forecast are the same length/order.
+  const selectedItineraryDay = itinerary?.days?.[selectedDayIndex]
+  const forecastDay = selectedItineraryDay
+    ? forecast?.find(d => d.date === selectedItineraryDay.date)
+    : forecast?.[selectedDayIndex]
 
   // --- SECTION 5: UI RENDERING ---
   return (
@@ -252,24 +259,24 @@ export default function ItineraryPage() {
 
       {/* 5D: Itinerary & Weather Section */}
       <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
-        {/* Day Tabs - Updated to link to Forecast */}
+        {/* Day Tabs */}
         <div className="flex items-center justify-between mb-6">
-          {forecast ? (
+          {itinerary?.days ? (
             <div className="flex gap-2 flex-wrap">
-              {forecast.map((day, index) => (
-                <button 
-                  key={day.date} 
-                  type="button" 
-                  onClick={() => setSelectedDayIndex(index)} 
-                  className={`px-4 py-2 rounded-full text-sm font-semibold border transition-colors 
+              {itinerary.days.map((day, index) => (
+                <button
+                  key={day.date}
+                  type="button"
+                  onClick={() => setSelectedDayIndex(index)}
+                  className={`px-4 py-2 rounded-full text-sm font-semibold border transition-colors
                     ${index === selectedDayIndex ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-300 text-gray-700 hover:border-indigo-300'}`}
                 >
-                  Day {index + 1}
+                  Day {index + 1} &middot; {day.date}
                 </button>
               ))}
             </div>
           ) : (
-             <div className="text-sm text-gray-500 italic">Loading weather...</div>
+             <div className="text-sm font-semibold text-gray-700">Day-by-day Activities</div>
           )}
           
           <button type="button" onClick={handleGenerate} disabled={generating} className="bg-slate-900 text-white px-4 py-2 rounded-md text-sm disabled:opacity-50">
@@ -280,24 +287,32 @@ export default function ItineraryPage() {
         {itineraryNotice && <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg text-sm mb-4">{itineraryNotice}</div>}
 
         {/* WEATHER MODULE */}
-        {weatherStatus === 'loaded' && forecast && forecast[selectedDayIndex] && (
+        {weatherStatus === 'loading' && (
+          <div className="text-sm text-gray-500 italic">Loading weather...</div>
+        )}
+
+        {weatherStatus === 'failed' && (
+          <p className="text-sm text-gray-400 italic">Weather unavailable for this destination.</p>
+        )}
+
+        {weatherStatus === 'loaded' && forecastDay && (
             <div className="border border-gray-100 p-4 rounded-lg bg-gray-50/50 space-y-4">
-                
+
                 {/* Daily Summary Header */}
                 <div className="flex justify-between items-start">
                     <div>
-                        <div className="text-sm font-semibold text-gray-500">{forecast[selectedDayIndex].date}</div>
+                        <div className="text-sm font-semibold text-gray-500">{forecastDay.date}</div>
                         <div className="flex items-baseline gap-2 my-1">
                             {/* Big number shows current temp if today, or max temp if future */}
                             <span className="text-4xl font-bold text-gray-900">{getDisplayTemp()}°</span>
                             {/* Smaller text shows High and Low */}
                             <span className="text-sm font-medium text-gray-500 ml-1">
-                                H: {Math.round(forecast[selectedDayIndex].temp_max)}° &nbsp; L: {Math.round(forecast[selectedDayIndex].temp_min)}°
+                                H: {Math.round(forecastDay.temp_max)}° &nbsp; L: {Math.round(forecastDay.temp_min)}°
                             </span>
                         </div>
-                        <div className="text-md font-medium text-gray-700 capitalize">{forecast[selectedDayIndex].condition}</div>
+                        <div className="text-md font-medium text-gray-700 capitalize">{forecastDay.condition}</div>
                     </div>
-                    <WeatherIcon condition={forecast[selectedDayIndex].condition} timeStr={forecast[selectedDayIndex].date + "T12:00:00"} className="w-10 h-10 text-indigo-500" />
+                    <WeatherIcon condition={forecastDay.condition} timeStr={forecastDay.date + "T12:00:00"} className="w-10 h-10 text-indigo-500" />
                 </div>
 
                 <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-800 pt-2 border-t">
@@ -306,11 +321,11 @@ export default function ItineraryPage() {
 
                 {/* Risk Cards Grid */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {[ 
-                    { l: 'Heavy Rain', v: forecast[selectedDayIndex].heavy_rain_probability + '%', s: forecast[selectedDayIndex].heavy_rain_warning ? 'High' : 'Low', i: Umbrella }, 
-                    { l: 'Flood', v: Math.round(forecast[selectedDayIndex].flood_score) + '%', s: forecast[selectedDayIndex].flood_risk, i: Waves }, 
-                    { l: 'Beach Safety', v: Math.round(forecast[selectedDayIndex].beach_safety_score) + '%', s: forecast[selectedDayIndex].beach_safety_level, i: Sun }, 
-                    { l: 'Snow', v: forecast[selectedDayIndex].snow_probability + '%', s: snowLevel(forecast[selectedDayIndex].snow_probability), i: Snowflake } 
+                  {[
+                    { l: 'Heavy Rain', v: forecastDay.heavy_rain_probability + '%', s: forecastDay.heavy_rain_warning ? 'High' : 'Low', i: Umbrella },
+                    { l: 'Flood', v: Math.round(forecastDay.flood_score) + '%', s: forecastDay.flood_risk, i: Waves },
+                    { l: 'Beach Safety', v: Math.round(forecastDay.beach_safety_score) + '%', s: forecastDay.beach_safety_level, i: Sun },
+                    { l: 'Snow', v: forecastDay.snow_probability + '%', s: snowLevel(forecastDay.snow_probability), i: Snowflake }
                   ].map((c, i) => (
                       <div key={i} className="bg-white p-3 rounded border text-center">
                           <div className="text-[10px] text-gray-500 uppercase flex items-center justify-center gap-1"><c.i size={12} /> {c.l}</div>
@@ -325,7 +340,7 @@ export default function ItineraryPage() {
                 {/* Hourly Forecast */}
                 <div className="flex overflow-x-auto gap-4 pb-2 cursor-grab active:cursor-grabbing">
                   {hourlyForecast
-                      .filter(h => h.time.startsWith(forecast[selectedDayIndex].date))
+                      .filter(h => h.time.startsWith(forecastDay.date))
                       .map((h, i) => (
                           <div key={i} className="flex flex-col items-center min-w-[50px] shrink-0 gap-0.5">
                               <span className="text-[10px] text-gray-500">{formatHour(h.time)}</span>
@@ -334,9 +349,9 @@ export default function ItineraryPage() {
                               
                               {/* Fixed-height container (h-4) that holds rain OR empty space */}
                               <div className="h-4 flex items-center justify-center">
-                                  {h.rain_mm > 0 && (
+                                  {h.rain_probability != null && (
                                       <span className="text-[9px] font-bold text-blue-600 leading-none">
-                                          {h.rain_mm}mm
+                                          {Math.round(h.rain_probability)}%
                                       </span>
                                   )}
                               </div>

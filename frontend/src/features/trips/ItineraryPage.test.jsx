@@ -5,6 +5,7 @@ import ItineraryPage from './ItineraryPage'
 import { getTrip } from './tripsApi'
 import { getItinerary, generateItinerary } from './itineraryApi'
 import { geocodeCity } from '../../lib/geocode'
+import { getForecast, getHourlyForecast } from '../weather/weatherApi'
 
 vi.mock('../../components/MapView', () => ({
   default: () => <div>Map</div>,
@@ -21,6 +22,11 @@ vi.mock('./itineraryApi', () => ({
 
 vi.mock('../../lib/geocode', () => ({
   geocodeCity: vi.fn().mockResolvedValue(null),
+}))
+
+vi.mock('../weather/weatherApi', () => ({
+  getForecast: vi.fn(),
+  getHourlyForecast: vi.fn(),
 }))
 
 function renderAt(tripId) {
@@ -41,9 +47,9 @@ beforeEach(() => {
 test('renders itinerary sections', async () => {
   renderAt(1)
 
-  expect(screen.getByText(/weather forecast will appear here/i)).toBeInTheDocument()
   expect(screen.getAllByText(/map/i).length).toBeGreaterThan(0)
   await waitFor(() => expect(getItinerary).toHaveBeenCalledWith('1'))
+  expect(await screen.findByText(/weather unavailable for this destination/i)).toBeInTheDocument()
 })
 
 test('shows the trip\'s own destination in the map heading, not a hardcoded city', async () => {
@@ -117,16 +123,74 @@ test('activities keep showing indoor/outdoor type and description within the com
   expect(screen.getByText('Great Russell St')).toBeInTheDocument()
 })
 
-test('weather forecast stays an honest placeholder inside the combined card, no fake hourly data', async () => {
+test('shows an honest unavailable message and no fake weather data when geocoding fails', async () => {
   getItinerary.mockResolvedValue({
     days: [{ date: '2026-08-01', activities: [
       { id: 1, name: 'British Museum', type: 'indoor', time_slot: '09:00 - 11:00', location: 'Great Russell St', description: 'x', is_swapped: false },
     ] }],
   })
-  renderAt(1)
+  renderAt(1) // geocodeCity resolves null by default (see mock above)
 
   await screen.findByText('British Museum')
-  expect(screen.getByText(/weather forecast will appear here/i)).toBeInTheDocument()
+  expect(await screen.findByText(/weather unavailable for this destination/i)).toBeInTheDocument()
+  expect(screen.queryByText(/heavy rain/i)).not.toBeInTheDocument()
+  expect(screen.queryByText(/loading weather/i)).not.toBeInTheDocument()
+})
+
+test('renders the real weather summary and hourly strip once forecast data resolves', async () => {
+  geocodeCity.mockResolvedValueOnce([51.5074, -0.1278])
+  getForecast.mockResolvedValueOnce([{
+    date: '2026-08-01',
+    temp_max: 22,
+    temp_min: 14,
+    condition: 'Partly Cloudy',
+    heavy_rain_probability: 65,
+    heavy_rain_warning: true,
+    flood_score: 40,
+    flood_risk: 'Moderate',
+    beach_safety_score: 80,
+    beach_safety_level: 'Good',
+    snow_probability: 0,
+  }])
+  getHourlyForecast.mockResolvedValueOnce([
+    { time: '2026-08-01T09:00', temperature: 15, rain_mm: 0, rain_probability: null, condition: 'Partly Cloudy' },
+    { time: '2026-08-01T14:00', temperature: 20, rain_mm: 2.4, rain_probability: 62, condition: 'Rain' },
+  ])
+  getItinerary.mockResolvedValue({ status: 'not_generated' })
+
+  renderAt(1)
+
+  expect(await screen.findByText('Partly Cloudy')).toBeInTheDocument()
+  expect(screen.getByText('65%')).toBeInTheDocument()
+  expect(screen.getByText('Moderate')).toBeInTheDocument()
+  expect(screen.getByText('Good')).toBeInTheDocument()
+  expect(screen.getByText('62%')).toBeInTheDocument()
+})
+
+test('risk cards use red/yellow/green styling based on severity level', async () => {
+  geocodeCity.mockResolvedValueOnce([51.5074, -0.1278])
+  getForecast.mockResolvedValueOnce([{
+    date: '2026-08-01',
+    temp_max: 22,
+    temp_min: 14,
+    condition: 'Clear',
+    heavy_rain_probability: 80,
+    heavy_rain_warning: true, // -> 'High' -> red
+    flood_score: 30,
+    flood_risk: 'Moderate', // -> yellow
+    beach_safety_score: 90,
+    beach_safety_level: 'Good', // -> green
+    snow_probability: 0, // -> 'None' -> green
+  }])
+  getHourlyForecast.mockResolvedValueOnce([])
+  getItinerary.mockResolvedValue({ status: 'not_generated' })
+
+  renderAt(1)
+
+  expect(await screen.findByText('High')).toHaveClass('bg-red-100')
+  expect(screen.getByText('Moderate')).toHaveClass('bg-yellow-100')
+  expect(screen.getByText('Good')).toHaveClass('bg-green-100')
+  expect(screen.getByText('None')).toHaveClass('bg-green-100')
 })
 
 test('clicking "Generate itinerary" calls the API and renders the result', async () => {
