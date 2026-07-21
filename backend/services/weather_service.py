@@ -126,10 +126,13 @@ def get_hourly_weather(lat: float, lon: float):
     results = []
     for i in range(len(hourly["time"])):
 
+        prob = hourly["precipitation_probability"][i]
+
         results.append({
             "time": hourly["time"][i],
             "temperature": hourly["temperature_2m"][i],
-            "rain_probability": f"{hourly['precipitation_probability'][i]}%",
+            "rain_mm": hourly["precipitation"][i],
+            "rain_probability": prob,
             "weather_code": hourly["weather_code"][i],
             "condition": weather_condition(
                 hourly["weather_code"][i]
