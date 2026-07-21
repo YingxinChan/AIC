@@ -26,7 +26,7 @@ class ForecastDayOut(BaseModel):
     snow_probability: float
 
 class HourlyWeatherOut(BaseModel):
-    time: time
+    time: str
     temperature: float
     rain_mm: float
     rain_probability: float | None = None
