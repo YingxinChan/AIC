@@ -33,3 +33,23 @@ def test_prediction_returns_forecast(auth_client):
     assert "beach_safety_score" in first_day
     assert "beach_safety_level" in first_day
     assert "snow_probability" in first_day
+
+def test_hourly_returns_forecast(auth_client):
+    response = auth_client.get(
+        "/api/weather/hourly?lat=51.5074&lon=-0.1278"
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert isinstance(data, list)
+    assert len(data) > 0
+
+    first_hour = data[0]
+
+    assert "time" in first_hour
+    assert "temperature" in first_hour
+    assert "rain_mm" in first_hour
+    assert "rain_probability" in first_hour
+    assert "condition" in first_hour
