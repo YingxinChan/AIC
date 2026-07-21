@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, time
 from pydantic import BaseModel
 
 class ForecastDayOut(BaseModel):
@@ -24,3 +24,10 @@ class ForecastDayOut(BaseModel):
     beach_safety_level: str
 
     snow_probability: float
+
+class HourlyWeatherOut(BaseModel):
+    time: str
+    temperature: float
+    rain_mm: float
+    rain_probability: float | None = None
+    condition: str
