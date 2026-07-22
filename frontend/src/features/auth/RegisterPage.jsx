@@ -28,8 +28,13 @@ export default function RegisterPage() {
       navigate('/dashboard')
     } catch (err) {
       const status = err?.response?.status
+      const detail = err?.response?.data?.detail
       if (status === 409) {
         setError('An account with this email already exists.')
+      } else if (status === 422) {
+        setError(typeof detail === 'string' ? detail : 'Please check your email and password and try again.')
+      } else if (typeof detail === 'string') {
+        setError(detail)
       } else {
         setError('Could not create account. Try again.')
       }

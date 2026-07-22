@@ -1,5 +1,5 @@
 from datetime import datetime, date
-from sqlalchemy import String, Date, DateTime, ForeignKey
+from sqlalchemy import String, Date, DateTime, Float, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 from models.base import Base
 
@@ -13,6 +13,9 @@ class Trip(Base):
     start_date: Mapped[date] = mapped_column(Date, nullable=False)
     end_date: Mapped[date] = mapped_column(Date, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    lat: Mapped[float] = mapped_column(Float, default=0.0, server_default="0")
+    lng: Mapped[float] = mapped_column(Float, default=0.0, server_default="0")
 
     arrival_flight_number: Mapped[str] = mapped_column(String(20), default="", server_default="")
     arrival_airline: Mapped[str] = mapped_column(String(100), default="", server_default="")

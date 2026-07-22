@@ -1,3 +1,4 @@
+import asyncio
 from datetime import date
 
 from fastapi import HTTPException
@@ -5,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.trip import Trip
+from services import geocoding_service
 
 VALID_LEGS = ("arrival", "departure")
 
@@ -51,6 +53,15 @@ async def create_trip(
         user_id=user_id, name=name, start_date=start_date, end_date=end_date,
         destination=destination, original_plan=original_plan, hotel_address=hotel_address,
     )
+
+    # Geocoded server-side so the weather auto-swap background job can fetch
+    # forecasts without depending on the browser's client-side geocode call.
+    # Best-effort: a failure here doesn't block trip creation, since
+    # auto_swap_service self-heals by retrying the geocode on its next run.
+    coords = await asyncio.to_thread(geocoding_service.geocode, destination)
+    if coords:
+        trip.lat, trip.lng = coords
+
     db.add(trip)
     await db.commit()
     await db.refresh(trip)

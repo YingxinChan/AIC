@@ -75,6 +75,7 @@ test('shows placeholder and "Generate itinerary" button before anything is gener
 })
 
 test('renders an already-generated itinerary on load without needing to click generate', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
   getItinerary.mockResolvedValue({
     days: [{ date: '2026-08-01', activities: [
       { id: 1, name: 'British Museum', type: 'indoor', time_slot: '09:00 - 11:00', location: 'Great Russell St', description: 'x', is_swapped: false },
@@ -88,6 +89,7 @@ test('renders an already-generated itinerary on load without needing to click ge
 })
 
 test('shows a day tab per generated day, and clicking a different day switches the shown activities', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-02' })
   getItinerary.mockResolvedValue({
     days: [
       { date: '2026-08-01', activities: [
@@ -109,7 +111,55 @@ test('shows a day tab per generated day, and clicking a different day switches t
   expect(screen.queryByText('British Museum')).not.toBeInTheDocument()
 })
 
+test('shows day tabs from the trip dates even before an itinerary is generated', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-03' })
+  // getItinerary defaults to { status: 'not_generated' } via beforeEach
+  renderAt(1)
+
+  expect(await screen.findByRole('button', { name: /day 1.*2026-08-01/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /day 2.*2026-08-02/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /day 3.*2026-08-03/i })).toBeInTheDocument()
+})
+
+test('day tabs render and remain clickable even when weather fails to load', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-02' })
+  getItinerary.mockResolvedValue({
+    days: [
+      { date: '2026-08-01', activities: [
+        { id: 1, name: 'British Museum', type: 'indoor', time_slot: '09:00 - 11:00', location: 'Great Russell St', description: 'x', is_swapped: false },
+      ] },
+      { date: '2026-08-02', activities: [
+        { id: 2, name: 'Hyde Park', type: 'outdoor', time_slot: '10:00 - 12:00', location: 'West London', description: 'Walk.', is_swapped: false },
+      ] },
+    ],
+  })
+  // geocodeCity resolves null by default (see mock above) -> weatherStatus becomes 'failed'
+  renderAt(1)
+
+  expect(await screen.findByText(/weather unavailable for this destination/i)).toBeInTheDocument()
+  expect(await screen.findByText('British Museum')).toBeInTheDocument()
+
+  fireEvent.click(screen.getByRole('button', { name: /day 2.*2026-08-02/i }))
+  expect(await screen.findByText('Hyde Park')).toBeInTheDocument()
+})
+
+test('shows a per-day placeholder when the itinerary has no activities for the selected day', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-02' })
+  getItinerary.mockResolvedValue({
+    days: [{ date: '2026-08-01', activities: [
+      { id: 1, name: 'British Museum', type: 'indoor', time_slot: '09:00 - 11:00', location: 'Great Russell St', description: 'x', is_swapped: false },
+    ] }],
+  })
+  renderAt(1)
+
+  await screen.findByText('British Museum')
+  fireEvent.click(screen.getByRole('button', { name: /day 2.*2026-08-02/i }))
+
+  expect(await screen.findByText(/no activities generated for this day yet/i)).toBeInTheDocument()
+})
+
 test('activities keep showing indoor/outdoor type and description within the combined card', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
   getItinerary.mockResolvedValue({
     days: [{ date: '2026-08-01', activities: [
       { id: 1, name: 'British Museum', type: 'indoor', time_slot: '09:00 - 11:00', location: 'Great Russell St', description: 'Free museum.', is_swapped: false },
@@ -124,6 +174,7 @@ test('activities keep showing indoor/outdoor type and description within the com
 })
 
 test('shows an honest unavailable message and no fake weather data when geocoding fails', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
   getItinerary.mockResolvedValue({
     days: [{ date: '2026-08-01', activities: [
       { id: 1, name: 'British Museum', type: 'indoor', time_slot: '09:00 - 11:00', location: 'Great Russell St', description: 'x', is_swapped: false },
@@ -138,6 +189,7 @@ test('shows an honest unavailable message and no fake weather data when geocodin
 })
 
 test('renders the real weather summary and hourly strip once forecast data resolves', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
   geocodeCity.mockResolvedValueOnce([51.5074, -0.1278])
   getForecast.mockResolvedValueOnce([{
     date: '2026-08-01',
@@ -168,6 +220,7 @@ test('renders the real weather summary and hourly strip once forecast data resol
 })
 
 test('risk cards use red/yellow/green styling based on severity level', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
   geocodeCity.mockResolvedValueOnce([51.5074, -0.1278])
   getForecast.mockResolvedValueOnce([{
     date: '2026-08-01',
@@ -194,6 +247,7 @@ test('risk cards use red/yellow/green styling based on severity level', async ()
 })
 
 test('clicking "Generate itinerary" calls the API and renders the result', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
   generateItinerary.mockResolvedValue({
     days: [{ date: '2026-08-01', activities: [
       { id: 1, name: 'Hyde Park', type: 'outdoor', time_slot: '10:00 - 12:00', location: 'West London', description: 'Walk.', is_swapped: false },
@@ -272,8 +326,10 @@ test('hero card shows the real trip name, destination, dates, and a status deriv
   renderAt(1)
 
   await screen.findByText('Tokyo Trip')
-  expect(screen.getByText(/2099-01-01/)).toBeInTheDocument()
-  expect(screen.getByText(/2099-01-10/)).toBeInTheDocument()
+  // Match the combined "start -> end" text so this only finds the hero's own
+  // date-range line, not one of the day tabs (which now also render a single
+  // date each, e.g. "Day 1 - 2099-01-01").
+  expect(screen.getByText(/2099-01-01.*2099-01-10/)).toBeInTheDocument()
   expect(screen.getByText(/upcoming/i)).toBeInTheDocument()
 })
 

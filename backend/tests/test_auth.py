@@ -31,6 +31,27 @@ def test_login_wrong_password_returns_401(client):
     assert response.status_code == 401
 
 
+def test_login_is_case_insensitive_on_email(client):
+    email = f"Test+{uuid.uuid4()}@Example.com"
+    client.post("/api/auth/register", json={"email": email, "password": "pass123"})
+    response = client.post("/api/auth/login", json={"email": email.upper(), "password": "pass123"})
+    assert response.status_code == 200
+
+
+def test_login_ignores_leading_trailing_whitespace_on_email(client):
+    email = f"test+{uuid.uuid4()}@example.com"
+    client.post("/api/auth/register", json={"email": email, "password": "pass123"})
+    response = client.post("/api/auth/login", json={"email": f"  {email}  ", "password": "pass123"})
+    assert response.status_code == 200
+
+
+def test_register_duplicate_email_is_case_insensitive(client):
+    email = f"test+{uuid.uuid4()}@example.com"
+    client.post("/api/auth/register", json={"email": email, "password": "pass123"})
+    response = client.post("/api/auth/register", json={"email": email.upper(), "password": "pass123"})
+    assert response.status_code == 409
+
+
 def test_logout_clears_cookie(client):
     response = client.post("/api/auth/logout")
     assert response.status_code == 204
