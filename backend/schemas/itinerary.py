@@ -11,6 +11,9 @@ class ActivityOut(BaseModel):
     lat: float
     lng: float
     is_swapped: bool
+    alternate_name: str
+    alternate_location: str
+    swap_reason: str
 
 class ItineraryDayOut(BaseModel):
     date: date

@@ -1,5 +1,9 @@
 import json
+from datetime import date, timedelta
 from unittest.mock import AsyncMock, MagicMock
+
+LONDON_COORDS = (51.5074, -0.1278)
+TODAY = date.today()
 
 
 def _create_trip(auth_client, start="2026-08-01", end="2026-08-02", destination=None, original_plan=None, hotel_address=None):
@@ -235,6 +239,115 @@ def test_generate_itinerary_prompt_orders_day_time_hotel_then_plan(auth_client, 
         prompt.index("day") < prompt.index("lands in London")
         < prompt.index("is staying at") < prompt.index("Tate Modern")
     )
+
+
+def test_generate_itinerary_scales_max_tokens_with_trip_length(auth_client, monkeypatch):
+    mock_client = _mock_claude(monkeypatch)
+    trip_id = _create_trip(auth_client, start="2026-08-01", end="2026-08-14")  # 14 days
+
+    auth_client.post(f"/api/trips/{trip_id}/itinerary/generate")
+
+    max_tokens = mock_client.messages.create.call_args.kwargs["max_tokens"]
+    assert max_tokens > 4096  # the fixed default that truncated longer trips
+    assert max_tokens <= 16000
+
+
+def test_generate_itinerary_short_trip_keeps_default_max_tokens(auth_client, monkeypatch):
+    mock_client = _mock_claude(monkeypatch)
+    trip_id = _create_trip(auth_client, start="2026-08-01", end="2026-08-02")  # 2 days
+
+    auth_client.post(f"/api/trips/{trip_id}/itinerary/generate")
+
+    assert mock_client.messages.create.call_args.kwargs["max_tokens"] == 4096
+
+
+def test_generate_itinerary_handles_truncated_json_gracefully(auth_client, monkeypatch):
+    fake_block = MagicMock(type="text", text='{"days": [{"activities": [{"name": "Truncated mid')
+    fake_response = MagicMock(content=[fake_block])
+    mock_client = MagicMock()
+    mock_client.messages.create = AsyncMock(return_value=fake_response)
+    monkeypatch.setattr("services.itinerary_service.settings.anthropic_api_key", "fake-key")
+    monkeypatch.setattr("services.itinerary_service.anthropic.AsyncAnthropic", lambda **kwargs: mock_client)
+
+    trip_id = _create_trip(auth_client)
+    response = auth_client.post(f"/api/trips/{trip_id}/itinerary/generate")
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "error"
+    assert "cut off" in response.json()["message"]
+
+
+def test_generate_itinerary_prompts_indoor_for_days_already_forecast_rainy(auth_client, monkeypatch):
+    mock_client = _mock_claude(monkeypatch)
+    monkeypatch.setattr("services.trips_service.geocoding_service.geocode", lambda destination: LONDON_COORDS)
+    trip_id = _create_trip(auth_client, start=TODAY.isoformat(), end=(TODAY + timedelta(days=2)).isoformat())
+
+    day2 = (TODAY + timedelta(days=1)).isoformat()
+    monkeypatch.setattr(
+        "services.itinerary_service.get_weather_prediction",
+        lambda lat, lon, start, end: [
+            {"date": TODAY.isoformat(), "heavy_rain_warning": False, "heavy_rain_probability": 5.0},
+            {"date": day2, "heavy_rain_warning": True, "heavy_rain_probability": 80.0},
+            {"date": (TODAY + timedelta(days=2)).isoformat(), "heavy_rain_warning": False, "heavy_rain_probability": 3.0},
+        ],
+    )
+
+    auth_client.post(f"/api/trips/{trip_id}/itinerary/generate")
+
+    prompt = mock_client.messages.create.call_args.kwargs["messages"][0]["content"]
+    assert "Heavy rain is already forecast for day 2" in prompt
+    assert "plan only indoor activities" in prompt
+
+
+def test_generate_itinerary_omits_rain_mention_when_forecast_is_clear(auth_client, monkeypatch):
+    mock_client = _mock_claude(monkeypatch)
+    monkeypatch.setattr("services.trips_service.geocoding_service.geocode", lambda destination: LONDON_COORDS)
+    trip_id = _create_trip(auth_client, start=TODAY.isoformat(), end=(TODAY + timedelta(days=1)).isoformat())
+
+    monkeypatch.setattr(
+        "services.itinerary_service.get_weather_prediction",
+        lambda lat, lon, start, end: [
+            {"date": TODAY.isoformat(), "heavy_rain_warning": False, "heavy_rain_probability": 5.0},
+            {"date": (TODAY + timedelta(days=1)).isoformat(), "heavy_rain_warning": False, "heavy_rain_probability": 2.0},
+        ],
+    )
+
+    auth_client.post(f"/api/trips/{trip_id}/itinerary/generate")
+
+    prompt = mock_client.messages.create.call_args.kwargs["messages"][0]["content"]
+    assert "Heavy rain" not in prompt
+
+
+def test_generate_itinerary_skips_weather_check_beyond_forecast_horizon(auth_client, monkeypatch):
+    mock_client = _mock_claude(monkeypatch)
+    monkeypatch.setattr("services.trips_service.geocoding_service.geocode", lambda destination: LONDON_COORDS)
+    far_start = (TODAY + timedelta(days=60)).isoformat()
+    far_end = (TODAY + timedelta(days=62)).isoformat()
+    trip_id = _create_trip(auth_client, start=far_start, end=far_end)
+
+    mock_weather = MagicMock()
+    monkeypatch.setattr("services.itinerary_service.get_weather_prediction", mock_weather)
+
+    auth_client.post(f"/api/trips/{trip_id}/itinerary/generate")
+
+    mock_weather.assert_not_called()
+    prompt = mock_client.messages.create.call_args.kwargs["messages"][0]["content"]
+    assert "Heavy rain" not in prompt
+
+
+def test_generate_itinerary_succeeds_even_when_weather_fetch_fails(auth_client, monkeypatch):
+    _mock_claude(monkeypatch)
+    monkeypatch.setattr("services.trips_service.geocoding_service.geocode", lambda destination: LONDON_COORDS)
+    trip_id = _create_trip(auth_client, start=TODAY.isoformat(), end=(TODAY + timedelta(days=1)).isoformat())
+
+    def _raise(*args, **kwargs):
+        raise RuntimeError("weather API down")
+    monkeypatch.setattr("services.itinerary_service.get_weather_prediction", _raise)
+
+    response = auth_client.post(f"/api/trips/{trip_id}/itinerary/generate")
+
+    assert response.status_code == 200
+    assert "days" in response.json()
 
 
 def test_swap_activity_returns_stub(auth_client):

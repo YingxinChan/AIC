@@ -60,6 +60,23 @@ const snowLevel = (pct) => {
   return 'High';
 };
 
+const ONE_DAY_MS = 24 * 60 * 60 * 1000
+
+// start/end are plain "YYYY-MM-DD" calendar dates with no timezone meaning of
+// their own, so this parses/advances/formats entirely in UTC — anchoring to
+// the runner's local midnight (via `new Date(start + 'T00:00:00')`) would
+// shift the date backward whenever the local timezone is ahead of UTC.
+const datesBetween = (start, end) => {
+  if (!start || !end) return []
+  const dates = []
+  const startMs = new Date(start + 'T00:00:00Z').getTime()
+  const endMs = new Date(end + 'T00:00:00Z').getTime()
+  for (let t = startMs; t <= endMs; t += ONE_DAY_MS) {
+    dates.push(new Date(t).toISOString().split('T')[0])
+  }
+  return dates
+}
+
 export default function ItineraryPage() {
   // --- SECTION 2: STATE VARIABLES ---
   const { tripId } = useParams()
@@ -67,8 +84,8 @@ export default function ItineraryPage() {
   const [itinerary, setItinerary] = useState(null)
   const [itineraryNotice, setItineraryNotice] = useState('')
   const [generating, setGenerating] = useState(false)
-  const [selectedDayIndex, setSelectedDayIndex] = useState(0)
-  
+  const [selectedDate, setSelectedDate] = useState(null)
+
   const [mapCenter, setMapCenter] = useState(null)
   const [forecast, setForecast] = useState(null)
   const [hourlyForecast, setHourlyForecast] = useState(null)
@@ -85,7 +102,6 @@ export default function ItineraryPage() {
     // Get user's local date and hour
     const now = new Date();
     const today = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-    const selectedDate = forecastDay.date;
 
     // If viewing TODAY'S itinerary, show the current hour's temperature
     if (selectedDate === today && hourlyForecast) {
@@ -112,7 +128,13 @@ export default function ItineraryPage() {
         setTrip(tripData);
         if (itinData?.days) {
           setItinerary(itinData);
-          // Day index will be set intelligently once weather loads
+        }
+
+        if (tripData?.start_date && tripData?.end_date) {
+          const now = new Date();
+          const todayStr = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+          const inRange = todayStr >= tripData.start_date && todayStr <= tripData.end_date;
+          setSelectedDate(inRange ? todayStr : tripData.start_date);
         }
 
         if (tripData?.destination) {
@@ -139,17 +161,6 @@ export default function ItineraryPage() {
                   setForecast(days);
                   setHourlyForecast(hours);
                   setWeatherStatus('loaded');
-
-                  // Auto-select the current day if the user is currently on the trip
-                  const now = new Date();
-                  const todayStr = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-                  const todayIdx = days.findIndex(d => d.date === todayStr);
-                  
-                  if (todayIdx !== -1) {
-                      setSelectedDayIndex(todayIdx);
-                  } else {
-                      setSelectedDayIndex(0);
-                  }
                 }
               })
               .catch((err) => {
@@ -174,7 +185,6 @@ export default function ItineraryPage() {
       const data = await generateItinerary(tripId)
       if (data.days) {
         setItinerary(data)
-        setSelectedDayIndex(0)
       } else {
         setItineraryNotice(data.message || 'Could not generate the itinerary.')
       }
@@ -186,12 +196,13 @@ export default function ItineraryPage() {
 
   const status = trip?.start_date && trip?.end_date ? tripStatus(trip) : null
 
-  // Match the selected itinerary day to its forecast entry by date, rather than
-  // assuming itinerary.days and forecast are the same length/order.
-  const selectedItineraryDay = itinerary?.days?.[selectedDayIndex]
-  const forecastDay = selectedItineraryDay
-    ? forecast?.find(d => d.date === selectedItineraryDay.date)
-    : forecast?.[selectedDayIndex]
+  // Day tabs are driven by the trip's own date range (see tripDates below),
+  // not by itinerary.days or forecast — so both are looked up by date here,
+  // independently of each other and of the tab source.
+  const tripDates = trip?.start_date && trip?.end_date ? datesBetween(trip.start_date, trip.end_date) : []
+  const forecastDay = forecast?.find(d => d.date === selectedDate)
+  const itineraryDay = itinerary?.days?.find(d => d.date === selectedDate)
+  const selectedDayNumber = tripDates.indexOf(selectedDate) + 1
 
   // --- SECTION 5: UI RENDERING ---
   return (
@@ -261,17 +272,17 @@ export default function ItineraryPage() {
       <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
         {/* Day Tabs */}
         <div className="flex items-center justify-between mb-6">
-          {itinerary?.days ? (
+          {tripDates.length > 0 ? (
             <div className="flex gap-2 flex-wrap">
-              {itinerary.days.map((day, index) => (
+              {tripDates.map((d, index) => (
                 <button
-                  key={day.date}
+                  key={d}
                   type="button"
-                  onClick={() => setSelectedDayIndex(index)}
+                  onClick={() => setSelectedDate(d)}
                   className={`px-4 py-2 rounded-full text-sm font-semibold border transition-colors
-                    ${index === selectedDayIndex ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-300 text-gray-700 hover:border-indigo-300'}`}
+                    ${d === selectedDate ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-300 text-gray-700 hover:border-indigo-300'}`}
                 >
-                  Day {index + 1} &middot; {day.date}
+                  Day {index + 1} &middot; {d}
                 </button>
               ))}
             </div>
@@ -365,32 +376,53 @@ export default function ItineraryPage() {
         )}
 
         {/* Itinerary List */}
-        {itinerary && itinerary.days && itinerary.days[selectedDayIndex] && (
+        {itineraryDay && (
           <div className="border-t border-gray-100 pt-6">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-800 mb-3">
-              <Sparkles size={16} className="text-indigo-600" /> Itinerary for Day {selectedDayIndex + 1}
+              <Sparkles size={16} className="text-indigo-600" /> Itinerary for Day {selectedDayNumber}
             </h3>
             <ul className="space-y-2">
-              {itinerary.days[selectedDayIndex].activities.map((activity, index) => (
+              {itineraryDay.activities.map((activity, index) => (
                 <li key={activity.id} className="flex items-start gap-3 bg-gray-50 rounded-lg p-3">
                   <span className="w-6 h-6 shrink-0 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center mt-0.5">
                     {index + 1}
                   </span>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-gray-900">{activity.name}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${activity.type === 'indoor' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
-                        {activity.type}
+                      <span className={`font-medium text-gray-900 ${activity.is_swapped ? 'line-through text-gray-400' : ''}`}>
+                        {activity.name}
                       </span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${(activity.is_swapped ? 'indoor' : activity.type) === 'indoor' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
+                        {activity.is_swapped ? 'indoor' : activity.type}
+                      </span>
+                      {activity.is_swapped && (
+                        <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                          <CloudRain size={12} /> Swapped
+                        </span>
+                      )}
                     </div>
-                    <p className="text-sm text-gray-500">{activity.time_slot}</p>
-                    <p className="text-sm text-gray-600">{activity.location}</p>
-                    <p className="text-sm text-gray-500">{activity.description}</p>
+                    {activity.is_swapped ? (
+                      <>
+                        <p className="font-medium text-gray-900 text-sm mt-1">{activity.alternate_name}</p>
+                        <p className="text-sm text-gray-500">{activity.time_slot}</p>
+                        <p className="text-sm text-gray-600">{activity.alternate_location}</p>
+                        <p className="text-xs text-amber-700 italic mt-1">{activity.swap_reason}</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm text-gray-500">{activity.time_slot}</p>
+                        <p className="text-sm text-gray-600">{activity.location}</p>
+                        <p className="text-sm text-gray-500">{activity.description}</p>
+                      </>
+                    )}
                   </div>
                 </li>
               ))}
             </ul>
           </div>
+        )}
+        {itinerary && !itineraryDay && selectedDate && (
+          <p className="text-sm text-gray-400 italic border-t border-gray-100 pt-6">No activities generated for this day yet.</p>
         )}
         {!itinerary && !itineraryNotice && (
           <Placeholder label="AI-generated itinerary will appear here once generated." />
