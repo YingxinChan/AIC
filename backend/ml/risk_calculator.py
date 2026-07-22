@@ -94,6 +94,30 @@ def snow_probability(
         "snow_probability": round(probability * 100, 2)
     }
 
+# UV level
+def uv_level(uv: float):
+    if uv < 3:
+        return "Low"
+    elif uv < 6:
+        return "Moderate"
+    elif uv < 8:
+        return "High"
+    elif uv < 11:
+        return "Very High"
+    else:
+        return "Extreme"
+
+# Wind level
+def wind_level(wind: float):
+    if wind < 10:
+        return "Calm"
+    elif wind < 20:
+        return "Moderate"
+    elif wind < 35:
+        return "Strong"
+    else:
+        return "Very Strong"
+
 
 # For testing
 if __name__ == "__main__":

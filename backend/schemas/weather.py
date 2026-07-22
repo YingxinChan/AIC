@@ -12,6 +12,14 @@ class ForecastDayOut(BaseModel):
     temp_max: float
     rain_mm: float
 
+    uv_index: float
+    uv_level: str
+
+    wind_speed: float
+    wind_level: str
+    
+    visibility_m: float
+
     # lgbm prediction
     heavy_rain_probability: float
     heavy_rain_warning: bool

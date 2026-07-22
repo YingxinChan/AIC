@@ -12,6 +12,7 @@ def get_forecast(lat: float, lon: float):
         "precipitation_probability",
         "temperature_2m",
         "weather_code"
+        "visibility",
     ])
 
     # Daily forecasted variables
@@ -24,6 +25,7 @@ def get_forecast(lat: float, lon: float):
         "wind_speed_10m_mean",
         "wind_direction_10m_dominant",
         "relative_humidity_2m_mean"
+        "uv_index_max",
     ])
 
     url = (
