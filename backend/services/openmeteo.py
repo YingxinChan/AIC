@@ -21,10 +21,25 @@ def get_forecast(lat: float, lon: float, start_date: str = None, end_date: str =
         "precipitation_probability",
         "temperature_2m",
         "weather_code"
+        "visibility",
     ])
 
     # Daily forecasted variables
+<<<<<<< HEAD
     daily = ",".join(["weather_code", "precipitation_sum", "temperature_2m_mean", "temperature_2m_max", "temperature_2m_min", "wind_speed_10m_mean", "wind_direction_10m_dominant", "relative_humidity_2m_mean"])
+=======
+    daily = ",".join([
+        "weather_code",
+        "precipitation_sum",
+        "temperature_2m_mean",
+        "temperature_2m_max",
+        "temperature_2m_min",
+        "wind_speed_10m_mean",
+        "wind_direction_10m_dominant",
+        "relative_humidity_2m_mean"
+        "uv_index_max",
+    ])
+>>>>>>> 97ba535 (add daily features)
 
     # Build the URL with the date parameters
     url = (
