@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Plane, Thermometer, MapPin, Zap, Globe, Briefcase, ArrowRight } from 'lucide-react'
+import heroImage from '../../assets/hero-amalfi-coast.jpg'
 
 const FEATURES = [
   {
@@ -54,9 +55,12 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* placeholder gradient until the canyon-road hero photo asset is supplied */}
-      <section className="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 text-white">
-        <div className="max-w-6xl mx-auto px-4 py-28">
+      <section
+        className="relative bg-cover bg-center text-white"
+        style={{ backgroundImage: `url(${heroImage})` }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-900/60 to-slate-900/10" />
+        <div className="relative max-w-6xl mx-auto px-4 py-28">
           <span className="inline-flex items-center gap-1.5 bg-indigo-600 px-3 py-1.5 rounded-full text-xs font-bold mb-6">
             <Zap size={14} /> AI-Powered Travel Planning
           </span>
