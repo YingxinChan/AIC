@@ -107,6 +107,7 @@ test('submitting Plan My Trip creates the trip, attaches both flights, and goes 
   await waitFor(() => expect(createTrip).toHaveBeenCalledWith({
     name: 'Tokyo Trip',
     destination: 'Tokyo',
+    origin: 'London, UK',
     start_date: '2026-08-01',
     end_date: '2026-08-10',
     hotel_address: 'Park Hyatt Tokyo',

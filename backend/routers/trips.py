@@ -22,7 +22,7 @@ async def create_trip(
 ):
     return await trips_service.create_trip(
         db, current_user["id"], body.name, body.start_date, body.end_date,
-        body.destination, body.original_plan, body.hotel_address,
+        body.destination, body.origin, body.original_plan, body.hotel_address,
     )
 
 @router.get("/{trip_id}")

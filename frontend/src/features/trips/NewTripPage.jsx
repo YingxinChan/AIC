@@ -26,6 +26,7 @@ export default function NewTripPage() {
       const trip = await createTrip({
         name: `${draft.destination} Trip`,
         destination: draft.destination,
+        origin: draft.origin,
         start_date: draft.startDate,
         end_date: draft.endDate,
         hotel_address: draft.hotelAddress,

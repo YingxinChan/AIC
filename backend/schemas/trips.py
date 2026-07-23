@@ -4,6 +4,7 @@ from pydantic import BaseModel
 class CreateTripRequest(BaseModel):
     name: str
     destination: str = "London"
+    origin: str = ""
     start_date: date
     end_date: date
     original_plan: str = ""
@@ -13,6 +14,7 @@ class TripOut(BaseModel):
     id: int
     name: str
     destination: str = "London"
+    origin: str = ""
     start_date: date
     end_date: date
     arrival_flight_number: str = ""

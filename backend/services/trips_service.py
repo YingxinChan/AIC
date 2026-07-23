@@ -17,6 +17,7 @@ def _trip_dict(trip: Trip) -> dict:
         "user_id": trip.user_id,
         "name": trip.name,
         "destination": trip.destination,
+        "origin": trip.origin,
         "start_date": trip.start_date,
         "end_date": trip.end_date,
         "created_at": trip.created_at,
@@ -46,12 +47,13 @@ async def create_trip(
     start_date: date,
     end_date: date,
     destination: str = "London",
+    origin: str = "",
     original_plan: str = "",
     hotel_address: str = "",
 ) -> dict:
     trip = Trip(
         user_id=user_id, name=name, start_date=start_date, end_date=end_date,
-        destination=destination, original_plan=original_plan, hotel_address=hotel_address,
+        destination=destination, origin=origin, original_plan=original_plan, hotel_address=hotel_address,
     )
 
     # Geocoded server-side so the weather auto-swap background job can fetch
