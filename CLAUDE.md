@@ -1,7 +1,7 @@
 # SmartTrip AI — Project Context
 
 ## What this project is
-An app that plans travel itineraries according to weather forecasts, then suggests changes (indoor/outdoor activity swaps) if weather changes — with flight recommendations included. MVP scope is **London only**. Built for a specific competition/grant submission, not a commercial launch (yet).
+An app that plans travel itineraries according to weather forecasts, then suggests changes (indoor/outdoor activity swaps) if weather changes — with flight recommendations included. MVP scope is **25 European cities** (expanded from the original London-only MVP — see decision note below). Built for a specific competition/grant submission, not a commercial launch (yet).
 
 ## Team
 4 people total (including the project owner). Roles/skills not yet assigned — to be discussed by the team. Plan is structured so 4 people can work in **parallel tracks** (ML, Backend, Frontend, Proposal), not sequential phases.
@@ -12,6 +12,12 @@ An app that plans travel itineraries according to weather forecasts, then sugges
 - **w/c 7 Sept:** create video, poster, slides
 - **11 Sept:** poster submission
 - **16 Sept:** video presentation submission
+
+## Scope (decision updated 23 July 2026)
+- MVP expanded from **London only** to **25 European cities**.
+- The 25 cities (confirmed via `backend/services/mock_flights.csv`, already seeded by a teammate): Amsterdam, Athens, Barcelona, Berlin, Bruges, Brussels, Budapest, Copenhagen, Dublin, Edinburgh, Florence, Istanbul, Krakow, Lisbon, London, Madrid, Milan, Munich, Oslo, Paris, Prague, Rome, Venice, Vienna, Zurich.
+- Impact not yet fully worked through — flagged here so it isn't missed: ML training data (OpenWeatherMap + NASA POWER pulls) needs to cover 25 locations instead of 1, activity/POI seeding data needs per-city coverage, and this may affect the Aug/Sept deadlines. Confirm with the team whether this changes timeline or is being absorbed within it.
+- Update this file further as multi-city implementation details (how city selection works in the UI, data seeding approach) get decided.
 
 ## Tech stack (FINAL — confirmed in planning conversation)
 - **Frontend:** React (regular web app — NOT React Native, NOT mobile. This was changed from the original proposal because mobile app setup was judged too troublesome for the timeline.)
@@ -45,7 +51,7 @@ An app that plans travel itineraries according to weather forecasts, then sugges
 - Firebase push notifications — replaced with email notifications.
 - Real flight API integration — Skyscanner is closed to non-partners, Amadeus self-service is shutting down July 2026. Using mock flight data for the prototype instead.
 - Map view — lowest priority, may be cut if time is short.
-- Multi-city/global expansion — explicitly future work, MVP is London only.
+- Global expansion beyond Europe — the 25-city scope is Europe-only; further expansion is future work.
 
 ## Research already completed (use as-is in proposal, don't redo)
 - 100-person survey: 81% Gen Z/Millennial respondents, 83% had a holiday ruined by bad weather, 88% change destinations based on forecasts, 85% want dynamic indoor/outdoor swapping, 73% willing to pay directly (reject free model), 49% prefer pay-as-you-go per-trip pricing.
