@@ -4,6 +4,7 @@ import { Plane } from 'lucide-react'
 import { register } from './authApi'
 import { useAuth } from './useAuth'
 import ErrorMessage from '../../components/ErrorMessage'
+import PasswordInput from '../../components/PasswordInput'
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('')
@@ -74,30 +75,26 @@ export default function RegisterPage() {
           <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
             Password
           </label>
-          <input
+          <PasswordInput
             id="password"
-            type="password"
-            autoComplete="new-password"
-            required
             value={password}
             onChange={e => setPassword(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            autoComplete="new-password"
             placeholder="••••••••"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
         <div>
           <label htmlFor="confirm" className="block text-sm font-medium text-gray-700 mb-1">
             Confirm password
           </label>
-          <input
+          <PasswordInput
             id="confirm"
-            type="password"
-            autoComplete="new-password"
-            required
             value={confirm}
             onChange={e => setConfirm(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            autoComplete="new-password"
             placeholder="••••••••"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
         <button

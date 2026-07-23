@@ -16,7 +16,7 @@ function renderPage() {
 
 function fillAndSubmit() {
   fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'user@example.com' } })
-  fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'wrongpass' } })
+  fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'wrongpass' } })
   fireEvent.click(screen.getByRole('button', { name: /^login$/i }))
 }
 
@@ -24,7 +24,7 @@ test('renders welcome back heading and form fields', () => {
   renderPage()
   expect(screen.getByRole('heading', { name: /welcome back/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/email/i)).toBeInTheDocument()
-  expect(screen.getByLabelText(/password/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^password$/i)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /^login$/i })).toBeInTheDocument()
 })
 
@@ -60,4 +60,17 @@ test('shows a generic message for an unexpected server error', async () => {
   renderPage()
   fillAndSubmit()
   expect(await screen.findByText(/something went wrong/i)).toBeInTheDocument()
+})
+
+test('password is masked by default and can be toggled visible and back', () => {
+  renderPage()
+  const passwordInput = screen.getByLabelText(/^password$/i)
+  expect(passwordInput).toHaveAttribute('type', 'password')
+
+  fireEvent.click(screen.getByRole('button', { name: /show password/i }))
+  expect(passwordInput).toHaveAttribute('type', 'text')
+  expect(screen.getByRole('button', { name: /hide password/i })).toBeInTheDocument()
+
+  fireEvent.click(screen.getByRole('button', { name: /hide password/i }))
+  expect(passwordInput).toHaveAttribute('type', 'password')
 })
