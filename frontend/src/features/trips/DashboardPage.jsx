@@ -3,6 +3,7 @@ import { Briefcase, MapPin, Plane, ArrowRight, Calendar, ChevronRight } from 'lu
 import ErrorMessage from '../../components/ErrorMessage'
 import { useTrips } from './useTrips'
 import { tripStatus, STATUS_STYLES } from './tripStatus'
+import { capitalize } from '../../lib/format'
 import planeWing from '../../assets/dashboard-plane-wing.jpg'
 
 const RECENT_TRIPS_PREVIEW_COUNT = 2
@@ -90,7 +91,7 @@ export default function DashboardPage() {
                 >
                   <div className="h-36 bg-gradient-to-br from-indigo-400 to-purple-400" />
                   <div className="p-4">
-                    <p className="font-semibold text-gray-900">{trip.name}</p>
+                    <p className="font-semibold text-gray-900">{capitalize(trip.name)}</p>
                     <p className="flex items-center gap-1.5 text-sm text-gray-500 mt-1">
                       <Calendar size={14} /> {trip.start_date} &rarr; {trip.end_date}
                     </p>

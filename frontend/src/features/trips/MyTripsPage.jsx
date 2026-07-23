@@ -3,6 +3,7 @@ import { Plane, Calendar, ChevronRight } from 'lucide-react'
 import ErrorMessage from '../../components/ErrorMessage'
 import { useTrips } from './useTrips'
 import { tripStatus, STATUS_STYLES } from './tripStatus'
+import { capitalize } from '../../lib/format'
 
 export default function MyTripsPage() {
   const { trips, loading, error } = useTrips()
@@ -44,7 +45,7 @@ export default function MyTripsPage() {
               >
                 <div className="h-36 bg-gradient-to-br from-indigo-400 to-purple-400" />
                 <div className="p-4">
-                  <p className="font-semibold text-gray-900">{trip.name}</p>
+                  <p className="font-semibold text-gray-900">{capitalize(trip.name)}</p>
                   <p className="flex items-center gap-1.5 text-sm text-gray-500 mt-1">
                     <Calendar size={14} /> {trip.start_date} &rarr; {trip.end_date}
                   </p>

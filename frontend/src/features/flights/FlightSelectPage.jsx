@@ -4,15 +4,7 @@ import { Plane, ArrowLeft } from 'lucide-react'
 import ErrorMessage from '../../components/ErrorMessage'
 import { searchFlights } from './flightsApi'
 import { useTripDraft } from '../trips/useTripDraft'
-
-// P1 Fix: Only uppercase the first letter, leave rest as is (preserves "UK", "USA")
-const capitalize = (str) => {
-  if (!str) return '';
-  return str.split(',').map(part => {
-    const trimmed = part.trim();
-    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
-  }).join(', ');
-};
+import { capitalize } from '../../lib/format'
 
 function airlineCode(flightNumber) {
   // P0 Fix: Works for "BA 112" or "KL346" by just matching letters

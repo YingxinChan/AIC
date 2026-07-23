@@ -12,16 +12,10 @@ import { getTrip } from './tripsApi'
 import { getItinerary, generateItinerary } from './itineraryApi'
 import { tripStatus, STATUS_STYLES } from './tripStatus'
 import { geocodeCity } from '../../lib/geocode'
+import { capitalize } from '../../lib/format'
 import { getForecast, getHourlyForecast } from '../weather/weatherApi'
 
 // --- SECTION 1: HELPER FUNCTIONS ---
-const capitalize = (str) => {
-  if (!str) return '';
-  return str.split(',').map(part => {
-    const trimmed = part.trim();
-    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
-  }).join(', ');
-};
 
 function airlineCode(flightNumber) {
   return (flightNumber || '').split(' ')[0]
