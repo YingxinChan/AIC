@@ -21,8 +21,20 @@ export default function LoginPage() {
       const data = await login(email, password)
       setUser(data.user)
       navigate('/dashboard')
-    } catch {
-      setError('Invalid email or password.')
+    } catch (err) {
+      const status = err?.response?.status
+      const detail = err?.response?.data?.detail
+      if (status === 401) {
+        setError('Invalid email or password.')
+      } else if (status === 422) {
+        setError(typeof detail === 'string' ? detail : 'Please check your email and password and try again.')
+      } else if (typeof detail === 'string') {
+        setError(detail)
+      } else if (!err?.response) {
+        setError('Could not reach the server. Check your connection and try again.')
+      } else {
+        setError('Something went wrong while signing in. Try again.')
+      }
     } finally {
       setLoading(false)
     }
