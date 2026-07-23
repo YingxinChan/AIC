@@ -5,6 +5,7 @@ from services.feature_builder import build_features
 from ml.predictor import WeatherPredictor
 from ml.risk_calculator import flood_risk, beach_safety, snow_probability, uv_level, wind_level
 
+
 # Weather code
 WEATHER_CODES = {
     0: "Clear",
@@ -75,7 +76,7 @@ def get_weather_prediction(lat: float, lon: float, start_date: str = None, end_d
             "wind_speed": float(features.iloc[i]["wind"]),
             "wind_level": wind_level(features.iloc[i]["wind"]),
             "uv_index": float(features.iloc[i]["uv_index"]),
-            "uv_level": uv_level(features.iloc[i]["uv"]),
+            "uv_level": uv_level(features.iloc[i]["uv_index"]),
             "visibility_m": float(features.iloc[i]["visibility"]),
         }
         
