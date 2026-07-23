@@ -1,4 +1,5 @@
 # Run: python ml/risk_calculator.py
+import math
 
 # Heavy rain probability + accumulated rainfall
 def flood_risk(
@@ -96,6 +97,9 @@ def snow_probability(
 
 # UV level
 def uv_level(uv: float):
+    if uv is None or math.isnan(uv):
+        return "Unknown"
+
     if uv < 3:
         return "Low"
     elif uv < 6:
@@ -109,6 +113,9 @@ def uv_level(uv: float):
 
 # Wind level
 def wind_level(wind: float):
+    if wind is None or math.isnan(wind):
+        return "Unknown"
+    
     if wind < 10:
         return "Calm"
     elif wind < 20:

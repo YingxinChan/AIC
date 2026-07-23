@@ -72,7 +72,7 @@ def get_weather_prediction(lat: float, lon: float, start_date: str = None, end_d
             "temp_min": float(features.iloc[i]["temp_min"]),
             "temp_max": float(features.iloc[i]["temp_max"]),
             "rain_mm": float(features.iloc[i]["rain"]),
-            "wind_kmh": float(features.iloc[i]["wind"]),
+            "wind_speed": float(features.iloc[i]["wind"]),
             "wind_level": wind_level(features.iloc[i]["wind"]),
             "uv_index": float(features.iloc[i]["uv_index"]),
             "uv_level": uv_level(features.iloc[i]["uv"]),
