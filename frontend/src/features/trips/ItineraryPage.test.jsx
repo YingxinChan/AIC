@@ -6,6 +6,9 @@ import { getTrip } from './tripsApi'
 import { getItinerary, generateItinerary } from './itineraryApi'
 import { geocodeCity } from '../../lib/geocode'
 import { getForecast, getHourlyForecast } from '../weather/weatherApi'
+import { getActivityPhoto } from '../../lib/wikipedia'
+import { getPlaceDetails } from '../../lib/nominatim'
+import { getWalkingDistance } from './activitiesApi'
 
 vi.mock('../../components/MapView', () => ({
   default: () => <div>Map</div>,
@@ -29,6 +32,18 @@ vi.mock('../weather/weatherApi', () => ({
   getHourlyForecast: vi.fn(),
 }))
 
+vi.mock('../../lib/wikipedia', () => ({
+  getActivityPhoto: vi.fn(),
+}))
+
+vi.mock('../../lib/nominatim', () => ({
+  getPlaceDetails: vi.fn(),
+}))
+
+vi.mock('./activitiesApi', () => ({
+  getWalkingDistance: vi.fn(),
+}))
+
 function renderAt(tripId) {
   return render(
     <MemoryRouter initialEntries={[`/trips/${tripId}`]}>
@@ -40,9 +55,21 @@ function renderAt(tripId) {
 }
 
 beforeEach(() => {
+  vi.clearAllMocks()
   getTrip.mockResolvedValue({ destination: 'London' })
   getItinerary.mockResolvedValue({ status: 'not_generated' })
+  getActivityPhoto.mockResolvedValue(null)
+  getPlaceDetails.mockResolvedValue(null)
+  getWalkingDistance.mockResolvedValue({ distance_m: null, duration_min: null })
 })
+
+const TWO_ACTIVITIES_DAY = {
+  date: '2026-08-01',
+  activities: [
+    { id: 1, name: 'British Museum', type: 'indoor', time_slot: '09:00 - 11:00', location: 'Great Russell St', description: 'x', is_swapped: false, lat: 51.5194, lng: -0.127 },
+    { id: 2, name: 'Hyde Park', type: 'outdoor', time_slot: '12:00 - 14:00', location: 'West London', description: 'Walk.', is_swapped: false, lat: 51.5073, lng: -0.1657 },
+  ],
+}
 
 test('renders itinerary sections', async () => {
   renderAt(1)
@@ -337,4 +364,91 @@ test('renders a Back to My Trips link to /dashboard', async () => {
   renderAt(1)
   await waitFor(() => expect(getTrip).toHaveBeenCalled())
   expect(screen.getByRole('link', { name: /back to my trips/i })).toHaveAttribute('href', '/dashboard')
+})
+
+test('clicking an activity expands it and fetches its photo, its own place details, and the next activity\'s place details', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  getItinerary.mockResolvedValue({ days: [TWO_ACTIVITIES_DAY] })
+  renderAt(1)
+
+  await screen.findByText('British Museum')
+  fireEvent.click(screen.getByText('British Museum'))
+
+  await waitFor(() => expect(getActivityPhoto).toHaveBeenCalledWith('British Museum'))
+  expect(getPlaceDetails).toHaveBeenCalledWith('British Museum', 'London')
+  expect(getPlaceDetails).toHaveBeenCalledWith('Hyde Park', 'London')
+})
+
+test('clicking an expanded activity again collapses it without re-fetching', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  getItinerary.mockResolvedValue({ days: [TWO_ACTIVITIES_DAY] })
+  renderAt(1)
+
+  await screen.findByText('British Museum')
+  fireEvent.click(screen.getByText('British Museum'))
+  await waitFor(() => expect(getActivityPhoto).toHaveBeenCalledTimes(1))
+
+  fireEvent.click(screen.getByText('British Museum'))
+  fireEvent.click(screen.getByText('British Museum'))
+
+  expect(getActivityPhoto).toHaveBeenCalledTimes(1)
+  expect(getPlaceDetails).toHaveBeenCalledTimes(2) // once for itself, once for the next activity
+})
+
+test('clicking a different activity while one is expanded collapses the first and expands the second', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  getItinerary.mockResolvedValue({ days: [TWO_ACTIVITIES_DAY] })
+  renderAt(1)
+
+  await screen.findByText('British Museum')
+  fireEvent.click(screen.getByText('British Museum'))
+  await waitFor(() => expect(getActivityPhoto).toHaveBeenCalledWith('British Museum'))
+
+  fireEvent.click(screen.getByText('Hyde Park'))
+  await waitFor(() => expect(getActivityPhoto).toHaveBeenCalledWith('Hyde Park'))
+
+  expect(getActivityPhoto).toHaveBeenCalledTimes(2)
+})
+
+test('the last activity of a day never looks up a "next" activity or walking distance', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  getItinerary.mockResolvedValue({ days: [TWO_ACTIVITIES_DAY] })
+  renderAt(1)
+
+  await screen.findByText('British Museum')
+  fireEvent.click(screen.getByText('Hyde Park')) // last activity in the day
+
+  await waitFor(() => expect(getActivityPhoto).toHaveBeenCalledWith('Hyde Park'))
+  expect(getPlaceDetails).toHaveBeenCalledTimes(1) // only for itself, no "next"
+  expect(getPlaceDetails).toHaveBeenCalledWith('Hyde Park', 'London')
+  expect(getWalkingDistance).not.toHaveBeenCalled()
+})
+
+test('falls back to activity.lat/activity.lng for walking distance when a place lookup finds no match', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  getItinerary.mockResolvedValue({ days: [TWO_ACTIVITIES_DAY] })
+  getPlaceDetails.mockResolvedValue(null) // no match for either activity
+  renderAt(1)
+
+  await screen.findByText('British Museum')
+  fireEvent.click(screen.getByText('British Museum'))
+
+  await waitFor(() => expect(getWalkingDistance).toHaveBeenCalledWith(51.5194, -0.127, 51.5073, -0.1657))
+})
+
+test('omits the photo, website, and walking-distance sections when each comes back unavailable', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  getItinerary.mockResolvedValue({ days: [TWO_ACTIVITIES_DAY] })
+  getActivityPhoto.mockResolvedValue(null)
+  getPlaceDetails.mockResolvedValue(null)
+  getWalkingDistance.mockResolvedValue({ distance_m: null, duration_min: null })
+  renderAt(1)
+
+  await screen.findByText('British Museum')
+  fireEvent.click(screen.getByText('British Museum'))
+
+  await waitFor(() => expect(getWalkingDistance).toHaveBeenCalled())
+  expect(screen.queryByRole('img')).not.toBeInTheDocument()
+  expect(screen.queryByRole('link', { name: /official website/i })).not.toBeInTheDocument()
+  expect(screen.queryByText(/min walk/i)).not.toBeInTheDocument()
 })
