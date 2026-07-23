@@ -6,7 +6,7 @@ from ml.risk_calculator import (
     beach_safety,
     snow_probability,
     uv_level,
-    wind_level,
+    wind_level
 )
 
 # Flood Risk Tests
