@@ -3,6 +3,7 @@ import { Briefcase, MapPin, Plane, ArrowRight, Calendar, ChevronRight } from 'lu
 import ErrorMessage from '../../components/ErrorMessage'
 import { useTrips } from './useTrips'
 import { tripStatus, STATUS_STYLES } from './tripStatus'
+import planeWing from '../../assets/dashboard-plane-wing.jpg'
 
 const RECENT_TRIPS_PREVIEW_COUNT = 2
 
@@ -18,8 +19,8 @@ export default function DashboardPage() {
         <p className="text-sm text-gray-500">Where are you heading next?</p>
       </div>
 
-      <div className="bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl p-8 text-white flex items-center justify-between overflow-hidden">
-        <div>
+      <div className="bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl text-white grid sm:grid-cols-2 overflow-hidden">
+        <div className="p-8 flex flex-col justify-center">
           <p className="text-xs font-medium text-indigo-200 mb-1">Ready for your next adventure?</p>
           <h2 className="text-2xl font-bold">Let AI plan your perfect trip</h2>
           <p className="text-sm text-indigo-100 mt-2 max-w-md">
@@ -27,10 +28,17 @@ export default function DashboardPage() {
           </p>
           <Link
             to="/trips/new"
-            className="mt-4 inline-flex items-center gap-2 bg-white text-indigo-700 px-5 py-2.5 rounded-full text-sm font-semibold hover:bg-indigo-50 transition-colors"
+            className="mt-4 inline-flex items-center gap-2 bg-white text-indigo-700 px-5 py-2.5 rounded-full text-sm font-semibold hover:bg-indigo-50 transition-colors w-fit"
           >
             <Plane size={16} /> Plan a Trip <ArrowRight size={14} />
           </Link>
+        </div>
+        <div className="relative hidden sm:block min-h-[220px]">
+          <div
+            className="absolute inset-0 bg-cover"
+            style={{ backgroundImage: `url(${planeWing})`, backgroundPosition: 'center 68%' }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/95 via-purple-600/60 to-purple-600/40" />
         </div>
       </div>
 
