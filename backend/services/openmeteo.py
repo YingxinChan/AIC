@@ -11,7 +11,7 @@ def get_forecast(lat: float, lon: float):
         "precipitation",
         "precipitation_probability",
         "temperature_2m",
-        "weather_code"
+        "weather_code",
         "visibility",
     ])
 
@@ -24,7 +24,7 @@ def get_forecast(lat: float, lon: float):
         "temperature_2m_min",
         "wind_speed_10m_mean",
         "wind_direction_10m_dominant",
-        "relative_humidity_2m_mean"
+        "relative_humidity_2m_mean",
         "uv_index_max",
     ])
 

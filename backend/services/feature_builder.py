@@ -21,7 +21,7 @@ def build_features(forecast):
         "humidity": daily["relative_humidity_2m_mean"],
         "wind": daily["wind_speed_10m_mean"],
         "wind_dir": daily["wind_direction_10m_dominant"],
-        "uv_index_max": daily["uv_index_max"],
+        "uv_index": daily["uv_index_max"],
     })
 
     # Date
