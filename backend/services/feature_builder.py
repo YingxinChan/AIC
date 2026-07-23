@@ -14,15 +14,14 @@ def build_features(forecast):
     df = pd.DataFrame({
         "date": daily["time"],
         "weather_code": daily["weather_code"],
-
         "rain": daily["precipitation_sum"],
         "temp": daily["temperature_2m_mean"],
         "temp_max": daily["temperature_2m_max"],
         "temp_min": daily["temperature_2m_min"],
-
         "humidity": daily["relative_humidity_2m_mean"],
         "wind": daily["wind_speed_10m_mean"],
         "wind_dir": daily["wind_direction_10m_dominant"],
+        "uv_index": daily["uv_index_max"],
     })
 
     # Date
@@ -54,6 +53,7 @@ def build_features(forecast):
         "time": hourly["time"],
         "pressure": hourly["pressure_msl"],
         "radiation": hourly["shortwave_radiation"],
+        "visibility": hourly["visibility"],
     })
 
     hourly_df["time"] = pd.to_datetime(hourly_df["time"])
@@ -64,7 +64,8 @@ def build_features(forecast):
         .groupby("date")
         .agg({
             "pressure": "mean",
-            "radiation": "sum"
+            "radiation": "sum",
+            "visibility": "min",
         })
         .reset_index()
     )

@@ -1,9 +1,12 @@
 # Run: python -m pytest tests/test_risk_calculator.py
+import math
 
 from ml.risk_calculator import (
     flood_risk,
     beach_safety,
     snow_probability,
+    uv_level,
+    wind_level
 )
 
 # Flood Risk Tests
@@ -123,3 +126,53 @@ def test_snow_probability_heavy_snow():
 
     # capped at 100%
     assert result["snow_probability"] == 100
+
+# UV level test
+def test_uv_level_low():
+    assert uv_level(2) == "Low"
+
+
+def test_uv_level_moderate():
+    assert uv_level(5) == "Moderate"
+
+
+def test_uv_level_high():
+    assert uv_level(7) == "High"
+
+
+def test_uv_level_very_high():
+    assert uv_level(9) == "Very High"
+
+
+def test_uv_level_extreme():
+    assert uv_level(12) == "Extreme"
+
+def test_uv_boundary():
+    assert uv_level(3) == "Moderate"
+    assert uv_level(6) == "High"
+    assert uv_level(8) == "Very High"
+    assert uv_level(11) == "Extreme"
+
+def test_uv_level_unknown():
+    assert uv_level(math.nan) == "Unknown"
+
+# Wind level test
+def test_wind_level_calm():
+    assert wind_level(5) == "Calm"
+
+def test_wind_level_moderate():
+    assert wind_level(15) == "Moderate"
+
+def test_wind_level_strong():
+    assert wind_level(25) == "Strong"
+
+def test_wind_level_very_strong():
+    assert wind_level(40) == "Very Strong"
+
+def test_wind_level_boundary():
+    assert wind_level(10) == "Moderate"
+    assert wind_level(20) == "Strong"
+    assert wind_level(35) == "Very Strong"
+
+def test_wind_level_unknown():
+    assert wind_level(math.nan) == "Unknown"

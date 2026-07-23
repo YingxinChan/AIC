@@ -1,4 +1,5 @@
 # Run: python ml/risk_calculator.py
+import math
 
 # Heavy rain probability + accumulated rainfall
 def flood_risk(
@@ -93,6 +94,36 @@ def snow_probability(
     return {
         "snow_probability": round(probability * 100, 2)
     }
+
+# UV level
+def uv_level(uv: float):
+    if uv is None or math.isnan(uv):
+        return "Unknown"
+
+    if uv < 3:
+        return "Low"
+    elif uv < 6:
+        return "Moderate"
+    elif uv < 8:
+        return "High"
+    elif uv < 11:
+        return "Very High"
+    else:
+        return "Extreme"
+
+# Wind level
+def wind_level(wind: float):
+    if wind is None or math.isnan(wind):
+        return "Unknown"
+    
+    if wind < 10:
+        return "Calm"
+    elif wind < 20:
+        return "Moderate"
+    elif wind < 35:
+        return "Strong"
+    else:
+        return "Very Strong"
 
 
 # For testing
