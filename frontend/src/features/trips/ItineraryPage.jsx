@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { 
-  Plane, Building2, MapPin, Calendar, CheckCircle2, 
-  Briefcase, Thermometer, Sparkles, Sun, Moon, Cloud, 
-  CloudSun, CloudMoon, CloudFog, CloudRain, CloudSnow, 
-  CloudLightning, AlertTriangle, Waves, Umbrella, Snowflake 
+import {
+  Plane, Building2, MapPin, Calendar, CheckCircle2,
+  Briefcase, Thermometer, Sparkles, Sun, Moon, Cloud,
+  CloudSun, CloudMoon, CloudFog, CloudRain, CloudSnow,
+  CloudLightning, AlertTriangle, Waves, Umbrella, Snowflake,
+  SunDim, Wind, Eye, Sunrise, Sunset, Palmtree
 } from 'lucide-react'
 import Placeholder from '../../components/Placeholder'
 import MapView from '../../components/MapView'
@@ -42,6 +43,17 @@ const weatherIcon = (condition, timeStr) => {
   return CloudRain;
 };
 
+// True when the icon weatherIcon() would pick actually depicts rain/drizzle/
+// showers/thunder — used to avoid pairing a rain % with a sun/cloud icon.
+const isRainyCondition = (condition) => {
+  const cond = (condition || '').toLowerCase();
+  return !cond.includes('clear')
+    && !cond.includes('partly cloudy')
+    && !cond.includes('overcast')
+    && !cond.includes('fog')
+    && !cond.includes('snow');
+};
+
 // Helper: Weather Icon Component
 const WeatherIcon = ({ condition, timeStr, className }) => {
   const Icon = weatherIcon(condition, timeStr);
@@ -52,6 +64,45 @@ const snowLevel = (pct) => {
   if (pct <= 0) return 'None';
   if (pct <= 50) return 'Low';
   return 'High';
+};
+
+// Explicit level -> color mapping for the risk-card badges, rather than an
+// inline ternary that only recognizes 'High'/'Poor'/'Moderate'/'Low' — that
+// old check treated 'Low' the same as 'Moderate' (both yellow), which was
+// wrong for Heavy Rain's "Low" (no-warning/safe) state. Anything not listed
+// here (Low, None, Good, Excellent) correctly falls through to green.
+// Covers Wind/UV vocabulary too, since those are also shown as color badges.
+const LEVEL_COLORS = {
+  red: ['High', 'Poor', 'Very High', 'Extreme', 'Strong', 'Very Strong'],
+  yellow: ['Moderate'],
+};
+function levelColorClass(level) {
+  if (LEVEL_COLORS.red.includes(level)) return 'bg-red-100 text-red-800';
+  if (LEVEL_COLORS.yellow.includes(level)) return 'bg-yellow-100 text-yellow-800';
+  return 'bg-green-100 text-green-800';
+}
+
+// Fixed group identity color (not severity-based) — the badge (levelColorClass)
+// remains the only red/yellow/green severity signal. Two groups: the daily
+// risk cards (Heavy Rain/Flood/Beach Safety/Snow) share one color, and the
+// Wind/UV/Visibility conditions cards share a different one.
+const CARD_IDENTITY_BG = {
+  heavyRain: 'bg-blue-50 border-blue-100',
+  flood: 'bg-blue-50 border-blue-100',
+  beachSafety: 'bg-blue-50 border-blue-100',
+  snow: 'bg-blue-50 border-blue-100',
+  wind: 'bg-blue-50 border-blue-100',
+  uv: 'bg-blue-50 border-blue-100',
+  visibility: 'bg-blue-50 border-blue-100',
+};
+
+// Visibility has no backend-supplied level (unlike UV/wind), so it's
+// classified here using the same Good/Moderate/Poor vocabulary Beach Safety
+// already uses — no changes needed to levelColorClass to support it.
+const visibilityLevel = (meters) => {
+  if (meters >= 10000) return 'Good';
+  if (meters >= 1000) return 'Moderate';
+  return 'Poor';
 };
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000
@@ -89,26 +140,28 @@ export default function ItineraryPage() {
   const hasArrivalFlight = Boolean(trip?.arrival_flight_number)
   const hasDepartureFlight = Boolean(trip?.departure_flight_number)
 
-  // --- NEW Helper: Get Current or Max Temp ---
-  const getDisplayTemp = () => {
+  // The big headline temperature only makes sense for today (a real, current
+  // reading) — a future day's "big number" would just be an arbitrarily
+  // chosen stat (max? mean?) implying more precision than a forecast has.
+  const getCurrentTemp = () => {
     if (!forecastDay) return '';
 
-    // Get user's local date and hour
-    const now = new Date();
-    const today = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-
-    // If viewing TODAY'S itinerary, show the current hour's temperature
-    if (selectedDate === today && hourlyForecast) {
-      const currentHour = now.getHours();
+    if (hourlyForecast) {
+      // Hourly/daily data is fetched with &timezone=auto (see openmeteo.py),
+      // so timestamps are the destination's own local time — convert the
+      // real current instant into that same local time using the offset the
+      // backend returns, rather than the browser's local hour or raw UTC
+      // (neither matches the destination unless it happens to share that
+      // exact offset).
+      const destNow = new Date(Date.now() + (forecastDay.utc_offset_seconds ?? 0) * 1000);
+      const currentHour = destNow.getUTCHours();
       const timeString = `${selectedDate}T${currentHour.toString().padStart(2, '0')}:00`;
       const currentData = hourlyForecast.find(h => h.time === timeString);
-
       if (currentData) {
         return Math.round(currentData.temperature);
       }
     }
 
-    // If viewing a future/past day, fallback to the daily Max temperature
     return Math.round(forecastDay.temp_max);
   };
 
@@ -125,8 +178,13 @@ export default function ItineraryPage() {
         }
 
         if (tripData?.start_date && tripData?.end_date) {
-          const now = new Date();
-          const todayStr = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+          // GMT-based best-effort default for which day tab to open — the
+          // destination's actual UTC offset isn't known yet at this point
+          // (forecast data, which carries it, hasn't loaded). This can be
+          // off by up to a day right at the destination's local midnight;
+          // isToday/getCurrentTemp below correct themselves once the real
+          // offset arrives, since they run on every render, not just here.
+          const todayStr = new Date().toISOString().split('T')[0];
           const inRange = todayStr >= tripData.start_date && todayStr <= tripData.end_date;
           setSelectedDate(inRange ? todayStr : tripData.start_date);
         }
@@ -197,6 +255,19 @@ export default function ItineraryPage() {
   const forecastDay = forecast?.find(d => d.date === selectedDate)
   const itineraryDay = itinerary?.days?.find(d => d.date === selectedDate)
   const selectedDayNumber = tripDates.indexOf(selectedDate) + 1
+
+  // Forecast/hourly data is fetched with &timezone=auto (see openmeteo.py),
+  // so its date/time fields are the destination's own local time — shift the
+  // real current instant by the destination's UTC offset (once known) so
+  // "today"/"now" are judged against Edinburgh's clock when viewing an
+  // Edinburgh trip, not the browser's local calendar date.
+  const destNow = new Date(Date.now() + (forecastDay?.utc_offset_seconds ?? 0) * 1000)
+  const todayStr = destNow.toISOString().split('T')[0]
+  const isToday = selectedDate === todayStr
+
+  // "YYYY-MM-DDTHH" prefix for the destination's current local hour, used to
+  // highlight the matching card in the hourly strip below.
+  const currentHourPrefix = destNow.toISOString().slice(0, 13)
 
   // --- SECTION 5: UI RENDERING ---
   return (
@@ -304,20 +375,85 @@ export default function ItineraryPage() {
             <div className="border border-gray-100 p-4 rounded-lg bg-gray-50/50 space-y-4">
 
                 {/* Daily Summary Header */}
-                <div className="flex justify-between items-start">
-                    <div>
-                        <div className="text-sm font-semibold text-gray-500">{forecastDay.date}</div>
-                        <div className="flex items-baseline gap-2 my-1">
-                            {/* Big number shows current temp if today, or max temp if future */}
-                            <span className="text-4xl font-bold text-gray-900">{getDisplayTemp()}°</span>
-                            {/* Smaller text shows High and Low */}
-                            <span className="text-sm font-medium text-gray-500 ml-1">
-                                H: {Math.round(forecastDay.temp_max)}° &nbsp; L: {Math.round(forecastDay.temp_min)}°
-                            </span>
+                <div className="flex justify-between items-center gap-4 flex-wrap">
+                    {/* Fixed width so the condition text's length (e.g. "Overcast" vs
+                        "Partly Cloudy") never shifts the sunrise card's centered position */}
+                    <div className="flex items-center gap-3 w-64 shrink-0">
+                        <WeatherIcon condition={forecastDay.condition} timeStr={forecastDay.date + "T12:00:00"} className="w-10 h-10 text-indigo-500 shrink-0" />
+                        <div>
+                            {/* Date sits directly above the big current-temp number */}
+                            <div className="text-sm font-semibold text-gray-500 -mt-3 mb-2">{forecastDay.date}</div>
+                            {isToday ? (
+                              <>
+                                <div className="flex items-baseline gap-2 my-1">
+                                    <span className="text-4xl font-bold text-gray-900">{getCurrentTemp()}°</span>
+                                    <span className="text-sm font-medium text-gray-500 ml-1">
+                                        H: {Math.round(forecastDay.temp_max)}° &nbsp; L: {Math.round(forecastDay.temp_min)}°
+                                    </span>
+                                </div>
+                                <div className="text-md font-medium text-gray-700 capitalize">{forecastDay.condition}</div>
+                              </>
+                            ) : (
+                              <>
+                                <div className="text-2xl font-bold text-gray-900 mt-1 capitalize">{forecastDay.condition}</div>
+                                <div className="text-sm font-medium text-gray-500 mt-1">
+                                    H: {Math.round(forecastDay.temp_max)}° &nbsp; L: {Math.round(forecastDay.temp_min)}°
+                                </div>
+                              </>
+                            )}
                         </div>
-                        <div className="text-md font-medium text-gray-700 capitalize">{forecastDay.condition}</div>
                     </div>
-                    <WeatherIcon condition={forecastDay.condition} timeStr={forecastDay.date + "T12:00:00"} className="w-10 h-10 text-indigo-500" />
+                    {/* Sits in the middle space, away from the Wind/UV/Visibility group */}
+                    <div className="flex-1 flex items-center justify-center min-w-[160px]">
+                        <div className="bg-white p-3 rounded-lg border flex items-center gap-4 min-w-[180px]">
+                            {forecastDay.sunrise && forecastDay.sunset ? (
+                              <>
+                                <div className="text-center">
+                                    <Sunrise size={20} className="text-amber-400 mx-auto mb-1" />
+                                    <div className="text-[10px] text-gray-400 uppercase tracking-wide">Sunrise</div>
+                                    <div className="text-sm font-semibold text-gray-800 my-1">{forecastDay.sunrise}</div>
+                                    <div className="h-4" />
+                                </div>
+                                <div className="text-center">
+                                    <Sunset size={20} className="text-orange-400 mx-auto mb-1" />
+                                    <div className="text-[10px] text-gray-400 uppercase tracking-wide">Sunset</div>
+                                    <div className="text-sm font-semibold text-gray-800 my-1">{forecastDay.sunset}</div>
+                                    <div className="h-4" />
+                                </div>
+                              </>
+                            ) : (
+                              <div className="w-full text-center">
+                                  <div className="flex items-center justify-center gap-1 text-gray-400">
+                                      <Sunrise size={18} />
+                                      <Sunset size={18} />
+                                  </div>
+                                  <div className="text-[10px] text-gray-400 uppercase tracking-wide mt-1">Sunrise / Sunset</div>
+                                  <div className="text-sm font-semibold text-gray-400 my-1">Not available</div>
+                                  <div className="h-4" />
+                              </div>
+                            )}
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3 flex-wrap">
+                        <div className={`p-3 rounded-lg border text-center min-w-[130px] ${CARD_IDENTITY_BG.wind}`}>
+                            <Wind size={22} className="text-indigo-400 mx-auto mb-1" />
+                            <div className="text-xs text-gray-500 uppercase tracking-wide">Wind</div>
+                            <div className="font-bold text-lg my-1">{Math.round(forecastDay.wind_speed)} km/h</div>
+                            <span className={`text-xs px-2 rounded-full ${levelColorClass(forecastDay.wind_level)}`}>{forecastDay.wind_level}</span>
+                        </div>
+                        <div className={`p-3 rounded-lg border text-center min-w-[130px] ${CARD_IDENTITY_BG.uv}`}>
+                            <SunDim size={22} className="text-indigo-400 mx-auto mb-1" />
+                            <div className="text-xs text-gray-500 uppercase tracking-wide">UV Index</div>
+                            <div className="font-bold text-lg my-1">{Math.round(forecastDay.uv_index)}</div>
+                            <span className={`text-xs px-2 rounded-full ${levelColorClass(forecastDay.uv_level)}`}>{forecastDay.uv_level}</span>
+                        </div>
+                        <div className={`p-3 rounded-lg border text-center min-w-[130px] ${CARD_IDENTITY_BG.visibility}`}>
+                            <Eye size={22} className="text-indigo-400 mx-auto mb-1" />
+                            <div className="text-xs text-gray-500 uppercase tracking-wide">Visibility</div>
+                            <div className="font-bold text-lg my-1">{(forecastDay.visibility_m / 1000).toFixed(1)} km</div>
+                            <span className={`text-xs px-2 rounded-full ${levelColorClass(visibilityLevel(forecastDay.visibility_m))}`}>{visibilityLevel(forecastDay.visibility_m)}</span>
+                        </div>
+                    </div>
                 </div>
 
                 <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-800 pt-2 border-t">
@@ -327,15 +463,15 @@ export default function ItineraryPage() {
                 {/* Risk Cards Grid */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {[
-                    { l: 'Heavy Rain', v: forecastDay.heavy_rain_probability + '%', s: forecastDay.heavy_rain_warning ? 'High' : 'Low', i: Umbrella },
-                    { l: 'Flood', v: Math.round(forecastDay.flood_score) + '%', s: forecastDay.flood_risk, i: Waves },
-                    { l: 'Beach Safety', v: Math.round(forecastDay.beach_safety_score) + '%', s: forecastDay.beach_safety_level, i: Sun },
-                    { l: 'Snow', v: forecastDay.snow_probability + '%', s: snowLevel(forecastDay.snow_probability), i: Snowflake }
+                    { l: 'Heavy Rain', v: forecastDay.heavy_rain_probability + '%', s: forecastDay.heavy_rain_warning ? 'High' : 'Low', i: Umbrella, bg: CARD_IDENTITY_BG.heavyRain },
+                    { l: 'Flood', v: Math.round(forecastDay.flood_score) + '%', s: forecastDay.flood_risk, i: Waves, bg: CARD_IDENTITY_BG.flood },
+                    { l: 'Beach Safety', v: Math.round(forecastDay.beach_safety_score) + '%', s: forecastDay.beach_safety_level, i: Palmtree, bg: CARD_IDENTITY_BG.beachSafety },
+                    { l: 'Snow', v: forecastDay.snow_probability + '%', s: snowLevel(forecastDay.snow_probability), i: Snowflake, bg: CARD_IDENTITY_BG.snow }
                   ].map((c, i) => (
-                      <div key={i} className="bg-white p-3 rounded border text-center">
-                          <div className="text-[10px] text-gray-500 uppercase flex items-center justify-center gap-1"><c.i size={12} /> {c.l}</div>
-                          <div className="font-bold my-1 text-sm">{c.v}</div>
-                          <span className={`text-[10px] px-2 rounded-full ${c.s === 'High' || c.s === 'Poor' ? 'bg-red-100 text-red-800' : c.s === 'Moderate' || c.s === 'Low' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
+                      <div key={i} className={`p-3 rounded border text-center ${c.bg}`}>
+                          <div className="text-xs text-gray-500 uppercase flex items-center justify-center gap-1"><c.i size={14} className="text-indigo-400" /> {c.l}</div>
+                          <div className="font-bold my-1 text-lg">{c.v}</div>
+                          <span className={`text-xs px-2 rounded-full ${levelColorClass(c.s)}`}>
                               {c.s}
                           </span>
                       </div>
@@ -343,28 +479,34 @@ export default function ItineraryPage() {
                 </div>
 
                 {/* Hourly Forecast */}
-                <div className="flex overflow-x-auto gap-4 pb-2 cursor-grab active:cursor-grabbing">
+                <div className="flex overflow-x-auto gap-4 pt-2 pb-2 cursor-grab active:cursor-grabbing">
                   {hourlyForecast
                       .filter(h => h.time.startsWith(forecastDay.date))
-                      .map((h, i) => (
-                          <div key={i} className="flex flex-col items-center min-w-[50px] shrink-0 gap-0.5">
-                              <span className="text-[10px] text-gray-500">{formatHour(h.time)}</span>
-                              
+                      .map((h, i) => {
+                        const isNow = h.time.startsWith(currentHourPrefix)
+                        return (
+                          <div key={i} className={`flex flex-col items-center min-w-[50px] shrink-0 gap-0.5 rounded-lg py-1 ${isNow ? 'bg-indigo-50 ring-1 ring-indigo-300' : ''}`}>
+                              <span className={`text-[10px] ${isNow ? 'text-indigo-600 font-bold' : 'text-gray-500'}`}>{isNow ? 'Now' : formatHour(h.time)}</span>
+
                               <WeatherIcon condition={h.condition} timeStr={h.time} className="w-5 h-5 text-indigo-500" />
-                              
-                              {/* Fixed-height container (h-4) that holds rain OR empty space */}
+
+                              {/* Fixed-height container (h-4) that holds rain OR empty space.
+                                  Only surfaced when the icon itself shows rain/thunder and the
+                                  probability clears a threshold — otherwise a sunny/cloudy icon
+                                  could still show a rain %, which reads as contradictory. */}
                               <div className="h-4 flex items-center justify-center">
-                                  {h.rain_probability != null && (
+                                  {isRainyCondition(h.condition) && h.rain_probability != null && h.rain_probability >= 30 && (
                                       <span className="text-[9px] font-bold text-blue-600 leading-none">
                                           {Math.round(h.rain_probability)}%
                                       </span>
                                   )}
                               </div>
-                              
+
                               {/* Temperature stays in the exact same spot regardless of rain */}
                               <span className="font-bold text-sm leading-none mt-0.5">{Math.round(h.temperature)}°</span>
                           </div>
-                      ))}
+                        )
+                      })}
               </div>
             </div>
         )}

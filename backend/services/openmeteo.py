@@ -46,7 +46,10 @@ def get_forecast(lat: float, lon: float, start_date: str = None, end_date: str =
         f"&daily={daily}"
         f"&start_date={start_date}"
         f"&end_date={end_date}"
-        f"&timezone=GMT"
+        # auto: Open-Meteo resolves the destination's real local timezone from
+        # lat/lon, instead of returning every timestamp in GMT regardless of
+        # where the destination actually is.
+        f"&timezone=auto"
     )
 
     response = requests.get(url)
@@ -58,5 +61,9 @@ def get_forecast(lat: float, lon: float, start_date: str = None, end_date: str =
         "latitude": lat,
         "longitude": lon,
         "hourly": data["hourly"],
-        "daily": data["daily"]
+        "daily": data["daily"],
+        # Seconds offset from UTC for the destination's resolved local
+        # timezone — callers need this to know what the "local" timestamps
+        # above actually mean in absolute (UTC) terms.
+        "utc_offset_seconds": data.get("utc_offset_seconds", 0),
     }

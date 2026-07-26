@@ -57,6 +57,7 @@ def get_weather_prediction(lat: float, lon: float, start_date: str = None, end_d
     features = build_features(forecast)
     predictor = get_predictor()
     predictions = predictor.predict(features)
+    utc_offset_seconds = forecast["utc_offset_seconds"]
 
     results = [ ]
     for i, prediction in enumerate(predictions):
@@ -66,7 +67,7 @@ def get_weather_prediction(lat: float, lon: float, start_date: str = None, end_d
 
             # Add weather icon and description
             "weather_code": int(features.iloc[i]["weather_code"]), # Check code in WEATHER_CODES dict
-            "condition": weather_condition( 
+            "condition": weather_condition(
                 int(features.iloc[i]["weather_code"])
             ), # weather code description
 
@@ -78,6 +79,7 @@ def get_weather_prediction(lat: float, lon: float, start_date: str = None, end_d
             "uv_index": float(features.iloc[i]["uv_index"]),
             "uv_level": uv_level(features.iloc[i]["uv_index"]),
             "visibility_m": float(features.iloc[i]["visibility"]),
+            "utc_offset_seconds": utc_offset_seconds,
         }
         
         # Add ML prediction
@@ -128,6 +130,7 @@ def get_hourly_weather(lat: float, lon: float, start_date: str = None, end_date:
 
     forecast = get_forecast(lat, lon, start_date, end_date)
     hourly = forecast["hourly"]
+    utc_offset_seconds = forecast["utc_offset_seconds"]
 
     results = []
     for i in range(len(hourly["time"])):
@@ -142,7 +145,8 @@ def get_hourly_weather(lat: float, lon: float, start_date: str = None, end_date:
             "weather_code": hourly["weather_code"][i],
             "condition": weather_condition(
                 hourly["weather_code"][i]
-            )
+            ),
+            "utc_offset_seconds": utc_offset_seconds,
         })
 
     return results

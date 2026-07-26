@@ -203,6 +203,11 @@ test('renders the real weather summary and hourly strip once forecast data resol
     beach_safety_score: 80,
     beach_safety_level: 'Good',
     snow_probability: 0,
+    wind_speed: 25,
+    wind_level: 'Strong',
+    uv_index: 9,
+    uv_level: 'Very High',
+    visibility_m: 500, // -> 'Poor' level, distinct from flood_risk's 'Moderate' and beach_safety_level's 'Good' used elsewhere in this test
   }])
   getHourlyForecast.mockResolvedValueOnce([
     { time: '2026-08-01T09:00', temperature: 15, rain_mm: 0, rain_probability: null, condition: 'Partly Cloudy' },
@@ -217,6 +222,62 @@ test('renders the real weather summary and hourly strip once forecast data resol
   expect(screen.getByText('Moderate')).toBeInTheDocument()
   expect(screen.getByText('Good')).toBeInTheDocument()
   expect(screen.getByText('62%')).toBeInTheDocument()
+
+  // Wind, UV, and visibility shown beside the condition icon.
+  expect(screen.getByText(/25 km\/h/)).toBeInTheDocument()
+  expect(screen.getByText(/Strong/)).toBeInTheDocument()
+  expect(screen.getByText('Very High')).toBeInTheDocument()
+  expect(screen.getByText('0.5 km')).toBeInTheDocument()
+  expect(screen.getByText('Poor')).toBeInTheDocument()
+
+  // Backend doesn't provide sunrise/sunset data yet — should say so honestly
+  // instead of crashing or showing blank/undefined.
+  expect(screen.getByText('Not available')).toBeInTheDocument()
+})
+
+test('hourly strip highlights the current GMT hour with "Now"', async () => {
+  // Fake only Date (not setTimeout/setInterval) — faking everything breaks
+  // findByText's internal real-timer polling and can hang the whole file.
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-08-01T14:30:00Z'))
+
+  try {
+    getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+    geocodeCity.mockResolvedValueOnce([51.5074, -0.1278])
+    getForecast.mockResolvedValueOnce([{
+      date: '2026-08-01',
+      temp_max: 22,
+      temp_min: 14,
+      condition: 'Clear',
+      heavy_rain_probability: 5,
+      heavy_rain_warning: false,
+      flood_score: 5,
+      flood_risk: 'Low',
+      beach_safety_score: 90,
+      beach_safety_level: 'Excellent',
+      snow_probability: 0,
+      wind_speed: 5,
+      wind_level: 'Calm',
+      uv_index: 3,
+      uv_level: 'Moderate',
+      visibility_m: 15000,
+    }])
+    getHourlyForecast.mockResolvedValueOnce([
+      { time: '2026-08-01T13:00', temperature: 18, rain_mm: 0, rain_probability: null, condition: 'Clear' },
+      { time: '2026-08-01T14:00', temperature: 20, rain_mm: 0, rain_probability: null, condition: 'Clear' },
+    ])
+    getItinerary.mockResolvedValue({ status: 'not_generated' })
+
+    renderAt(1)
+
+    // The 14:00 GMT card (matching the fixed system time above) shows "Now"
+    // instead of its formatted hour; the 13:00 card is unaffected.
+    expect(await screen.findByText('Now')).toBeInTheDocument()
+    expect(screen.getByText('1 PM')).toBeInTheDocument()
+    expect(screen.queryByText('2 PM')).not.toBeInTheDocument()
+  } finally {
+    vi.useRealTimers()
+  }
 })
 
 test('risk cards use red/yellow/green styling based on severity level', async () => {
@@ -234,6 +295,11 @@ test('risk cards use red/yellow/green styling based on severity level', async ()
     beach_safety_score: 90,
     beach_safety_level: 'Good', // -> green
     snow_probability: 0, // -> 'None' -> green
+    wind_speed: 5,
+    wind_level: 'Calm',
+    uv_index: 2,
+    uv_level: 'Low',
+    visibility_m: 500, // -> 'Poor', kept distinct from beach_safety_level's 'Good' used in this test
   }])
   getHourlyForecast.mockResolvedValueOnce([])
   getItinerary.mockResolvedValue({ status: 'not_generated' })
@@ -244,6 +310,39 @@ test('risk cards use red/yellow/green styling based on severity level', async ()
   expect(screen.getByText('Moderate')).toHaveClass('bg-yellow-100')
   expect(screen.getByText('Good')).toHaveClass('bg-green-100')
   expect(screen.getByText('None')).toHaveClass('bg-green-100')
+})
+
+test('heavy rain "Low" (no warning) renders green, not yellow', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  geocodeCity.mockResolvedValueOnce([51.5074, -0.1278])
+  getForecast.mockResolvedValueOnce([{
+    date: '2026-08-01',
+    temp_max: 22,
+    temp_min: 14,
+    condition: 'Clear',
+    heavy_rain_probability: 5,
+    heavy_rain_warning: false, // -> 'Low' -> should be green, not yellow
+    flood_score: 10,
+    flood_risk: 'Low',
+    beach_safety_score: 95,
+    beach_safety_level: 'Excellent',
+    snow_probability: 0,
+    wind_speed: 5,
+    wind_level: 'Calm',
+    uv_index: 2,
+    uv_level: 'Low',
+    visibility_m: 12000,
+  }])
+  getHourlyForecast.mockResolvedValueOnce([])
+  getItinerary.mockResolvedValue({ status: 'not_generated' })
+
+  renderAt(1)
+
+  const lowBadges = await screen.findAllByText('Low')
+  lowBadges.forEach((badge) => {
+    expect(badge).toHaveClass('bg-green-100')
+    expect(badge).not.toHaveClass('bg-yellow-100')
+  })
 })
 
 test('clicking "Generate itinerary" calls the API and renders the result', async () => {

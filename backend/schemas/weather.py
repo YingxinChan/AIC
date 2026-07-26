@@ -33,9 +33,15 @@ class ForecastDayOut(BaseModel):
 
     snow_probability: float
 
+    # Seconds offset from UTC for the destination's resolved local timezone
+    # (Open-Meteo's &timezone=auto) — `date`/`time` fields above are in this
+    # local timezone, not GMT/UTC.
+    utc_offset_seconds: int
+
 class HourlyWeatherOut(BaseModel):
     time: str
     temperature: float
     rain_mm: float
     rain_probability: float | None = None
     condition: str
+    utc_offset_seconds: int
