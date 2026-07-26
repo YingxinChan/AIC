@@ -22,12 +22,20 @@ def build_features(forecast):
         "wind": daily["wind_speed_10m_mean"],
         "wind_dir": daily["wind_direction_10m_dominant"],
         "uv_index": daily["uv_index_max"],
+        "sunrise": daily["sunrise"],
+        "sunset": daily["sunset"],
     })
 
     # Date
     df["date"] = pd.to_datetime(df["date"])
     df["day_of_year"] = pd.to_datetime(df["date"]).dt.dayofyear
     df["month"] = df["date"].dt.month
+
+    # Convert time
+    df["sunrise"] = pd.to_datetime(df["sunrise"])
+    df["sunset"] = pd.to_datetime(df["sunset"])
+    df["sunrise"] = df["sunrise"].dt.strftime("%I:%M %p")
+    df["sunset"] = df["sunset"].dt.strftime("%I:%M %p")
 
     # Cyclic date features
     df["day_sin"] = np.sin(2 * np.pi * df["day_of_year"] / 365)
@@ -54,6 +62,9 @@ def build_features(forecast):
         "pressure": hourly["pressure_msl"],
         "radiation": hourly["shortwave_radiation"],
         "visibility": hourly["visibility"],
+        "wind": hourly["wind_speed_10m"],
+        "uv_index": hourly["uv_index"],
+        "feels_like_temp": hourly["apparent_temperature"],
     })
 
     hourly_df["time"] = pd.to_datetime(hourly_df["time"])

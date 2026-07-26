@@ -14,11 +14,15 @@ class ForecastDayOut(BaseModel):
 
     uv_index: float
     uv_level: str
+    uv_advice: str
 
     wind_speed: float
     wind_level: str
     
     visibility_m: float
+
+    sunrise: str
+    sunset: str
 
     # lgbm prediction
     heavy_rain_probability: float
@@ -36,6 +40,11 @@ class ForecastDayOut(BaseModel):
 class HourlyWeatherOut(BaseModel):
     time: str
     temperature: float
+    feels_like_temp: float
     rain_mm: float
     rain_probability: float | None = None
     condition: str
+    uv_index: float    
+    wind_speed: float        
+    visibility_m: float
+

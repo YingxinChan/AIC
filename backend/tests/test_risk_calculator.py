@@ -6,6 +6,7 @@ from ml.risk_calculator import (
     beach_safety,
     snow_probability,
     uv_level,
+    uv_advice,
     wind_level
 )
 
@@ -155,6 +156,101 @@ def test_uv_boundary():
 
 def test_uv_level_unknown():
     assert uv_level(math.nan) == "Unknown"
+
+
+# UV advice
+def test_uv_always_low():
+    """Test when UV never reaches 3 throughout the day."""
+    hourly_uv = [0.1, 0.5, 1.2, 2.8, 2.0, 1.0, 0.2]
+    hourly_time = [
+        "2026-07-26T08:00",
+        "2026-07-26T09:00",
+        "2026-07-26T10:00",
+        "2026-07-26T11:00",
+        "2026-07-26T12:00",
+        "2026-07-26T13:00",
+        "2026-07-26T14:00"
+    ]
+    
+    result = uv_advice(hourly_uv, hourly_time)
+    assert result == "Low UV. No special sun protection is needed."
+
+
+def test_moderate_uv_advice():
+    """Test when UV reaches between 3 and 5.9 (Moderate)."""
+    hourly_uv = [1.0, 3.2, 5.5, 4.0, 2.0]
+    hourly_time = [
+        "2026-07-26T10:00",
+        "2026-07-26T11:00",
+        "2026-07-26T12:00", # Max UV = 5.5
+        "2026-07-26T13:00", # Last time UV >= 3 (4.0) -> 01:00 PM
+        "2026-07-26T14:00"
+    ]
+    
+    result = uv_advice(hourly_uv, hourly_time)
+    assert result == "Use sun protection until 01:00 PM."
+
+
+def test_high_uv_advice():
+    """Test when UV reaches between 6 and 7.9 (High)."""
+    hourly_uv = [1.0, 3.5, 7.2, 4.1, 1.5]
+    hourly_time = [
+        "2026-07-26T10:00",
+        "2026-07-26T11:00",
+        "2026-07-26T12:00", # Max UV = 7.2
+        "2026-07-26T13:00", # Last time UV >= 3 -> 01:00 PM
+        "2026-07-26T14:00"
+    ]
+    
+    result = uv_advice(hourly_uv, hourly_time)
+    assert result == "High UV. Wear sunscreen and sunglasses until 01:00 PM."
+
+
+def test_very_high_uv_advice():
+    """Test when UV reaches between 8 and 10.9 (Very High)."""
+    hourly_uv = [1.0, 4.0, 9.5, 3.1, 1.0]
+    hourly_time = [
+        "2026-07-26T10:00",
+        "2026-07-26T11:00",
+        "2026-07-26T12:00", # Max UV = 9.5
+        "2026-07-26T13:00", # Last time UV >= 3 -> 01:00 PM
+        "2026-07-26T14:00"
+    ]
+    
+    result = uv_advice(hourly_uv, hourly_time)
+    assert result == "Very high UV. Limit direct sun exposure until 01:00 PM."
+
+
+def test_extreme_uv_advice():
+    """Test when UV reaches 11 or higher (Extreme)."""
+    hourly_uv = [1.0, 5.0, 11.5, 3.8, 0.5]
+    hourly_time = [
+        "2026-07-26T10:00",
+        "2026-07-26T11:00",
+        "2026-07-26T12:00", # Max UV = 11.5
+        "2026-07-26T13:00", # Last time UV >= 3 -> 01:00 PM
+        "2026-07-26T14:00"
+    ]
+    
+    result = uv_advice(hourly_uv, hourly_time)
+    assert result == "Extreme UV. Avoid prolonged sun exposure until 01:00 PM."
+
+
+def test_uv_with_none_values():
+    """Test edge case where Open-Meteo returns None for some night/early morning hours."""
+    hourly_uv = [None, None, 1.0, 4.5, 6.2, None]
+    hourly_time = [
+        "2026-07-26T04:00",
+        "2026-07-26T05:00",
+        "2026-07-26T06:00",
+        "2026-07-26T12:00",
+        "2026-07-26T14:00", # Last time UV >= 3 -> 02:00 PM
+        "2026-07-26T22:00"
+    ]
+    
+    result = uv_advice(hourly_uv, hourly_time)
+    assert result == "High UV. Wear sunscreen and sunglasses until 02:00 PM."
+
 
 # Wind level test
 def test_wind_level_calm():

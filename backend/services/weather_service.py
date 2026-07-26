@@ -3,7 +3,7 @@
 from services.openmeteo import get_forecast
 from services.feature_builder import build_features
 from ml.predictor import WeatherPredictor
-from ml.risk_calculator import flood_risk, beach_safety, snow_probability, uv_level, wind_level
+from ml.risk_calculator import flood_risk, beach_safety, snow_probability, uv_level, uv_advice, wind_level
 
 
 # Weather code
@@ -58,6 +58,8 @@ def get_weather_prediction(lat: float, lon: float, start_date: str = None, end_d
     predictor = get_predictor()
     predictions = predictor.predict(features)
 
+    hourly = forecast["hourly"]
+
     results = [ ]
     for i, prediction in enumerate(predictions):
 
@@ -75,11 +77,23 @@ def get_weather_prediction(lat: float, lon: float, start_date: str = None, end_d
             "rain_mm": float(features.iloc[i]["rain"]),
             "wind_speed": float(features.iloc[i]["wind"]),
             "wind_level": wind_level(features.iloc[i]["wind"]),
+            "visibility_m": float(features.iloc[i]["visibility"]),
+            "sunrise": features.iloc[i]["sunrise"],
+            "sunset": features.iloc[i]["sunset"],
+        }
+
+        # UV advice
+        advice = uv_advice(
+            hourly["uv_index"],
+            hourly["time"],
+        )
+
+        day.update({
             "uv_index": float(features.iloc[i]["uv_index"]),
             "uv_level": uv_level(features.iloc[i]["uv_index"]),
-            "visibility_m": float(features.iloc[i]["visibility"]),
-        }
-        
+            "uv_advice": advice,
+        })
+    
         # Add ML prediction
         day.update(prediction)
 
@@ -137,12 +151,18 @@ def get_hourly_weather(lat: float, lon: float, start_date: str = None, end_date:
         results.append({
             "time": hourly["time"][i],
             "temperature": hourly["temperature_2m"][i],
+            "feels_like_temp": hourly["feels_like_temp"][i],
             "rain_mm": hourly["precipitation"][i],
             "rain_probability": prob,
             "weather_code": hourly["weather_code"][i],
             "condition": weather_condition(
                 hourly["weather_code"][i]
-            )
+            ),
+            "wind_speed": hourly["wind"][i],
+            "uv_index": hourly["uv_index"][i],
+            "visibility_m": hourly["visibility"][i],
+            
+            
         })
 
     return results

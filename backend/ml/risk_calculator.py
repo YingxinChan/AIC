@@ -1,5 +1,7 @@
 # Run: python ml/risk_calculator.py
+from datetime import datetime
 import math
+
 
 # Heavy rain probability + accumulated rainfall
 def flood_risk(
@@ -110,6 +112,33 @@ def uv_level(uv: float):
         return "Very High"
     else:
         return "Extreme"
+
+# UV advice (hourly)
+def uv_advice(hourly_uv, hourly_time):
+    # Find the last hour where UV is 3 or above
+    last_protection_time = None
+
+    for uv, time in zip(hourly_uv, hourly_time):
+        if uv is not None and uv >= 3:
+            last_protection_time = time
+
+    # UV never reaches 3
+    if last_protection_time is None:
+        return "Low UV. No special sun protection is needed."
+
+    # Convert time format
+    end_time = datetime.fromisoformat(last_protection_time).strftime("%I:%M %p")
+
+    max_uv = max((u for u in hourly_uv if u is not None), default=0)
+
+    if max_uv < 6:
+        return f"Use sun protection until {end_time}."
+    elif max_uv < 8:
+        return f"High UV. Wear sunscreen and sunglasses until {end_time}."
+    elif max_uv < 11:
+        return f"Very high UV. Limit direct sun exposure until {end_time}."
+    else:
+        return f"Extreme UV. Avoid prolonged sun exposure until {end_time}."
 
 # Wind level
 def wind_level(wind: float):

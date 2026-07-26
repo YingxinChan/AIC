@@ -1,3 +1,5 @@
+# Run: python services/openmeteo.py
+
 import requests
 from datetime import datetime, timedelta
 
@@ -22,6 +24,9 @@ def get_forecast(lat: float, lon: float, start_date: str = None, end_date: str =
         "temperature_2m",
         "weather_code",
         "visibility",
+        "wind_speed_10m",
+        "uv_index",
+        "apparent_temperature",
     ])
 
     # Daily forecasted variables
@@ -35,6 +40,8 @@ def get_forecast(lat: float, lon: float, start_date: str = None, end_date: str =
         "wind_direction_10m_dominant",
         "relative_humidity_2m_mean",
         "uv_index_max",
+        "sunrise",
+        "sunset",
     ])
 
     # Build the URL with the date parameters
