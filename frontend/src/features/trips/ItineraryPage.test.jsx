@@ -1,6 +1,16 @@
+// Test: npm test itinerarypage
+
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { vi } from 'vitest'
+import userEvent from '@testing-library/user-event'
+
+const mockMapView = vi.hoisted(() => vi.fn(() => <div>Map</div>))
+
+vi.mock('../../components/MapView', () => ({
+  default: mockMapView,
+}))
+
 import ItineraryPage from './ItineraryPage'
 import { getTrip, updateTrip } from './tripsApi'
 import { getItinerary, generateItinerary } from './itineraryApi'
@@ -8,9 +18,9 @@ import { geocodeCity } from '../../lib/geocode'
 import { getForecast, getHourlyForecast } from '../weather/weatherApi'
 import { searchPlaces } from '../../lib/nominatim'
 
-vi.mock('../../components/MapView', () => ({
-  default: () => <div>Map</div>,
-}))
+beforeEach(() => {
+  mockMapView.mockClear()
+})
 
 vi.mock('./tripsApi', () => ({
   getTrip: vi.fn(),
@@ -695,4 +705,154 @@ test('renders a Back to My Trips link to /dashboard', async () => {
   renderAt(1)
   await waitFor(() => expect(getTrip).toHaveBeenCalled())
   expect(screen.getByRole('link', { name: /back to my trips/i })).toHaveAttribute('href', '/dashboard')
+})
+
+// Test itinerary data
+const mockItinerary = {
+  days: [
+    {
+      date: "2026-07-26",
+      activities: [
+        {
+          id: 1,
+          name: "British Museum",
+          lat: 51.5194,
+          lng: -0.127,
+          type: "indoor",
+          time_slot: "10:00"
+        }
+      ]
+    },
+    {
+      date: "2026-07-27",
+      activities: [
+        {
+          id: 2,
+          name: "Big Ben",
+          lat: 51.5007,
+          lng: -0.1246,
+          type: "outdoor",
+          time_slot: "10:00"
+        }
+      ]
+    }
+  ]
+}
+
+// test first day stop
+test('passes selected day activities to MapView as stops', async () => {
+  getTrip.mockResolvedValue({
+    destination: 'London',
+    start_date: '2026-07-26',
+    end_date: '2026-07-27',
+  })
+
+  getItinerary.mockResolvedValue({
+    days: [
+      {
+        date: "2026-07-26",
+        activities: [
+          {
+            id: 1,
+            name: "British Museum",
+            lat: 51.5194,
+            lng: -0.127,
+            type: "indoor",
+            time_slot: "10:00"
+          }
+        ]
+      },
+      {
+        date: "2026-07-27",
+        activities: [
+          {
+            id: 2,
+            name: "Big Ben",
+            lat: 51.5007,
+            lng: -0.1246,
+            type: "outdoor",
+            time_slot: "10:00"
+          }
+        ]
+      }
+    ]
+  })
+
+  renderAt(1)
+
+  await screen.findByText("British Museum")
+
+  expect(mockMapView).toHaveBeenCalledWith(
+    expect.objectContaining({
+      stops: [
+        {
+          position: [51.5194, -0.127],
+          label: "British Museum"
+        }
+      ]
+    }),
+    expect.anything()
+  )
+})
+
+// test changing day
+test('updates MapView stops when switching days', async () => {
+  getTrip.mockResolvedValue({
+    destination: 'London',
+    start_date: '2026-07-26',
+    end_date: '2026-07-27',
+  })
+
+  getItinerary.mockResolvedValue({
+    days: [
+      {
+        date: "2026-07-26",
+        activities: [
+          {
+            id: 1,
+            name: "British Museum",
+            lat: 51.5194,
+            lng: -0.127,
+            type: "indoor",
+            time_slot: "10:00"
+          }
+        ]
+      },
+      {
+        date: "2026-07-27",
+        activities: [
+          {
+            id: 2,
+            name: "Big Ben",
+            lat: 51.5007,
+            lng: -0.1246,
+            type: "outdoor",
+            time_slot: "10:00"
+          }
+        ]
+      }
+    ]
+  })
+
+  renderAt(1)
+
+  await screen.findByText("British Museum")
+
+  fireEvent.click(
+    screen.getByRole('button', { name: /day 2/i })
+  )
+
+  await screen.findByText("Big Ben")
+
+  expect(mockMapView).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      stops: [
+        {
+          position: [51.5007, -0.1246],
+          label: "Big Ben"
+        }
+      ]
+    }),
+    expect.anything()
+  )
 })

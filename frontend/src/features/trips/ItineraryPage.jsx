@@ -333,6 +333,21 @@ export default function ItineraryPage() {
   const itineraryDay = itinerary?.days?.find(d => d.date === selectedDate)
   const selectedDayNumber = tripDates.indexOf(selectedDate) + 1
 
+  // Build map stops for selected day's itinerary
+  const stops = itineraryDay?.activities
+    ?.filter(
+      (activity) =>
+        activity.lat !== null &&
+        activity.lat !== undefined &&
+        activity.lng !== null &&
+        activity.lng !== undefined &&
+        !(activity.lat === 0 && activity.lng === 0)
+    )
+    .map((activity) => ({
+      position: [activity.lat, activity.lng],
+      label: activity.name
+    })) || []
+
   // --- SECTION 5: UI RENDERING ---
   return (
     <div className="space-y-6">
@@ -682,7 +697,7 @@ export default function ItineraryPage() {
 
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-800 mb-4"><MapPin size={18} className="text-indigo-600" /> {capitalize(destination || 'Trip')} Map</h2>
-        <MapView height="h-80" center={mapCenter} />
+        <MapView height="h-80" center={mapCenter} stops={stops}/>
       </div>
 
       <div className="flex justify-center">
