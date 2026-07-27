@@ -1,9 +1,25 @@
+import asyncio
 import json
 from datetime import date, timedelta
 from unittest.mock import AsyncMock, MagicMock
 
+from sqlalchemy import select
+
+from models.activity import Activity
+from tests.conftest import _TestSessionLocal
+
 LONDON_COORDS = (51.5074, -0.1278)
 TODAY = date.today()
+
+
+def _get_activity_by_name(trip_id, name):
+    async def _inner():
+        async with _TestSessionLocal() as db:
+            result = await db.execute(
+                select(Activity).where(Activity.trip_id == trip_id, Activity.name == name)
+            )
+            return result.scalar_one()
+    return asyncio.run(_inner())
 
 
 def _create_trip(auth_client, start="2026-08-01", end="2026-08-02", destination=None, original_plan=None, hotel_address=None):
@@ -90,6 +106,114 @@ def test_generate_itinerary_persists_activities(auth_client, monkeypatch):
     # GET should now reflect the persisted activities too
     get_response = auth_client.get(f"/api/trips/{trip_id}/itinerary/")
     assert len(get_response.json()["days"]) == 2
+
+
+def test_generate_itinerary_persists_weather_sensitivity_tags(auth_client, monkeypatch):
+    fake_days = {
+        "days": [
+            {"activities": [
+                {"name": "Primrose Hill Viewpoint", "type": "outdoor", "time_slot": "09:00 - 10:00",
+                 "location": "Primrose Hill", "description": "City skyline view.",
+                 "weather_sensitivity": ["view_dependent", "strenuous_outdoor"]},
+            ]},
+        ]
+    }
+    _mock_claude(monkeypatch, fake_days)
+    trip_id = _create_trip(auth_client)
+
+    auth_client.post(f"/api/trips/{trip_id}/itinerary/generate")
+
+    activity = _get_activity_by_name(trip_id, "Primrose Hill Viewpoint")
+    assert set(activity.weather_sensitivity.split(",")) == {"view_dependent", "strenuous_outdoor"}
+
+
+def test_generate_itinerary_persists_empty_weather_sensitivity_as_empty_string(auth_client, monkeypatch):
+    fake_days = {
+        "days": [
+            {"activities": [
+                {"name": "British Museum", "type": "indoor", "time_slot": "09:00 - 11:00",
+                 "location": "Great Russell St", "description": "Explore world history.",
+                 "weather_sensitivity": []},
+            ]},
+        ]
+    }
+    _mock_claude(monkeypatch, fake_days)
+    trip_id = _create_trip(auth_client)
+
+    auth_client.post(f"/api/trips/{trip_id}/itinerary/generate")
+
+    activity = _get_activity_by_name(trip_id, "British Museum")
+    assert activity.weather_sensitivity == ""
+
+
+def test_generate_itinerary_prompt_includes_targeted_rule_steering_when_triggered(auth_client, monkeypatch):
+    mock_client = _mock_claude(monkeypatch)
+    monkeypatch.setattr("services.trips_service.geocoding_service.geocode", lambda destination: LONDON_COORDS)
+    trip_id = _create_trip(auth_client, start=TODAY.isoformat(), end=(TODAY + timedelta(days=1)).isoformat())
+
+    monkeypatch.setattr(
+        "services.itinerary_service.get_weather_prediction",
+        lambda lat, lon, start, end: [
+            {"date": TODAY.isoformat(), "heavy_rain_warning": False, "visibility_m": 800},
+            {"date": (TODAY + timedelta(days=1)).isoformat(), "heavy_rain_warning": False, "visibility_m": 5000},
+        ],
+    )
+
+    auth_client.post(f"/api/trips/{trip_id}/itinerary/generate")
+
+    prompt = mock_client.messages.create.call_args.kwargs["messages"][0]["content"]
+    assert "Day 1 may not be suitable for viewpoint or scenic-vista activities" in prompt
+
+
+def test_generate_itinerary_prompt_omits_targeted_rule_steering_when_not_triggered(auth_client, monkeypatch):
+    mock_client = _mock_claude(monkeypatch)
+    monkeypatch.setattr("services.trips_service.geocoding_service.geocode", lambda destination: LONDON_COORDS)
+    trip_id = _create_trip(auth_client, start=TODAY.isoformat(), end=(TODAY + timedelta(days=1)).isoformat())
+
+    monkeypatch.setattr(
+        "services.itinerary_service.get_weather_prediction",
+        lambda lat, lon, start, end: [
+            {"date": TODAY.isoformat(), "heavy_rain_warning": False, "visibility_m": 8000},
+        ],
+    )
+
+    auth_client.post(f"/api/trips/{trip_id}/itinerary/generate")
+
+    prompt = mock_client.messages.create.call_args.kwargs["messages"][0]["content"]
+    assert "viewpoint or scenic-vista activities" not in prompt
+
+
+def test_generate_itinerary_prompt_includes_multiple_rule_sentences_independently(auth_client, monkeypatch):
+    mock_client = _mock_claude(monkeypatch)
+    monkeypatch.setattr("services.trips_service.geocoding_service.geocode", lambda destination: LONDON_COORDS)
+    trip_id = _create_trip(auth_client, start=TODAY.isoformat(), end=(TODAY + timedelta(days=1)).isoformat())
+
+    monkeypatch.setattr(
+        "services.itinerary_service.get_weather_prediction",
+        lambda lat, lon, start, end: [
+            {"date": TODAY.isoformat(), "heavy_rain_warning": True, "heavy_rain_probability": 90.0,
+             "wind_level": "Very Strong"},
+            {"date": (TODAY + timedelta(days=1)).isoformat(), "heavy_rain_warning": False, "wind_level": "Calm"},
+        ],
+    )
+
+    auth_client.post(f"/api/trips/{trip_id}/itinerary/generate")
+
+    prompt = mock_client.messages.create.call_args.kwargs["messages"][0]["content"]
+    assert "Heavy rain is already forecast for day 1" in prompt
+    assert "Day 1 may not be suitable for boat tours, cable cars, or other wind-exposed activities" in prompt
+
+
+def test_generate_itinerary_system_prompt_mentions_weather_sensitivity_tagging(auth_client, monkeypatch):
+    mock_client = _mock_claude(monkeypatch)
+    trip_id = _create_trip(auth_client)
+
+    auth_client.post(f"/api/trips/{trip_id}/itinerary/generate")
+
+    system_prompt = mock_client.messages.create.call_args.kwargs["system"]
+    assert "weather_sensitivity" in system_prompt
+    assert "view_dependent" in system_prompt
+    assert "rearrange which activities fall on which day" in system_prompt
 
 
 def test_generate_itinerary_prompt_excludes_flight_context_when_unset(auth_client, monkeypatch):
