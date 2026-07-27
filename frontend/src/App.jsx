@@ -30,6 +30,7 @@ export default function App() {
               <Route path="/trips" element={<MyTripsPage />} />
               <Route path="/trips/new" element={<NewTripPage />} />
               <Route path="/trips/new/flights/:leg" element={<FlightSelectPage />} />
+              <Route path="/trips/:tripId/flights/:leg" element={<FlightSelectPage />} />
               <Route path="/trips/:tripId" element={<ItineraryPage />} />
               <Route path="/account" element={<AccountPage />} />
               <Route path="/account/subscription" element={<SubscriptionPage />} />

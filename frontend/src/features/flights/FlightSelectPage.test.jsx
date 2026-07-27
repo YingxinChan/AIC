@@ -3,13 +3,21 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { vi } from 'vitest'
 import FlightSelectPage from './FlightSelectPage'
 import { searchFlights } from './flightsApi'
+import { getTrip, selectFlight } from '../trips/tripsApi'
 
 vi.mock('./flightsApi', () => ({
   searchFlights: vi.fn(),
 }))
 
+vi.mock('../trips/tripsApi', () => ({
+  getTrip: vi.fn(),
+  selectFlight: vi.fn(),
+}))
+
 beforeEach(() => {
   sessionStorage.clear()
+  getTrip.mockReset()
+  selectFlight.mockReset()
 })
 
 afterEach(() => {
@@ -22,6 +30,8 @@ function renderAt(path) {
       <Routes>
         <Route path="/trips/new/flights/:leg" element={<FlightSelectPage />} />
         <Route path="/trips/new" element={<div>Plan Your Trip page</div>} />
+        <Route path="/trips/:tripId/flights/:leg" element={<FlightSelectPage />} />
+        <Route path="/trips/:tripId" element={<div>Trip page</div>} />
       </Routes>
     </MemoryRouter>
   )
@@ -137,4 +147,70 @@ test('renders a Back to Edit Trip link to /trips/new', async () => {
   renderAt('/trips/new/flights/outbound')
 
   expect(screen.getByRole('link', { name: /back to edit trip/i })).toHaveAttribute('href', '/trips/new')
+})
+
+test('rendering at a tripId route fetches the trip and searches using its origin/destination/dates, not the draft', async () => {
+  // A leftover draft in sessionStorage must NOT be used in edit mode.
+  sessionStorage.setItem('tripDraft', JSON.stringify({
+    destination: 'Wrong City', origin: 'Wrong Origin', startDate: '2099-01-01', endDate: '2099-01-10', flightNumber: 'ZZ 999',
+  }))
+  getTrip.mockResolvedValue({
+    origin: 'London, UK', destination: 'Tokyo', start_date: '2026-08-01', end_date: '2026-08-10',
+  })
+  searchFlights.mockResolvedValue({ flights: [] })
+
+  renderAt('/trips/42/flights/outbound')
+
+  await waitFor(() => expect(getTrip).toHaveBeenCalledWith('42'))
+  await waitFor(() => expect(searchFlights).toHaveBeenCalledWith(
+    'London, UK', '2026-08-01', '2026-08-01', 'arrival', 'Tokyo', ''
+  ))
+  expect(screen.getByRole('heading', { name: /London, UK.*Tokyo/i })).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: /back to edit trip/i })).toHaveAttribute('href', '/trips/42')
+})
+
+test('selecting the outbound flight in edit mode saves it and continues straight into the return leg, like the new-trip wizard', async () => {
+  getTrip.mockResolvedValue({
+    origin: 'London, UK', destination: 'Tokyo', start_date: '2026-08-01', end_date: '2026-08-10',
+  })
+  selectFlight.mockResolvedValue({})
+  searchFlights.mockResolvedValue({
+    flights: [{ airline: 'Japan Airlines', flight_number: 'JL 712', departure_time: '08:30', arrival_time: '14:15', duration: '5h 45m' }],
+  })
+
+  renderAt('/trips/42/flights/outbound')
+
+  const selectButton = await screen.findByRole('button', { name: /select/i })
+  fireEvent.click(selectButton)
+
+  await waitFor(() => expect(selectFlight).toHaveBeenCalledWith('42', {
+    leg: 'arrival', flight_number: 'JL 712', airline: 'Japan Airlines', time: '14:15', other_time: '08:30',
+  }))
+  // Continues into the return leg's search on the same tripId — not back
+  // to the trip page yet, and no review prompt pending until the return
+  // leg is also done.
+  await waitFor(() => expect(searchFlights).toHaveBeenCalledTimes(2))
+  expect(screen.getByRole('heading', { name: /Tokyo.*London, UK/i })).toBeInTheDocument()
+  expect(sessionStorage.getItem('pendingReview:42')).toBeNull()
+})
+
+test('selecting the return flight in edit mode saves it, navigates back to the trip page, and sets the pending-review flag', async () => {
+  getTrip.mockResolvedValue({
+    origin: 'London, UK', destination: 'Tokyo', start_date: '2026-08-01', end_date: '2026-08-10',
+  })
+  selectFlight.mockResolvedValue({})
+  searchFlights.mockResolvedValue({
+    flights: [{ airline: 'ANA', flight_number: 'NH 206', departure_time: '11:00', arrival_time: '17:20', duration: '6h 20m' }],
+  })
+
+  renderAt('/trips/42/flights/return')
+
+  const selectButton = await screen.findByRole('button', { name: /select/i })
+  fireEvent.click(selectButton)
+
+  await waitFor(() => expect(selectFlight).toHaveBeenCalledWith('42', {
+    leg: 'departure', flight_number: 'NH 206', airline: 'ANA', time: '11:00', other_time: '17:20',
+  }))
+  await screen.findByText('Trip page')
+  expect(sessionStorage.getItem('pendingReview:42')).toBe('1')
 })

@@ -104,6 +104,26 @@ async def select_flight(
     return _trip_dict(trip)
 
 
+async def update_trip_details(
+    db: AsyncSession,
+    trip_id: int,
+    user_id: int,
+    start_date: date | None = None,
+    end_date: date | None = None,
+    hotel_address: str | None = None,
+) -> dict:
+    trip = await _get_owned_trip(db, trip_id, user_id)
+    if start_date is not None:
+        trip.start_date = start_date
+    if end_date is not None:
+        trip.end_date = end_date
+    if hotel_address is not None:
+        trip.hotel_address = hotel_address
+    await db.commit()
+    await db.refresh(trip)
+    return _trip_dict(trip)
+
+
 async def _get_owned_trip(db: AsyncSession, trip_id: int, user_id: int) -> Trip:
     result = await db.execute(
         select(Trip).where(Trip.id == trip_id, Trip.user_id == user_id)

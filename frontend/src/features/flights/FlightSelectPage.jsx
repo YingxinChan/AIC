@@ -4,7 +4,9 @@ import { Plane, ArrowLeft } from 'lucide-react'
 import ErrorMessage from '../../components/ErrorMessage'
 import { searchFlights } from './flightsApi'
 import { useTripDraft } from '../trips/useTripDraft'
+import { getTrip, selectFlight } from '../trips/tripsApi'
 import { capitalize } from '../../lib/format'
+import { markPendingReview } from '../../lib/pendingReview'
 
 function airlineCode(flightNumber) {
   // P0 Fix: Works for "BA 112" or "KL346" by just matching letters
@@ -12,35 +14,76 @@ function airlineCode(flightNumber) {
 }
 
 export default function FlightSelectPage() {
-  const { leg } = useParams()
+  const { leg, tripId } = useParams()
   const navigate = useNavigate()
   const { draft, updateDraft } = useTripDraft()
 
+  // Present when this page is reached via /trips/:tripId/flights/:leg (an
+  // existing saved trip being edited) rather than /trips/new/flights/:leg
+  // (the creation draft flow).
+  const isEditMode = Boolean(tripId)
+  const [trip, setTrip] = useState(null)
+
+  useEffect(() => {
+    if (!isEditMode) return
+    let cancelled = false
+    getTrip(tripId).then((data) => { if (!cancelled) setTrip(data) })
+    return () => { cancelled = true }
+  }, [tripId])
+
   const isOutbound = leg === 'outbound'
   const direction = isOutbound ? 'arrival' : 'departure'
-  const date = isOutbound ? draft.startDate : draft.endDate
-  
-  // P0 Fix: Pass draft.flightNumber unconditionally (removed isOutbound check)
-  const flightNumber = draft.flightNumber
+  const origin = isEditMode ? trip?.origin : draft.origin
+  const destination = isEditMode ? trip?.destination : draft.destination
+  const date = isEditMode
+    ? (isOutbound ? trip?.start_date : trip?.end_date)
+    : (isOutbound ? draft.startDate : draft.endDate)
+  // No prior flight-number filter exists to carry over in edit mode —
+  // search unfiltered, same as draft.flightNumber being blank today.
+  const flightNumber = isEditMode ? '' : draft.flightNumber
 
   const [flights, setFlights] = useState([])
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
 
   useEffect(() => {
+    if (isEditMode && !trip) return // wait for the trip to load in edit mode
     let cancelled = false
     setLoading(true)
     setErrorMessage('')
-    searchFlights(draft.origin, date, date, direction, draft.destination, flightNumber)
+    searchFlights(origin, date, date, direction, destination, flightNumber)
       .then((data) => { if (!cancelled) setFlights(data.flights || []) })
       .catch((error) => {
         if (!cancelled) setErrorMessage(error.response?.data?.detail || 'Something went wrong while fetching flights.')
       })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, [leg])
+  }, [leg, isEditMode, trip])
 
-  const handleSelect = (flight) => {
+  const handleSelect = async (flight) => {
+    if (isEditMode) {
+      await selectFlight(tripId, {
+        leg: direction,
+        flight_number: flight.flight_number,
+        airline: flight.airline,
+        time: isOutbound ? flight.arrival_time : flight.departure_time,
+        other_time: isOutbound ? flight.departure_time : flight.arrival_time,
+      })
+      // Mirrors the new-trip wizard below: picking the outbound leg
+      // continues straight into the return leg, rather than dropping back
+      // to the trip page after just one of the two.
+      if (isOutbound) {
+        navigate(`/trips/${tripId}/flights/return`)
+        return
+      }
+      // Doesn't regenerate the itinerary itself — dates/hotel edits and
+      // this flight change are batched, and ItineraryPage's review prompt
+      // (triggered by the pendingReview flag below) is what actually fires
+      // the regenerate, once the user is done editing everything else.
+      markPendingReview(tripId)
+      navigate(`/trips/${tripId}`)
+      return
+    }
     if (isOutbound) {
       updateDraft({ outboundFlight: flight })
       navigate('/trips/new/flights/return')
@@ -52,15 +95,15 @@ export default function FlightSelectPage() {
 
   return (
     <div className="space-y-6">
-      <Link to="/trips/new" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900">
+      <Link to={isEditMode ? `/trips/${tripId}` : '/trips/new'} className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900">
         <ArrowLeft size={16} /> Back to Edit Trip
       </Link>
 
       <div>
         <h1 className="text-2xl font-bold text-gray-900">
-          {isOutbound 
-            ? `${capitalize(draft.origin)} → ${capitalize(draft.destination)}`
-            : `${capitalize(draft.destination)} → ${capitalize(draft.origin)}`}
+          {isOutbound
+            ? `${capitalize(origin)} → ${capitalize(destination)}`
+            : `${capitalize(destination)} → ${capitalize(origin)}`}
         </h1>
         <p className="text-gray-500 text-sm mt-1">
           {isOutbound ? 'Outbound Flight' : 'Return Flight'} &middot; {date || 'No date selected'}
