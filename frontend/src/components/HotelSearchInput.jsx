@@ -10,8 +10,14 @@ export default function HotelSearchInput({ id, value, onChange, cityContext, pla
   const [searched, setSearched] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef(null)
+  // Tracks the value the user last explicitly picked from the dropdown, so
+  // selecting a result doesn't immediately re-trigger a search for the full
+  // address it just wrote into `value` — see handleSelect below.
+  const lastSelectedRef = useRef(null)
 
   useEffect(() => {
+    if (value === lastSelectedRef.current) return
+
     if (!value || value.length < MIN_QUERY_LENGTH || !cityContext) {
       setResults([])
       setSearched(false)
@@ -19,22 +25,35 @@ export default function HotelSearchInput({ id, value, onChange, cityContext, pla
       return
     }
 
+    // Guards against out-of-order network responses: Nominatim is a public,
+    // latency-variable API, so if the user keeps typing after this request
+    // fires, an earlier (now-stale) response can resolve after a later one
+    // and silently overwrite fresher results. `cancelled` (set in this
+    // effect's cleanup, which React runs before the next call) makes any
+    // response arriving after the input has changed again a no-op.
+    let cancelled = false
     setLoading(true)
     setSearched(false)
 
     const timeoutId = setTimeout(() => {
       searchPlaces(`${value}, ${cityContext}`)
         .then((places) => {
+          if (cancelled) return
           setResults([...places].sort((a, b) => Number(b.isLodging) - Number(a.isLodging)))
         })
-        .catch(() => setResults([]))
+        .catch(() => { if (!cancelled) setResults([]) })
         .finally(() => {
-          setLoading(false)
-          setSearched(true)
+          if (!cancelled) {
+            setLoading(false)
+            setSearched(true)
+          }
         })
     }, DEBOUNCE_MS)
 
-    return () => clearTimeout(timeoutId)
+    return () => {
+      cancelled = true
+      clearTimeout(timeoutId)
+    }
   }, [value, cityContext])
 
   useEffect(() => {
@@ -53,6 +72,7 @@ export default function HotelSearchInput({ id, value, onChange, cityContext, pla
   }
 
   const handleSelect = (result) => {
+    lastSelectedRef.current = result.label
     onChange(result.label)
     setIsOpen(false)
   }

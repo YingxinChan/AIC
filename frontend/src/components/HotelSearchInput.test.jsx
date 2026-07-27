@@ -130,3 +130,68 @@ test('a rejected searchPlaces call does not crash the component and just shows n
 
   expect(await screen.findByText(/no matches/i)).toBeInTheDocument()
 })
+
+test('a stale out-of-order response never overwrites fresher results', async () => {
+  // Two in-flight requests: the one fired for "Rit" resolves AFTER the one
+  // fired for "Ritz", even though "Rit" was typed first — reproduces the
+  // reported race exactly (Nominatim's latency isn't guaranteed in order).
+  let resolveStale, resolveFresh
+  searchPlaces
+    .mockImplementationOnce(() => new Promise((resolve) => { resolveStale = resolve }))
+    .mockImplementationOnce(() => new Promise((resolve) => { resolveFresh = resolve }))
+
+  vi.useFakeTimers()
+  render(<ControlledHotelInput cityContext="Paris" />)
+
+  fireEvent.change(getInput(), { target: { value: 'Rit' } })
+  act(() => { vi.advanceTimersByTime(400) }) // fires the "Rit, Paris" search
+
+  fireEvent.change(getInput(), { target: { value: 'Ritz' } })
+  act(() => { vi.advanceTimersByTime(400) }) // fires the "Ritz, Paris" search
+  vi.useRealTimers()
+
+  expect(searchPlaces).toHaveBeenCalledTimes(2)
+
+  // Resolve the fresh (second) request first, then the stale (first) one —
+  // out of order, exactly as reproduced in the review.
+  resolveFresh([{ label: 'The Ritz London', isLodging: true }])
+  await screen.findByText('The Ritz London')
+
+  resolveStale([{ label: 'Stale Rit Result', isLodging: true }])
+  await act(async () => { await Promise.resolve() }) // let the stale .then() settle, if it were going to
+
+  expect(screen.getByText('The Ritz London')).toBeInTheDocument()
+  expect(screen.queryByText('Stale Rit Result')).not.toBeInTheDocument()
+})
+
+test('selecting a result does not trigger a redundant follow-up search for that same value', async () => {
+  // Fake timers stay active for the whole test (never switched to real
+  // mid-test) — mixing them can leave a real setTimeout still pending when
+  // the final assertion runs, silently passing regardless of the actual fix.
+  const fullLabel = 'The Ritz London, 150 Piccadilly, London'
+  searchPlaces.mockResolvedValueOnce([{ label: fullLabel, isLodging: true }])
+
+  vi.useFakeTimers()
+  try {
+    render(<ControlledHotelInput cityContext="London" />)
+
+    fireEvent.change(getInput(), { target: { value: 'Ritz' } })
+    act(() => { vi.advanceTimersByTime(400) })
+    await act(async () => { await Promise.resolve() }) // flush the resolved searchPlaces promise
+
+    const option = screen.getByText(fullLabel)
+    fireEvent.click(option)
+
+    expect(getInput()).toHaveValue(fullLabel)
+    expect(searchPlaces).toHaveBeenCalledTimes(1)
+
+    // Selecting the result set `value` to that same full label — without the
+    // fix, this alone re-triggers the debounced search effect.
+    act(() => { vi.advanceTimersByTime(1000) })
+    await act(async () => { await Promise.resolve() })
+
+    expect(searchPlaces).toHaveBeenCalledTimes(1)
+  } finally {
+    vi.useRealTimers()
+  }
+})

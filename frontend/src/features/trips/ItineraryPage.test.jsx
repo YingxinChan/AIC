@@ -329,6 +329,15 @@ test('shows an honest empty state in the Hotel section when hotel_address is omi
   expect(screen.getByText(/no hotel added yet/i)).toBeInTheDocument()
 })
 
+test('shows an honest empty state in the Hotel section when hotel_address is whitespace-only', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', hotel_address: '   ' })
+  renderAt(1)
+
+  await waitFor(() => expect(getTrip).toHaveBeenCalled())
+  expect(screen.getByText(/^hotel$/i)).toBeInTheDocument()
+  expect(screen.getByText(/no hotel added yet/i)).toBeInTheDocument()
+})
+
 test('hero card shows the real trip name, destination, dates, and a status derived from real dates', async () => {
   getTrip.mockResolvedValue({
     name: 'Tokyo Trip', destination: 'Tokyo', start_date: '2099-01-01', end_date: '2099-01-10',

@@ -30,7 +30,7 @@ export default function NewTripPage() {
         origin: draft.origin,
         start_date: draft.startDate,
         end_date: draft.endDate,
-        hotel_address: draft.hotelAddress,
+        hotel_address: (draft.hotelAddress || '').trim(),
         original_plan: draft.placesToVisit,
       })
 
