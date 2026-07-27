@@ -469,7 +469,7 @@ export default function ItineraryPage() {
                     { l: 'Snow', v: forecastDay.snow_probability + '%', s: snowLevel(forecastDay.snow_probability), i: Snowflake, bg: CARD_IDENTITY_BG.snow }
                   ].map((c, i) => (
                       <div key={i} className={`p-3 rounded border text-center ${c.bg}`}>
-                          <div className="text-xs text-gray-500 uppercase flex items-center justify-center gap-1"><c.i size={14} className="text-indigo-400" /> {c.l}</div>
+                          <div className="text-xs text-gray-500 uppercase flex items-center justify-center gap-2"><c.i size={22} className="text-indigo-400" /> {c.l}</div>
                           <div className="font-bold my-1 text-lg">{c.v}</div>
                           <span className={`text-xs px-2 rounded-full ${levelColorClass(c.s)}`}>
                               {c.s}
