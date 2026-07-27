@@ -29,12 +29,13 @@ def _create_trip(auth_client, monkeypatch):
 
 def _add_activity(
     trip_id, activity_type, is_swapped=False, name="Hyde Park Walk", day_date=TODAY, weather_sensitivity="",
+    time_slot="10:00 - 12:00",
 ):
     async def _inner():
         async with _TestSessionLocal() as db:
             activity = Activity(
                 trip_id=trip_id, day_date=day_date, name=name, type=activity_type,
-                time_slot="10:00 - 12:00", location="Hyde Park", is_swapped=is_swapped,
+                time_slot=time_slot, location="Hyde Park", is_swapped=is_swapped,
                 lat=51.5073, lng=-0.1657,  # Hyde Park's real coordinates
                 weather_sensitivity=weather_sensitivity,
             )
@@ -67,6 +68,19 @@ def _mock_weather(monkeypatch, forecast=RAINY_FORECAST):
     )
 
 
+def _mock_hourly_weather(monkeypatch, hourly=None):
+    # Defaults to [] rather than None — get_hourly_weather() always returns
+    # a list, and an empty list reproduces RainRule's pre-hourly blanket
+    # fallback exactly, matching every existing test's expectations without
+    # needing per-test hourly fixtures. get_hourly_weather() would otherwise
+    # make a real network call once run_auto_swap() starts fetching it.
+    hourly = hourly if hourly is not None else []
+    monkeypatch.setattr(
+        "services.auto_swap_service.get_hourly_weather",
+        lambda lat, lon, start, end: hourly,
+    )
+
+
 def _mock_find_alternative(monkeypatch, alternate=None):
     alternate = alternate or {
         "name": "British Museum", "location": "Great Russell St",
@@ -87,6 +101,7 @@ def test_auto_swap_swaps_outdoor_activity_on_rainy_day(auth_client, monkeypatch)
     trip_id = _create_trip(auth_client, monkeypatch)
     activity_id = _add_activity(trip_id, "outdoor")
     _mock_weather(monkeypatch)
+    _mock_hourly_weather(monkeypatch)
     _mock_find_alternative(monkeypatch)
 
     swapped = _run_auto_swap()
@@ -111,6 +126,7 @@ def test_auto_swap_is_idempotent(auth_client, monkeypatch):
     trip_id = _create_trip(auth_client, monkeypatch)
     activity_id = _add_activity(trip_id, "outdoor")
     _mock_weather(monkeypatch)
+    _mock_hourly_weather(monkeypatch)
     mock_find = _mock_find_alternative(monkeypatch)
 
     first = [s for s in _run_auto_swap() if s["trip_id"] == trip_id]
@@ -127,6 +143,7 @@ def test_auto_swap_skips_indoor_and_already_swapped_activities(auth_client, monk
     indoor_id = _add_activity(trip_id, "indoor")
     already_swapped_id = _add_activity(trip_id, "outdoor", is_swapped=True)
     _mock_weather(monkeypatch)
+    _mock_hourly_weather(monkeypatch)
     mock_find = _mock_find_alternative(monkeypatch)
 
     swapped = _run_auto_swap()
@@ -144,6 +161,7 @@ def test_auto_swap_excludes_activities_already_planned_elsewhere_on_the_trip(aut
     activity_id = _add_activity(trip_id, "outdoor")
     _add_activity(trip_id, "indoor", name="British Museum", day_date=TODAY + timedelta(days=1))
     _mock_weather(monkeypatch)
+    _mock_hourly_weather(monkeypatch)
     mock_find = _mock_find_alternative(monkeypatch)
 
     _run_auto_swap()
@@ -157,6 +175,7 @@ def test_auto_swap_excludes_activities_swapped_earlier_in_the_same_run(auth_clie
     first_id = _add_activity(trip_id, "outdoor", name="Hyde Park Walk")
     second_id = _add_activity(trip_id, "outdoor", name="Regent's Park Picnic")
     _mock_weather(monkeypatch)
+    _mock_hourly_weather(monkeypatch)
     mock_find = _mock_find_alternative(monkeypatch)
 
     _run_auto_swap()
@@ -181,6 +200,7 @@ def test_auto_swap_targeted_rule_only_swaps_the_tagged_activity(auth_client, mon
         "date": TODAY.isoformat(), "heavy_rain_warning": False, "heavy_rain_probability": 2.0,
         "visibility_m": 800,
     }])
+    _mock_hourly_weather(monkeypatch)
     _mock_find_alternative(monkeypatch)
 
     swapped = _run_auto_swap()
@@ -196,6 +216,7 @@ def test_auto_swap_does_not_trigger_without_rain(auth_client, monkeypatch):
     _mock_weather(monkeypatch, forecast=[{
         "date": TODAY.isoformat(), "heavy_rain_warning": False, "heavy_rain_probability": 5.0,
     }])
+    _mock_hourly_weather(monkeypatch)
     mock_find = _mock_find_alternative(monkeypatch)
 
     swapped = _run_auto_swap()
@@ -204,3 +225,65 @@ def test_auto_swap_does_not_trigger_without_rain(auth_client, monkeypatch):
     assert our_swaps == []
     calls_for_our_activity = [c for c in mock_find.call_args_list if c.args[0].id == activity_id]
     assert calls_for_our_activity == []
+
+
+_RAINY_MORNING_HOURLY = [
+    {"time": f"{TODAY.isoformat()}T09:00", "rain_probability": 85},
+    {"time": f"{TODAY.isoformat()}T10:00", "rain_probability": 90},
+    {"time": f"{TODAY.isoformat()}T14:00", "rain_probability": 5},
+    {"time": f"{TODAY.isoformat()}T15:00", "rain_probability": 10},
+]
+
+
+def test_auto_swap_hourly_only_swaps_the_activity_overlapping_the_rainy_window(auth_client, monkeypatch):
+    """The flagship scenario: two outdoor activities on the same rainy day —
+    only the one whose time_slot overlaps the actual rainy hours gets
+    swapped, the one in the clear afternoon does not."""
+    trip_id = _create_trip(auth_client, monkeypatch)
+    morning_id = _add_activity(trip_id, "outdoor", name="Morning Walk", time_slot="09:00 - 11:00")
+    afternoon_id = _add_activity(trip_id, "outdoor", name="Afternoon Market", time_slot="14:00 - 16:00")
+    _mock_weather(monkeypatch)
+    _mock_hourly_weather(monkeypatch, hourly=_RAINY_MORNING_HOURLY)
+    _mock_find_alternative(monkeypatch)
+
+    swapped = _run_auto_swap()
+    our_swaps = {s["activity_id"] for s in swapped if s["trip_id"] == trip_id}
+
+    assert our_swaps == {morning_id}
+    assert afternoon_id not in our_swaps
+
+
+def test_auto_swap_falls_back_to_blanket_when_hourly_fetch_fails(auth_client, monkeypatch):
+    trip_id = _create_trip(auth_client, monkeypatch)
+    morning_id = _add_activity(trip_id, "outdoor", name="Morning Walk", time_slot="09:00 - 11:00")
+    afternoon_id = _add_activity(trip_id, "outdoor", name="Afternoon Market", time_slot="14:00 - 16:00")
+    _mock_weather(monkeypatch)
+
+    def _raise(*args, **kwargs):
+        raise RuntimeError("hourly weather API down")
+    monkeypatch.setattr("services.auto_swap_service.get_hourly_weather", _raise)
+    _mock_find_alternative(monkeypatch)
+
+    swapped = _run_auto_swap()
+    our_swaps = {s["activity_id"] for s in swapped if s["trip_id"] == trip_id}
+
+    # No hourly data available at all -> falls back to the original
+    # whole-day blanket behavior, same as before this feature existed.
+    assert our_swaps == {morning_id, afternoon_id}
+
+
+def test_auto_swap_falls_back_to_blanket_when_hourly_data_is_for_a_different_date(auth_client, monkeypatch):
+    trip_id = _create_trip(auth_client, monkeypatch)
+    afternoon_id = _add_activity(trip_id, "outdoor", name="Afternoon Market", time_slot="14:00 - 16:00")
+    _mock_weather(monkeypatch)
+    # Hourly data present, but for a date that doesn't match the activity's
+    # day at all — hourly_by_date.get(...) returns None, distinct from the
+    # exception path above.
+    other_date = (TODAY + timedelta(days=5)).isoformat()
+    _mock_hourly_weather(monkeypatch, hourly=[{"time": f"{other_date}T09:00", "rain_probability": 90}])
+    _mock_find_alternative(monkeypatch)
+
+    swapped = _run_auto_swap()
+    our_swaps = {s["activity_id"] for s in swapped if s["trip_id"] == trip_id}
+
+    assert our_swaps == {afternoon_id}

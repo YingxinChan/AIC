@@ -7,7 +7,7 @@ from models.activity import Activity
 from models.trip import Trip
 from services import geocoding_service, swap_service
 from services.weather_rules import ACTIVE_RULES
-from services.weather_service import get_weather_prediction
+from services.weather_service import get_hourly_weather, get_weather_prediction
 
 FORECAST_HORIZON_DAYS = 15  # Open-Meteo only reliably forecasts ~16 days out
 
@@ -55,6 +55,24 @@ async def run_auto_swap(db: AsyncSession) -> list[dict]:
         except Exception:
             continue  # transient forecast failure — retried on the next scheduled run
 
+        # Hourly rain data, used by RainRule to refine which activities on a
+        # rainy day are actually affected (their time_slot overlaps a rainy
+        # hour) rather than swapping every outdoor activity that day. A
+        # failed fetch degrades to an empty dict — RainRule's own fallback
+        # then reproduces the original whole-day blanket behavior, so this
+        # can only narrow swaps relative to before, never miss a rainy day.
+        try:
+            hourly_days = get_hourly_weather(
+                trip.lat, trip.lng,
+                window_start.isoformat(), window_end.isoformat(),
+            )
+        except Exception:
+            hourly_days = []
+
+        hourly_by_date: dict[str, list[dict]] = {}
+        for entry in hourly_days:
+            hourly_by_date.setdefault(entry["time"][:10], []).append(entry)
+
         activities_result = await db.execute(
             select(Activity).where(
                 Activity.trip_id == trip.id,
@@ -93,7 +111,7 @@ async def run_auto_swap(db: AsyncSession) -> list[dict]:
             for activity in day_activities:
                 reason = None
                 for rule in ACTIVE_RULES:
-                    reason = rule.evaluate(forecast_day, activity)
+                    reason = rule.evaluate(forecast_day, activity, hourly=hourly_by_date.get(forecast_day["date"]))
                     if reason:
                         break
                 if not reason:

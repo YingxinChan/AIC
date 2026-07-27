@@ -1,3 +1,8 @@
+from datetime import datetime
+
+from services.time_slot import parse_time_slot, hourly_window_is_rainy
+
+
 class WeatherRiskRule:
     id: str
     # None = "blanket" rule: fires for any outdoor activity on a day it
@@ -23,11 +28,16 @@ class WeatherRiskRule:
         day_triggers() has already returned True."""
         raise NotImplementedError
 
-    def evaluate(self, forecast_day: dict, activity=None) -> str | None:
+    def evaluate(self, forecast_day: dict, activity=None, hourly: list[dict] | None = None) -> str | None:
         """Full check used by the swap job: the day-level condition must be
         occurring, AND — for targeted rules — the specific activity must
         carry the matching tag. Blanket rules (activity_tag is None) never
-        look at `activity` at all, same as before targeted rules existed."""
+        look at `activity` at all, same as before targeted rules existed.
+
+        `hourly` is only meaningful to RainRule, which overrides this method
+        to refine its own check against the activity's time_slot — every
+        other rule inherits this base implementation unchanged and never
+        reads `hourly` at all."""
         if not self.day_triggers(forecast_day):
             return None
         if self.activity_tag is not None:
@@ -45,6 +55,10 @@ class RainRule(WeatherRiskRule):
     # cross the ML model's heavy-rain-volume threshold but is still a real
     # outdoor safety concern (lightning), independent of rainfall amount.
     THUNDERSTORM_CODES = {95, 96, 99}
+    # Hourly refinement only applies to the plain heavy-rain case, not
+    # thunderstorm (see evaluate() below) — thunderstorm stays a whole-day
+    # blanket signal regardless of hourly data.
+    HOURLY_RAIN_PROBABILITY_THRESHOLD = 60  # TODO: confirm with team
 
     def day_triggers(self, forecast_day: dict) -> bool:
         return bool(forecast_day.get("heavy_rain_warning")) or forecast_day.get("weather_code") in self.THUNDERSTORM_CODES
@@ -53,6 +67,57 @@ class RainRule(WeatherRiskRule):
         if forecast_day.get("heavy_rain_warning"):
             return f"Heavy rain expected ({forecast_day['heavy_rain_probability']}% chance)"
         return "Thunderstorm expected"
+
+    def evaluate(self, forecast_day: dict, activity=None, hourly: list[dict] | None = None) -> str | None:
+        """Thunderstorm stays a pure daily/blanket signal — never gated by
+        hourly data or time_slot, regardless of activity. Heavy rain, when
+        hourly data and a parseable activity time_slot are both available,
+        only fires if an hour within that specific time_slot is actually
+        forecast rainy — a 9am activity on a rainy morning is affected, a
+        2pm activity the same day, if the afternoon is clear, is not.
+
+        Falls back to the original whole-day blanket behavior whenever
+        hourly refinement isn't possible: no hourly data (fetch failed, or
+        this date isn't in the hourly response), or an unparseable
+        time_slot. This can only ever narrow which activities get swapped
+        relative to the pre-hourly behavior, never miss a genuinely rainy
+        day entirely.
+        """
+        if forecast_day.get("weather_code") in self.THUNDERSTORM_CODES:
+            return "Thunderstorm expected"
+
+        if not forecast_day.get("heavy_rain_warning"):
+            return None
+
+        if not hourly:
+            return self.reason(forecast_day)
+
+        window = parse_time_slot(activity.time_slot) if activity else None
+        if window is None:
+            return self.reason(forecast_day)
+
+        if hourly_window_is_rainy(hourly, window, self.HOURLY_RAIN_PROBABILITY_THRESHOLD):
+            return self.reason(forecast_day)
+        return None
+
+    def describe_rainy_window(self, hourly_day: list[dict]) -> str | None:
+        """Human-readable description of the rainy hour range within one
+        day's hourly entries (e.g. "between 08:00 and 11:00"), or None if no
+        hour meets HOURLY_RAIN_PROBABILITY_THRESHOLD. Used by pre-generation
+        steering to describe a specific window instead of the whole-day
+        blanket sentence — approximates with the earliest/latest qualifying
+        hour as a single range rather than describing multiple separate
+        rainy periods precisely, same spirit as the temperature sentence's
+        "around X°C" approximation elsewhere in this app."""
+        rainy_hours = [
+            datetime.fromisoformat(entry["time"]).hour
+            for entry in hourly_day
+            if (entry.get("rain_probability") or 0) >= self.HOURLY_RAIN_PROBABILITY_THRESHOLD
+        ]
+        if not rainy_hours:
+            return None
+        start, end = min(rainy_hours), max(rainy_hours)
+        return f"between {start:02d}:00 and {min(end + 1, 24):02d}:00"
 
 
 class FogRule(WeatherRiskRule):

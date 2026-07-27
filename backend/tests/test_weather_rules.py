@@ -11,11 +11,22 @@ from services.weather_rules import (
 )
 
 
-def _activity(weather_sensitivity=""):
+def _activity(weather_sensitivity="", time_slot="10:00 - 12:00"):
     return Activity(
         trip_id=1, day_date=None, name="Test Activity", type="outdoor",
-        time_slot="10:00 - 12:00", location="Somewhere", weather_sensitivity=weather_sensitivity,
+        time_slot=time_slot, location="Somewhere", weather_sensitivity=weather_sensitivity,
     )
+
+
+_RAINY_MORNING_DAY = {"heavy_rain_warning": True, "heavy_rain_probability": 80.0}
+_RAINY_MORNING_HOURLY = [
+    {"time": "2026-08-01T08:00", "rain_probability": 20},
+    {"time": "2026-08-01T09:00", "rain_probability": 85},
+    {"time": "2026-08-01T10:00", "rain_probability": 90},
+    {"time": "2026-08-01T11:00", "rain_probability": 70},
+    {"time": "2026-08-01T14:00", "rain_probability": 5},
+    {"time": "2026-08-01T15:00", "rain_probability": 10},
+]
 
 
 def test_rain_rule_fires_on_warning():
@@ -34,6 +45,68 @@ def test_rain_rule_fires_on_thunderstorm_code_even_without_heavy_rain_warning():
     rule = RainRule()
     reason = rule.evaluate({"heavy_rain_warning": False, "heavy_rain_probability": 10.0, "weather_code": 95})
     assert reason == "Thunderstorm expected"
+
+
+def test_rain_rule_hourly_fires_for_activity_overlapping_a_rainy_hour():
+    rule = RainRule()
+    morning_activity = _activity(time_slot="09:00 - 11:00")
+    reason = rule.evaluate(_RAINY_MORNING_DAY, morning_activity, hourly=_RAINY_MORNING_HOURLY)
+    assert reason is not None
+    assert "80.0" in reason
+
+
+def test_rain_rule_hourly_does_not_fire_for_activity_in_the_clear_afternoon():
+    """The core new behavior: same rainy day, but an activity scheduled in
+    hours that are actually clear should NOT be swapped, even though the
+    day-level heavy_rain_warning is True."""
+    rule = RainRule()
+    afternoon_activity = _activity(time_slot="14:00 - 16:00")
+    assert rule.evaluate(_RAINY_MORNING_DAY, afternoon_activity, hourly=_RAINY_MORNING_HOURLY) is None
+
+
+def test_rain_rule_hourly_falls_back_to_blanket_when_time_slot_unparseable():
+    rule = RainRule()
+    activity = _activity(time_slot="Flexible")
+    reason = rule.evaluate(_RAINY_MORNING_DAY, activity, hourly=_RAINY_MORNING_HOURLY)
+    assert reason is not None
+
+
+def test_rain_rule_falls_back_to_blanket_when_hourly_is_none():
+    rule = RainRule()
+    afternoon_activity = _activity(time_slot="14:00 - 16:00")
+    # No hourly data at all -> same as today's pre-hourly behavior: fires
+    # for any outdoor activity on a day-level rainy warning, afternoon or not.
+    reason = rule.evaluate(_RAINY_MORNING_DAY, afternoon_activity, hourly=None)
+    assert reason is not None
+
+
+def test_rain_rule_falls_back_to_blanket_when_hourly_is_empty_list():
+    rule = RainRule()
+    afternoon_activity = _activity(time_slot="14:00 - 16:00")
+    reason = rule.evaluate(_RAINY_MORNING_DAY, afternoon_activity, hourly=[])
+    assert reason is not None
+
+
+def test_rain_rule_thunderstorm_stays_blanket_regardless_of_hourly_data():
+    """Thunderstorm is a whole-day safety signal — hourly data showing all
+    hours clear must not suppress it, unlike the plain heavy-rain case."""
+    rule = RainRule()
+    all_clear_hourly = [{"time": "2026-08-01T09:00", "rain_probability": 0}]
+    thunderstorm_day = {"heavy_rain_warning": False, "weather_code": 95}
+    afternoon_activity = _activity(time_slot="14:00 - 16:00")
+    reason = rule.evaluate(thunderstorm_day, afternoon_activity, hourly=all_clear_hourly)
+    assert reason == "Thunderstorm expected"
+
+
+def test_rain_rule_describe_rainy_window_reports_earliest_to_latest_rainy_hour():
+    rule = RainRule()
+    assert rule.describe_rainy_window(_RAINY_MORNING_HOURLY) == "between 09:00 and 12:00"
+
+
+def test_rain_rule_describe_rainy_window_none_when_no_hour_meets_threshold():
+    rule = RainRule()
+    all_clear_hourly = [{"time": "2026-08-01T09:00", "rain_probability": 10}]
+    assert rule.describe_rainy_window(all_clear_hourly) is None
 
 
 def test_rain_rule_is_blanket_ignores_activity_tags():
