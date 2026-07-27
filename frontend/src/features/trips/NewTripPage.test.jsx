@@ -122,6 +122,21 @@ test('submitting Plan My Trip creates the trip, attaches both flights, and goes 
   await screen.findByText('Itinerary page')
 })
 
+test('submitting with a whitespace-only hotel address trims it to empty, not saved as blank-looking text', async () => {
+  createTrip.mockResolvedValue({ id: 99 })
+  sessionStorage.setItem('tripDraft', JSON.stringify({
+    destination: 'Tokyo', origin: 'London, UK', startDate: '2026-08-01', endDate: '2026-08-10',
+    hotelAddress: '   ', placesToVisit: '',
+  }))
+  renderPage()
+
+  fireEvent.click(screen.getByRole('button', { name: /plan my trip/i }))
+
+  await waitFor(() => expect(createTrip).toHaveBeenCalledWith(expect.objectContaining({
+    hotel_address: '',
+  })))
+})
+
 test('submitting without any flights picked still creates the trip', async () => {
   createTrip.mockResolvedValue({ id: 5 })
   renderPage()
