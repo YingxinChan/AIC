@@ -311,12 +311,22 @@ test('shows real Hotel info when the trip has a hotel address saved', async () =
   expect(screen.getByText(/hotel/i)).toBeInTheDocument()
 })
 
-test('does not show a Hotel section when no hotel address is saved', async () => {
+test('shows an honest empty state in the Hotel section when hotel_address is empty', async () => {
   getTrip.mockResolvedValue({ destination: 'London', hotel_address: '' })
   renderAt(1)
 
   await waitFor(() => expect(getTrip).toHaveBeenCalled())
-  expect(screen.queryByText(/^hotel$/i)).not.toBeInTheDocument()
+  expect(screen.getByText(/^hotel$/i)).toBeInTheDocument()
+  expect(screen.getByText(/no hotel added yet/i)).toBeInTheDocument()
+})
+
+test('shows an honest empty state in the Hotel section when hotel_address is omitted entirely', async () => {
+  getTrip.mockResolvedValue({ destination: 'London' })
+  renderAt(1)
+
+  await waitFor(() => expect(getTrip).toHaveBeenCalled())
+  expect(screen.getByText(/^hotel$/i)).toBeInTheDocument()
+  expect(screen.getByText(/no hotel added yet/i)).toBeInTheDocument()
 })
 
 test('hero card shows the real trip name, destination, dates, and a status derived from real dates', async () => {

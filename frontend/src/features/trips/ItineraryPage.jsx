@@ -252,12 +252,16 @@ export default function ItineraryPage() {
       )}
 
       {/* 5C: Hotel Information */}
-      {trip?.hotel_address && (
+      {trip && (
         <div className="bg-white rounded-lg border border-gray-200 p-6 flex items-center gap-4">
           <div className="w-16 h-16 shrink-0 rounded-lg bg-gradient-to-br from-indigo-400 to-purple-400" />
           <div>
             <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-800 mb-1"><Building2 size={18} className="text-indigo-600" /> Hotel</h2>
-            <p className="text-gray-700 text-sm">{trip.hotel_address}</p>
+            {trip.hotel_address ? (
+              <p className="text-gray-700 text-sm">{trip.hotel_address}</p>
+            ) : (
+              <p className="text-gray-400 text-sm italic">No hotel added yet.</p>
+            )}
           </div>
         </div>
       )}
