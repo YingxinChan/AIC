@@ -10,9 +10,8 @@ from core.config import settings
 from models.activity import Activity
 from models.trip import Trip
 from services import geocoding_service
-from services.auto_swap_service import FORECAST_HORIZON_DAYS
 from services.weather_rules import ACTIVE_RULES
-from services.weather_service import get_weather_prediction
+from services.weather_service import FORECAST_HORIZON_DAYS, get_weather_prediction
 
 MODEL = "claude-haiku-4-5"
 

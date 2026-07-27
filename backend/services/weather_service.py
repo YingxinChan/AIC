@@ -1,8 +1,12 @@
 # Run: python -m services.weather_service
 
-from services.openmeteo import get_forecast
+from datetime import date, timedelta
+
+from services.openmeteo import get_forecast, resolve_date_range
 from services.feature_builder import build_features
+from services.climatology_service import get_climatology_days
 from ml.predictor import WeatherPredictor
+
 from ml.risk_calculator import (
     flood_risk,
     beach_safety,
@@ -14,6 +18,10 @@ from ml.risk_calculator import (
     temp_advice,
     hiking_safety,
 )
+
+# Open-Meteo's forecast API degrades to null values at day 15 and may fail
+# beyond that. Days outside this horizon use historical climatology.
+FORECAST_HORIZON_DAYS = 14
 
 # Weather code
 WEATHER_CODES = {
@@ -61,7 +69,47 @@ def get_predictor():
     return predictor
 
 # ML daily risk
-def get_weather_prediction(lat: float, lon: float, start_date: str = None, end_date: str = None) -> dict:
+def get_weather_prediction(lat: float, lon: float, start_date: str = None, end_date: str = None) -> list[dict]:
+    """Day-by-day weather for [start_date, end_date]. Days within
+    FORECAST_HORIZON_DAYS use the real forecast/ML path (unchanged
+    behavior); days beyond it fall back to historical climatology instead
+    of erroring or returning nothing, via climatology_service. Callers get
+    one continuous, date-sorted list either way and don't need to know
+    which source a given day came from."""
+    range_start, range_end = resolve_date_range(start_date, end_date)
+    horizon = date.today() + timedelta(days=FORECAST_HORIZON_DAYS)
+
+    forecast_end = min(range_end, horizon)
+    climatology_start = max(range_start, horizon + timedelta(days=1))
+
+    results = []
+
+    if range_start <= forecast_end:
+        results.extend(
+            _get_forecast_days(lat, lon, range_start.isoformat(), forecast_end.isoformat())
+        )
+
+    if climatology_start <= range_end:
+        climatology_dates = [
+            climatology_start + timedelta(days=i)
+            for i in range((range_end - climatology_start).days + 1)
+        ]
+        try:
+            results.extend(get_climatology_days(lat, lon, climatology_dates))
+        except Exception:
+            # Climatology is a fallback, not a hard dependency — an
+            # unreachable/erroring archive API shouldn't take down days
+            # that already came back fine from the real forecast above.
+            pass
+
+    results.sort(key=lambda day: day["date"])
+    return results
+
+
+def _get_forecast_days(lat: float, lon: float, start_date: str, end_date: str) -> list[dict]:
+    """The original get_weather_prediction body — unchanged behavior, just
+    split into its own function so get_weather_prediction can call it for
+    only the in-horizon portion of a requested range."""
     forecast = get_forecast(lat, lon, start_date, end_date)
     features = build_features(forecast)
     predictor = get_predictor()
@@ -74,10 +122,11 @@ def get_weather_prediction(lat: float, lon: float, start_date: str = None, end_d
 
         day = {
             "date": features.iloc[i]["date"].strftime("%Y-%m-%d"),
+            "is_climatology": False,
 
             # Add weather icon and description
             "weather_code": int(features.iloc[i]["weather_code"]), # Check code in WEATHER_CODES dict
-            "condition": weather_condition( 
+            "condition": weather_condition(
                 int(features.iloc[i]["weather_code"])
             ), # weather code description
 
