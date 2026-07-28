@@ -1,5 +1,5 @@
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { vi } from 'vitest'
 import MyTripsPage from './MyTripsPage'
 import { getTrips, deleteTrip } from './tripsApi'
@@ -183,4 +183,80 @@ it('keeps the trip visible when deletion fails', async () => {
   expect(
     screen.getByText('Edinburgh Trip'),
   ).toBeInTheDocument()
+})
+
+it('does not navigate when the delete button is clicked', async () => {
+  const user = userEvent.setup()
+
+  window.confirm = vi.fn(() => true)
+
+  getTrips.mockResolvedValue([
+    {
+      id: 1,
+      name: 'Edinburgh Trip',
+      start_date: '2026-08-01',
+      end_date: '2026-08-04',
+    },
+  ])
+
+  deleteTrip.mockResolvedValue({})
+
+  render(
+    <MemoryRouter initialEntries={['/trips']}>
+      <Routes>
+        <Route path="/trips" element={<MyTripsPage />} />
+        <Route
+          path="/trips/:id"
+          element={<div>Trip Detail Page</div>}
+        />
+      </Routes>
+    </MemoryRouter>,
+  )
+
+  expect(
+    await screen.findByText('Edinburgh Trip'),
+  ).toBeInTheDocument()
+
+  await user.click(
+    screen.getByRole('button', {
+      name: /delete edinburgh trip/i,
+    }),
+  )
+
+  expect(
+    screen.queryByText('Trip Detail Page'),
+  ).not.toBeInTheDocument()
+})
+
+it('disables the delete button while a delete request is in flight', async () => {
+  const user = userEvent.setup()
+
+  window.confirm = vi.fn(() => true)
+
+  getTrips.mockResolvedValue([
+    {
+      id: 1,
+      name: 'Edinburgh Trip',
+      start_date: '2026-08-01',
+      end_date: '2026-08-04',
+    },
+  ])
+
+  deleteTrip.mockReturnValue(new Promise(() => {}))
+
+  renderPage()
+
+  expect(
+    await screen.findByText('Edinburgh Trip'),
+  ).toBeInTheDocument()
+
+  const deleteButton = screen.getByRole('button', {
+    name: /delete edinburgh trip/i,
+  })
+
+  await user.click(deleteButton)
+
+  expect(deleteButton).toBeDisabled()
+  expect(deleteTrip).toHaveBeenCalledTimes(1)
+  expect(deleteTrip).toHaveBeenCalledWith(1)
 })
