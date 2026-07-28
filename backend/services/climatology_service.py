@@ -14,6 +14,7 @@ from services.openmeteo import get_historical_forecast
 
 HISTORICAL_YEARS = 10   # TODO: confirm with team (ticket open question)
 DAY_WINDOW_DAYS = 3     # +/- days around the target's month/day to sample
+RAIN_THRESHOLD_MM = 1.0  # TODO: confirm whether 1 mm defines a historically rainy day
 
 
 def get_climatology_days(lat: float, lon: float, dates: list[date]) -> list[dict]:

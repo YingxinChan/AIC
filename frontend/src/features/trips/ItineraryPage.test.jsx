@@ -229,6 +229,85 @@ test('renders the real weather summary and hourly strip once forecast data resol
   expect(screen.getByText('Moderate')).toBeInTheDocument()
   expect(screen.getByText('Good')).toBeInTheDocument()
   expect(screen.getByText('62%')).toBeInTheDocument()
+  expect(
+  screen.queryByText(/typical weather \(historical average\)/i),
+).not.toBeInTheDocument()
+})
+
+test('renders dashes for null climatology values and never displays null%', async () => {
+  getTrip.mockResolvedValue({
+    destination: 'London',
+    start_date: '2026-08-01',
+    end_date: '2026-08-01',
+  })
+
+  geocodeCity.mockResolvedValueOnce([51.5074, -0.1278])
+
+  getForecast.mockResolvedValueOnce([
+    {
+      date: '2026-08-01',
+      is_climatology: true,
+      temp_max: null,
+      temp_min: null,
+      condition: 'Typical conditions',
+      heavy_rain_probability: null,
+      heavy_rain_warning: false,
+      flood_score: null,
+      flood_risk: 'Unknown',
+      beach_safety_score: null,
+      beach_safety_level: 'Unknown',
+      snow_probability: null,
+    },
+  ])
+
+  getHourlyForecast.mockResolvedValueOnce([])
+  getItinerary.mockResolvedValue({ status: 'not_generated' })
+
+  renderAt(1)
+
+  expect(
+    await screen.findByText(/typical weather \(historical average\)/i),
+  ).toBeInTheDocument()
+
+  expect(screen.getAllByText('—').length).toBeGreaterThan(0)
+  expect(screen.queryByText(/null%/i)).not.toBeInTheDocument()
+  expect(screen.queryByText(/null°/i)).not.toBeInTheDocument()
+})
+
+test('shows the Typical weather badge only for climatology data', async () => {
+  getTrip.mockResolvedValue({
+    destination: 'London',
+    start_date: '2026-08-01',
+    end_date: '2026-08-01',
+  })
+
+  geocodeCity.mockResolvedValueOnce([51.5074, -0.1278])
+
+  getForecast.mockResolvedValueOnce([
+    {
+      date: '2026-08-01',
+      is_climatology: true,
+      temp_max: 21,
+      temp_min: 13,
+      condition: 'Partly Cloudy',
+      heavy_rain_probability: 30,
+      heavy_rain_warning: false,
+      flood_score: 20,
+      flood_risk: 'Low',
+      beach_safety_score: 70,
+      beach_safety_level: 'Good',
+      snow_probability: 0,
+    },
+  ])
+
+  getHourlyForecast.mockResolvedValueOnce([])
+  getItinerary.mockResolvedValue({ status: 'not_generated' })
+
+  renderAt(1)
+
+  expect(
+    await screen.findByText(/typical weather \(historical average\)/i),
+  ).toBeInTheDocument()
 })
 
 test('risk cards use red/yellow/green styling based on severity level', async () => {
@@ -695,4 +774,104 @@ test('renders a Back to My Trips link to /dashboard', async () => {
   renderAt(1)
   await waitFor(() => expect(getTrip).toHaveBeenCalled())
   expect(screen.getByRole('link', { name: /back to my trips/i })).toHaveAttribute('href', '/dashboard')
+})
+
+test('hides the hourly strip for climatology even when hourly data exists', async () => {
+  getTrip.mockResolvedValue({
+    destination: 'London',
+    start_date: '2026-08-01',
+    end_date: '2026-08-01',
+  })
+
+  geocodeCity.mockResolvedValueOnce([51.5074, -0.1278])
+
+  getForecast.mockResolvedValueOnce([
+    {
+      date: '2026-08-01',
+      is_climatology: true,
+      temp_max: 21,
+      temp_min: 13,
+      condition: 'Typical conditions',
+      heavy_rain_probability: 30,
+      heavy_rain_warning: false,
+      flood_score: 20,
+      flood_risk: 'Low',
+      beach_safety_score: 70,
+      beach_safety_level: 'Good',
+      snow_probability: 0,
+    },
+  ])
+
+  getHourlyForecast.mockResolvedValueOnce([
+    {
+      time: '2026-08-01T09:00',
+      temperature: 15,
+      rain_mm: 0,
+      rain_probability: 97,
+      condition: 'Hourly Test Weather',
+    },
+    {
+      time: '2026-08-01T14:00',
+      temperature: 20,
+      rain_mm: 2,
+      rain_probability: 98,
+      condition: 'Hourly Test Rain',
+    },
+  ])
+
+  getItinerary.mockResolvedValue({ status: 'not_generated' })
+
+  renderAt(1)
+
+  expect(
+    await screen.findByText(/typical weather \(historical average\)/i),
+  ).toBeInTheDocument()
+
+  expect(screen.queryByText('97%')).not.toBeInTheDocument()
+  expect(screen.queryByText('98%')).not.toBeInTheDocument()
+  expect(screen.queryByText('Hourly Test Weather')).not.toBeInTheDocument()
+  expect(screen.queryByText('Hourly Test Rain')).not.toBeInTheDocument()
+})
+
+test('uses neutral gray styling for an Unknown beach safety level', async () => {
+  getTrip.mockResolvedValue({
+    destination: 'London',
+    start_date: '2026-08-01',
+    end_date: '2026-08-01',
+  })
+
+  geocodeCity.mockResolvedValueOnce([51.5074, -0.1278])
+
+  getForecast.mockResolvedValueOnce([
+    {
+      date: '2026-08-01',
+      is_climatology: true,
+      temp_max: 21,
+      temp_min: 13,
+      condition: 'Typical conditions',
+      heavy_rain_probability: 30,
+      heavy_rain_warning: false,
+      flood_score: 20,
+      flood_risk: 'Low',
+      beach_safety_score: null,
+      beach_safety_level: 'Unknown',
+      snow_probability: 0,
+    },
+  ])
+
+  getHourlyForecast.mockResolvedValueOnce([])
+  getItinerary.mockResolvedValue({ status: 'not_generated' })
+
+  renderAt(1)
+
+  await screen.findByText(/typical weather \(historical average\)/i)
+
+  const unknownBadges = screen.getAllByText('Unknown')
+  const unknownBadge = unknownBadges.find((element) =>
+  /gray|slate|neutral/.test(element.className),
+  )
+
+  expect(unknownBadge).toBeDefined()
+
+  expect(unknownBadge.className).toMatch(/gray|slate|neutral/)
 })

@@ -1,12 +1,11 @@
 # Run: python -m pytest tests/test_climatology_service.py
-from datetime import date
-from unittest.mock import patch
 
 from services.climatology_service import (
     get_climatology_days,
     _historical_rows_near,
     _within_day_window,
     _safe_replace_year,
+    _summarize_climatology_rows,
 )
 
 
@@ -35,7 +34,7 @@ def test_within_day_window_handles_year_wraparound():
     assert not _within_day_window(date(2019, 6, 15), target)
 
 
-def test_historical_rows_near_filters_to_the_day_window(monkeypatch):
+def test_historical_rows_near_filters_to_the_day_window():
     # A fake archive response spanning a wide range — only the rows within
     # DAY_WINDOW_DAYS of the target's month/day (in any of the sampled
     # years) should survive the filter.
@@ -92,3 +91,104 @@ def test_get_climatology_days_survives_a_failed_historical_fetch():
     assert len(results) == 2
     assert all(r["is_climatology"] for r in results)
     assert all(r["flood_score"] is None for r in results)
+
+
+def test_get_climatology_days_calculates_values_from_historical_api_data():
+    dates = [date(2026, 7, 1)]
+
+    historical_response = {
+        "daily": {
+            "time": [
+                "2023-07-01",
+                "2024-07-01",
+                "2025-07-01",
+                "2025-08-01",
+            ],
+            "temperature_2m_max": [20.0, 24.0, 22.0, 99.0],
+            "temperature_2m_min": [10.0, 12.0, 11.0, 99.0],
+            "weather_code": [3, 3, 1, 99],
+            "precipitation_sum": [0.0, 2.0, 3.0, 99.0],
+            "wind_speed_10m_mean": [10.0, 14.0, 12.0, 99.0],
+        },
+    }
+
+    with patch(
+        "services.climatology_service.get_historical_forecast",
+        return_value=historical_response,
+    ) as mocked:
+        results = get_climatology_days(
+            51.5074,
+            -0.1278,
+            dates,
+        )
+
+    assert len(results) == 1
+
+    result = results[0]
+
+    assert result["date"] == "2026-07-01"
+    assert result["is_climatology"] is True
+    assert result["temp_max"] == 22.0
+    assert result["temp_min"] == 11.0
+    assert result["weather_code"] == 3
+    assert result["rain_chance"] == 66.7
+
+    mocked.assert_called_once_with(
+        51.5074,
+        -0.1278,
+        "2016-07-01",
+        "2025-07-01",
+    )
+
+def test_summarize_climatology_rows_calculates_averages():
+
+    rows = [
+        {
+            "date": date(2023, 7, 1),
+            "temp_max": 20.0,
+            "temp_min": 10.0,
+            "weather_code": 3,
+            "rain_mm": 0.0,
+            "wind": 10.0,
+        },
+        {
+            "date": date(2024, 7, 1),
+            "temp_max": 24.0,
+            "temp_min": 12.0,
+            "weather_code": 3,
+            "rain_mm": 2.0,
+            "wind": 14.0,
+        },
+        {
+            "date": date(2025, 7, 1),
+            "temp_max": 22.0,
+            "temp_min": 11.0,
+            "weather_code": 1,
+            "rain_mm": 3.0,
+            "wind": 12.0,
+        },
+    ]
+
+    result = _summarize_climatology_rows(
+        date(2026, 7, 1),
+        rows,
+    )
+
+    assert result["is_climatology"] is True
+    assert result["temp_max"] == 22.0
+    assert result["temp_min"] == 11.0
+    assert result["weather_code"] == 3
+    assert result["rain_chance"] == 66.7
+
+def test_summarize_climatology_rows_empty_rows():
+
+    result = _summarize_climatology_rows(
+        date(2026, 7, 1),
+        [],
+    )
+
+    assert result["is_climatology"] is True
+    assert result["condition"] == "Unknown"
+    assert result["temp_max"] is None
+    assert result["temp_min"] is None
+    assert result["rain_chance"] is None
