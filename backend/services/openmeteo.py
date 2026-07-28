@@ -98,7 +98,7 @@ def get_historical_forecast(lat: float, lon: float, start_date: str, end_date: s
         f"&timezone=GMT"
     )
 
-    response = requests.get(url)
+    response = requests.get(url,timeout=10,)
     if response.status_code != 200:
         raise Exception(f"Historical request failed with status code {response.status_code}")
 

@@ -1,8 +1,11 @@
 # Run: python -m pytest tests/test_climatology_service.py
+from datetime import date
+from unittest.mock import patch
 
 from services.climatology_service import (
+    _fetch_historical_rows,
+    _rows_near_target,
     get_climatology_days,
-    _historical_rows_near,
     _within_day_window,
     _safe_replace_year,
     _summarize_climatology_rows,
@@ -34,7 +37,7 @@ def test_within_day_window_handles_year_wraparound():
     assert not _within_day_window(date(2019, 6, 15), target)
 
 
-def test_historical_rows_near_filters_to_the_day_window():
+def test_rows_near_target_filters_to_the_day_window():
     # A fake archive response spanning a wide range — only the rows within
     # DAY_WINDOW_DAYS of the target's month/day (in any of the sampled
     # years) should survive the filter.
@@ -44,18 +47,33 @@ def test_historical_rows_near_filters_to_the_day_window():
         "temperature_2m_min": [12.0, 13.0, 15.0, 12.5],
         "weather_code": [1, 2, 0, 3],
         "precipitation_sum": [0.0, 5.0, 0.0, 1.2],
+        "wind_speed_10m_mean": [10.0, 12.0, 11.0, 13.0],
     }
 
     with patch(
         "services.climatology_service.get_historical_forecast",
         return_value={"daily": fake_daily},
     ) as mocked:
-        rows = _historical_rows_near(51.5074, -0.1278, date(2026, 8, 12))
+        historical_rows = _fetch_historical_rows(
+            51.5074,
+            -0.1278,
+            [date(2026, 8, 12)],
+        )
 
-    mocked.assert_called_once()
-    matched_dates = {row["date"] for row in rows}
-    assert matched_dates == {date(2016, 8, 10), date(2016, 8, 12), date(2017, 8, 13)}
-    assert date(2016, 9, 1) not in matched_dates  # outside the +/- day window
+        rows = _rows_near_target(
+            historical_rows,
+            date(2026, 8, 12),
+        )
+
+        mocked.assert_called_once()
+        matched_dates = {row["date"] for row in rows}
+
+        assert matched_dates == {
+            date(2016, 8, 10),
+            date(2016, 8, 12),
+            date(2017, 8, 13),
+        }
+        assert date(2016, 9, 1) not in matched_dates
 
 
 def test_get_climatology_days_returns_a_safe_placeholder_per_date():
@@ -108,7 +126,7 @@ def test_get_climatology_days_calculates_values_from_historical_api_data():
             "temperature_2m_min": [10.0, 12.0, 11.0, 99.0],
             "weather_code": [3, 3, 1, 99],
             "precipitation_sum": [0.0, 2.0, 3.0, 99.0],
-            "wind_speed_10m_mean": [10.0, 14.0, 12.0, 99.0],
+            "wind_speed_10m_mean": [10.0, 12.0, 11.0, 13.0],
         },
     }
 

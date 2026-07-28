@@ -177,10 +177,10 @@ def _get_forecast_days(lat: float, lon: float, start_date: str, end_date: str) -
         rain = features.iloc[i]["rain"]
 
         beach = beach_safety(
-            heavy_rain_probability=prediction["heavy_rain_probability"],
-            rain=rain,
-            wind=wind,
-            feels_like_temp=feels_like_temp
+          heavy_rain_probability=rain_chance,
+          rain=average_rain,
+          wind=wind,
+          feels_like_temp=temp_max,
         )
 
         # Snow prob
