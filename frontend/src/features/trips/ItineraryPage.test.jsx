@@ -42,6 +42,7 @@ function renderAt(tripId) {
     <MemoryRouter initialEntries={[`/trips/${tripId}`]}>
       <Routes>
         <Route path="/trips/:tripId" element={<ItineraryPage />} />
+        <Route path="/trips/:tripId/flights/:leg" element={<div>Flight search page</div>} />
       </Routes>
     </MemoryRouter>
   )
@@ -530,7 +531,7 @@ test('"No, regenerate now" in the review prompt regenerates the itinerary exactl
   expect(screen.queryByRole('heading', { name: /update anything else first/i })).not.toBeInTheDocument()
 })
 
-test('the review prompt does not offer an Edit Flights option — flight edits are their own outbound/return wizard', async () => {
+test('the review prompt offers Dates/Outbound/Return but not Hotel again, right after a hotel save', async () => {
   getTrip.mockResolvedValue({ destination: 'Paris', hotel_address: '' })
   updateTrip.mockResolvedValue({ destination: 'Paris', hotel_address: 'Hotel Plaza Athenee' })
   renderAt(1)
@@ -540,7 +541,25 @@ test('the review prompt does not offer an Edit Flights option — flight edits a
   fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
 
   await screen.findByRole('heading', { name: /update anything else first/i })
-  expect(screen.queryByRole('button', { name: /edit flights/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /^edit hotel$/i })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /^edit dates$/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /edit outbound flight/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /edit return flight/i })).toBeInTheDocument()
+})
+
+test('"Edit Outbound Flight" and "Edit Return Flight" in the review prompt navigate to the right leg', async () => {
+  getTrip.mockResolvedValue({ destination: 'Paris', hotel_address: '' })
+  updateTrip.mockResolvedValue({ destination: 'Paris', hotel_address: 'Hotel Plaza Athenee' })
+  renderAt(1)
+
+  fireEvent.click(await screen.findByRole('button', { name: /add hotel/i }))
+  fireEvent.change(screen.getByPlaceholderText(/ritz paris/i), { target: { value: 'Hotel Plaza Athenee' } })
+  fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
+
+  fireEvent.click(await screen.findByRole('button', { name: /edit outbound flight/i }))
+
+  expect(await screen.findByText('Flight search page')).toBeInTheDocument()
+  expect(generateItinerary).not.toHaveBeenCalled()
 })
 
 test('"Edit Dates" in the review prompt (triggered by a hotel save) opens the dates modal', async () => {
@@ -557,12 +576,15 @@ test('"Edit Dates" in the review prompt (triggered by a hotel save) opens the da
   expect(screen.getByRole('heading', { name: /edit dates/i })).toBeInTheDocument()
 })
 
-test('reopens the review prompt on load if a flight edit left a pending review flag set, then consumes the flag', async () => {
-  sessionStorage.setItem('pendingReview:1', '1')
-  getTrip.mockResolvedValue({ destination: 'Paris' })
+test('reopens the review prompt on load if a flight edit left a pending review flag set, excludes that leg, then consumes the flag', async () => {
+  sessionStorage.setItem('pendingReview:1', 'outbound')
+  getTrip.mockResolvedValue({ destination: 'Paris', start_date: '2026-08-01', end_date: '2026-08-10' })
   renderAt(1)
 
   expect(await screen.findByRole('heading', { name: /update anything else first/i })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /edit outbound flight/i })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /edit return flight/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /^edit dates$/i })).toBeInTheDocument()
   // Regression guard: the flag must be cleared once shown, not left set —
   // otherwise simply reopening the trip later re-triggers the same prompt
   // even with no new edit pending.

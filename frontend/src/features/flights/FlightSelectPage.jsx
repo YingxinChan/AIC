@@ -45,6 +45,8 @@ export default function FlightSelectPage() {
   const [flights, setFlights] = useState([])
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
+  const [selecting, setSelecting] = useState(false)
+  const [selectError, setSelectError] = useState('')
 
   useEffect(() => {
     if (isEditMode && !trip) return // wait for the trip to load in edit mode
@@ -62,26 +64,31 @@ export default function FlightSelectPage() {
 
   const handleSelect = async (flight) => {
     if (isEditMode) {
-      await selectFlight(tripId, {
-        leg: direction,
-        flight_number: flight.flight_number,
-        airline: flight.airline,
-        time: isOutbound ? flight.arrival_time : flight.departure_time,
-        other_time: isOutbound ? flight.departure_time : flight.arrival_time,
-      })
-      // Mirrors the new-trip wizard below: picking the outbound leg
-      // continues straight into the return leg, rather than dropping back
-      // to the trip page after just one of the two.
-      if (isOutbound) {
-        navigate(`/trips/${tripId}/flights/return`)
-        return
+      setSelecting(true)
+      setSelectError('')
+      try {
+        await selectFlight(tripId, {
+          leg: direction,
+          flight_number: flight.flight_number,
+          airline: flight.airline,
+          time: isOutbound ? flight.arrival_time : flight.departure_time,
+          other_time: isOutbound ? flight.departure_time : flight.arrival_time,
+        })
+        // Each leg is independent here — no forced chain into the other
+        // one, matching the two separate Change Flight links on the trip
+        // page. Doesn't regenerate the itinerary itself — dates/hotel edits
+        // and this flight change are batched, and ItineraryPage's review
+        // prompt (triggered by the pendingReview flag) is what actually
+        // fires the regenerate, once the user is done editing everything.
+        markPendingReview(tripId, leg)
+        navigate(`/trips/${tripId}`)
+      } catch (err) {
+        // A separate error state from the search's errorMessage, which
+        // gates the whole flights list below — reusing it would hide the
+        // Select button the user needs to retry right after a failed save.
+        setSelectError(err.response?.data?.detail || 'Something went wrong while saving this flight — try again.')
+        setSelecting(false)
       }
-      // Doesn't regenerate the itinerary itself — dates/hotel edits and
-      // this flight change are batched, and ItineraryPage's review prompt
-      // (triggered by the pendingReview flag below) is what actually fires
-      // the regenerate, once the user is done editing everything else.
-      markPendingReview(tripId)
-      navigate(`/trips/${tripId}`)
       return
     }
     if (isOutbound) {
@@ -111,6 +118,7 @@ export default function FlightSelectPage() {
       </div>
 
       {errorMessage && <ErrorMessage message={errorMessage} />}
+      {selectError && <ErrorMessage message={selectError} />}
 
       {loading && <p className="text-sm text-gray-500">Searching for flights...</p>}
 
@@ -146,9 +154,10 @@ export default function FlightSelectPage() {
               <button
                 type="button"
                 onClick={() => handleSelect(flight)}
-                className="bg-indigo-600 text-white px-5 py-2 rounded-md font-medium hover:bg-indigo-700 transition-colors"
+                disabled={selecting}
+                className="bg-indigo-600 text-white px-5 py-2 rounded-md font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"
               >
-                Select
+                {selecting ? 'Saving...' : 'Select'}
               </button>
             </div>
           ))}

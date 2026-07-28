@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { 
   Plane, Building2, MapPin, Calendar, CheckCircle2, 
   Briefcase, Thermometer, Sparkles, Sun, Moon, Cloud, 
@@ -16,7 +16,7 @@ import { tripStatus, STATUS_STYLES } from './tripStatus'
 import { geocodeCity } from '../../lib/geocode'
 import { capitalize } from '../../lib/format'
 import { getForecast, getHourlyForecast } from '../weather/weatherApi'
-import { hasPendingReview, clearPendingReview } from '../../lib/pendingReview'
+import { getPendingReview, clearPendingReview } from '../../lib/pendingReview'
 
 // --- SECTION 1: HELPER FUNCTIONS ---
 
@@ -91,6 +91,7 @@ const datesBetween = (start, end) => {
 export default function ItineraryPage() {
   // --- SECTION 2: STATE VARIABLES ---
   const { tripId } = useParams()
+  const navigate = useNavigate()
   const [trip, setTrip] = useState(null)
   const [itinerary, setItinerary] = useState(null)
   const [itineraryNotice, setItineraryNotice] = useState('')
@@ -109,6 +110,10 @@ export default function ItineraryPage() {
   const [endDraft, setEndDraft] = useState('')
   const [savingTrip, setSavingTrip] = useState(false)
   const [reviewModalOpen, setReviewModalOpen] = useState(false)
+  // Which of dates/hotel/outbound/return was just saved — the review prompt
+  // excludes this one and only offers the others, so it never re-suggests
+  // editing the thing the user just finished editing.
+  const [lastEdited, setLastEdited] = useState(null)
 
   const destination = trip?.destination || ''
   const hasArrivalFlight = Boolean(trip?.arrival_flight_number)
@@ -157,12 +162,14 @@ export default function ItineraryPage() {
         }
 
         // Covers returning from FlightSelectPage (a full navigation, so this
-        // effect re-runs) right after the return leg was saved there — see
+        // effect re-runs) right after a leg was saved there — see
         // saveTripDetails below for the in-page Dates/Hotel case, which opens
         // this directly instead. Cleared immediately after showing it once,
         // so simply reopening/reloading this trip later doesn't keep
         // re-surfacing the same prompt.
-        if (hasPendingReview(tripId)) {
+        const pendingSource = getPendingReview(tripId);
+        if (pendingSource) {
+          setLastEdited(pendingSource);
           setReviewModalOpen(true);
           clearPendingReview(tripId);
         }
@@ -229,9 +236,9 @@ export default function ItineraryPage() {
   // immediately — PATCH /api/trips/{id} just saves the field and returns
   // the plain trip. Instead, saving here opens the review prompt so the
   // user can batch in the other one before we regenerate once, via
-  // handleReviewRegenerateNow below. Flight edits are a separate two-leg
-  // wizard (see FlightSelectPage) that marks pendingReview itself once the
-  // return leg is done, reopening this same prompt on return.
+  // handleReviewRegenerateNow below. Each flight leg (see FlightSelectPage)
+  // is edited independently and marks pendingReview itself once saved,
+  // reopening this same prompt on return.
   const openHotelModal = () => {
     setHotelDraft(trip.hotel_address || '')
     setHotelModalOpen(true)
@@ -245,12 +252,13 @@ export default function ItineraryPage() {
 
   const datesInvalid = Boolean(startDraft) && Boolean(endDraft) && endDraft <= startDraft
 
-  const saveTripDetails = async (patch, { closeModal }) => {
+  const saveTripDetails = async (patch, { closeModal, source }) => {
     setSavingTrip(true)
     try {
       const updatedTrip = await updateTrip(tripId, patch)
       setTrip(updatedTrip)
       closeModal()
+      setLastEdited(source)
       setReviewModalOpen(true)
     } catch (err) {
       setItineraryNotice(err.response?.data?.detail || 'Saving your trip details failed — try again.')
@@ -260,14 +268,14 @@ export default function ItineraryPage() {
 
   const handleSaveHotel = () => saveTripDetails(
     { hotel_address: hotelDraft },
-    { closeModal: () => setHotelModalOpen(false) }
+    { closeModal: () => setHotelModalOpen(false), source: 'hotel' }
   )
 
   const handleSaveDates = () => {
     if (datesInvalid) return
     return saveTripDetails(
       { start_date: startDraft, end_date: endDraft },
-      { closeModal: () => setDatesModalOpen(false) }
+      { closeModal: () => setDatesModalOpen(false), source: 'dates' }
     )
   }
 
@@ -279,6 +287,16 @@ export default function ItineraryPage() {
   const handleReviewEditDates = () => {
     setReviewModalOpen(false)
     openDatesModal()
+  }
+
+  const handleReviewEditOutbound = () => {
+    setReviewModalOpen(false)
+    navigate(`/trips/${tripId}/flights/outbound`)
+  }
+
+  const handleReviewEditReturn = () => {
+    setReviewModalOpen(false)
+    navigate(`/trips/${tripId}/flights/return`)
   }
 
   const handleReviewRegenerateNow = async () => {
@@ -454,12 +472,26 @@ export default function ItineraryPage() {
           Your itinerary is generated from your dates, hotel, and flights together — want to update anything else before we regenerate it?
         </p>
         <div className="flex flex-col gap-2">
-          <button type="button" onClick={handleReviewEditDates} className="w-full text-left px-4 py-2 rounded-md text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50">
-            Edit Dates
-          </button>
-          <button type="button" onClick={handleReviewEditHotel} className="w-full text-left px-4 py-2 rounded-md text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50">
-            Edit Hotel
-          </button>
+          {lastEdited !== 'dates' && (
+            <button type="button" onClick={handleReviewEditDates} className="w-full text-left px-4 py-2 rounded-md text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50">
+              Edit Dates
+            </button>
+          )}
+          {lastEdited !== 'hotel' && (
+            <button type="button" onClick={handleReviewEditHotel} className="w-full text-left px-4 py-2 rounded-md text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50">
+              Edit Hotel
+            </button>
+          )}
+          {lastEdited !== 'outbound' && (
+            <button type="button" onClick={handleReviewEditOutbound} className="w-full text-left px-4 py-2 rounded-md text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50">
+              Edit Outbound Flight
+            </button>
+          )}
+          {lastEdited !== 'return' && (
+            <button type="button" onClick={handleReviewEditReturn} className="w-full text-left px-4 py-2 rounded-md text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50">
+              Edit Return Flight
+            </button>
+          )}
           <button type="button" onClick={handleReviewRegenerateNow} disabled={generating} className="w-full px-4 py-2 rounded-md text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 mt-2">
             {generating ? 'Regenerating...' : "No, regenerate now"}
           </button>

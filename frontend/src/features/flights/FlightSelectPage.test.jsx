@@ -169,7 +169,7 @@ test('rendering at a tripId route fetches the trip and searches using its origin
   expect(screen.getByRole('link', { name: /back to edit trip/i })).toHaveAttribute('href', '/trips/42')
 })
 
-test('selecting the outbound flight in edit mode saves it and continues straight into the return leg, like the new-trip wizard', async () => {
+test('selecting the outbound flight in edit mode saves it, navigates straight back to the trip page (no forced chain into return), and sets the pending-review flag', async () => {
   getTrip.mockResolvedValue({
     origin: 'London, UK', destination: 'Tokyo', start_date: '2026-08-01', end_date: '2026-08-10',
   })
@@ -186,12 +186,9 @@ test('selecting the outbound flight in edit mode saves it and continues straight
   await waitFor(() => expect(selectFlight).toHaveBeenCalledWith('42', {
     leg: 'arrival', flight_number: 'JL 712', airline: 'Japan Airlines', time: '14:15', other_time: '08:30',
   }))
-  // Continues into the return leg's search on the same tripId — not back
-  // to the trip page yet, and no review prompt pending until the return
-  // leg is also done.
-  await waitFor(() => expect(searchFlights).toHaveBeenCalledTimes(2))
-  expect(screen.getByRole('heading', { name: /Tokyo.*London, UK/i })).toBeInTheDocument()
-  expect(sessionStorage.getItem('pendingReview:42')).toBeNull()
+  await screen.findByText('Trip page')
+  expect(searchFlights).toHaveBeenCalledTimes(1) // no chaining into a return-leg search
+  expect(sessionStorage.getItem('pendingReview:42')).toBe('outbound')
 })
 
 test('selecting the return flight in edit mode saves it, navigates back to the trip page, and sets the pending-review flag', async () => {
@@ -212,5 +209,44 @@ test('selecting the return flight in edit mode saves it, navigates back to the t
     leg: 'departure', flight_number: 'NH 206', airline: 'ANA', time: '11:00', other_time: '17:20',
   }))
   await screen.findByText('Trip page')
-  expect(sessionStorage.getItem('pendingReview:42')).toBe('1')
+  expect(sessionStorage.getItem('pendingReview:42')).toBe('return')
+})
+
+test('a rejected selectFlight in edit mode shows an error message instead of crashing, and re-enables Select', async () => {
+  getTrip.mockResolvedValue({
+    origin: 'London, UK', destination: 'Tokyo', start_date: '2026-08-01', end_date: '2026-08-10',
+  })
+  selectFlight.mockRejectedValue({ response: { data: { detail: 'Session expired.' } } })
+  searchFlights.mockResolvedValue({
+    flights: [{ airline: 'Japan Airlines', flight_number: 'JL 712', departure_time: '08:30', arrival_time: '14:15', duration: '5h 45m' }],
+  })
+
+  renderAt('/trips/42/flights/outbound')
+
+  const selectButton = await screen.findByRole('button', { name: /select/i })
+  fireEvent.click(selectButton)
+
+  expect(await screen.findByText('Session expired.')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /select/i })).not.toBeDisabled()
+  expect(sessionStorage.getItem('pendingReview:42')).toBeNull()
+})
+
+test('disables Select while an edit-mode flight save is in flight', async () => {
+  getTrip.mockResolvedValue({
+    origin: 'London, UK', destination: 'Tokyo', start_date: '2026-08-01', end_date: '2026-08-10',
+  })
+  let resolveSelect
+  selectFlight.mockReturnValue(new Promise((resolve) => { resolveSelect = resolve }))
+  searchFlights.mockResolvedValue({
+    flights: [{ airline: 'Japan Airlines', flight_number: 'JL 712', departure_time: '08:30', arrival_time: '14:15', duration: '5h 45m' }],
+  })
+
+  renderAt('/trips/42/flights/outbound')
+
+  const selectButton = await screen.findByRole('button', { name: /select/i })
+  fireEvent.click(selectButton)
+
+  expect(await screen.findByRole('button', { name: /saving/i })).toBeDisabled()
+  resolveSelect({})
+  await screen.findByText('Trip page')
 })
