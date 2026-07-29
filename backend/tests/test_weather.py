@@ -61,6 +61,6 @@ def test_hourly_returns_forecast(auth_client):
     assert "rain_probability" in first_hour
     assert "wind_speed" in first_hour
     assert "uv_index" in first_hour
-    assert "visibility_m" in first_hour
+    assert "visibility_km" in first_hour
     assert "condition" in first_hour
 

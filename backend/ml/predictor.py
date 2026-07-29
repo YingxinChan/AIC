@@ -42,8 +42,11 @@ class WeatherPredictor:
         # Put all probs in each day in dictionary
         results = []
         for i, probability in enumerate(probabilities):
+            warning = probability >= self.threshold
+
             results.append({
-                "heavy_rain_probability": round(float(probability) * 100, 2)
+                "heavy_rain_probability": round(float(probability) * 100, 2),
+                "heavy_rain_warning": bool(warning)
             })
 
         # Check for missing features

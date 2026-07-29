@@ -26,6 +26,7 @@ class ForecastDayOut(BaseModel):
 
     # lgbm prediction
     heavy_rain_probability: float
+    heavy_rain_warning: bool
 
     # Rule-based risks
     flood_score: float
