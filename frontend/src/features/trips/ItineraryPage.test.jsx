@@ -258,6 +258,35 @@ test('risk cards use red/yellow/green styling based on severity level', async ()
   expect(screen.getByText('None')).toHaveClass('bg-green-100')
 })
 
+test('editing dates in-place re-fetches weather for the new range instead of leaving it stale', async () => {
+  // Regression test: forecast/hourlyForecast/selectedDate used to only ever
+  // be set once, inside the initial [tripId]-keyed effect — saving new dates
+  // via the modal updated trip.start_date/end_date but never re-ran that
+  // fetch, so the weather section silently kept showing the old range (or
+  // disappeared entirely if the new range fell outside what was fetched).
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-02' })
+  updateTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-05', end_date: '2026-08-06' })
+  geocodeCity.mockResolvedValue([51.5074, -0.1278])
+  getForecast.mockResolvedValue([{
+    date: '2026-08-05', temp_max: 22, temp_min: 14, condition: 'Clear',
+    heavy_rain_probability: 0, heavy_rain_warning: false, flood_score: 0, flood_risk: 'Low',
+    beach_safety_score: 90, beach_safety_level: 'Good', snow_probability: 0,
+  }])
+  getHourlyForecast.mockResolvedValue([])
+  getItinerary.mockResolvedValue({ status: 'not_generated' })
+
+  renderAt(1)
+  await waitFor(() => expect(getForecast).toHaveBeenCalledWith(51.5074, -0.1278, '2026-08-01', '2026-08-02'))
+
+  fireEvent.click(await screen.findByRole('button', { name: /^edit dates$/i }))
+  fireEvent.change(screen.getByLabelText(/date depart/i), { target: { value: '2026-08-05' } })
+  fireEvent.change(screen.getByLabelText(/date return/i), { target: { value: '2026-08-06' } })
+  fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
+
+  await waitFor(() => expect(getForecast).toHaveBeenCalledWith(51.5074, -0.1278, '2026-08-05', '2026-08-06'))
+  expect(await screen.findByRole('button', { name: /day 1.*2026-08-05/i })).toBeInTheDocument()
+})
+
 test('clicking "Generate itinerary" calls the API and renders the result', async () => {
   getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
   generateItinerary.mockResolvedValue({
@@ -336,7 +365,7 @@ test('shows real Hotel info when the trip has a hotel address saved', async () =
   renderAt(1)
 
   await screen.findByText('Park Hyatt Tokyo')
-  expect(screen.getByText(/hotel/i)).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: /^hotel$/i })).toBeInTheDocument()
 })
 
 test('shows an honest empty state in the Hotel section when hotel_address is empty', async () => {
@@ -376,11 +405,11 @@ test('"Add Hotel" opens the hotel modal pre-filled with the current (empty) valu
   expect(screen.getByPlaceholderText(/ritz paris/i)).toHaveValue('')
 })
 
-test('"Edit" hotel opens the modal pre-filled with the existing hotel address', async () => {
+test('"Edit Hotel" opens the modal pre-filled with the existing hotel address', async () => {
   getTrip.mockResolvedValue({ destination: 'Paris', hotel_address: 'Hotel Plaza Athenee' })
   renderAt(1)
 
-  fireEvent.click(await screen.findByRole('button', { name: /^edit$/i }))
+  fireEvent.click(await screen.findByRole('button', { name: /^edit hotel$/i }))
 
   expect(screen.getByRole('heading', { name: /edit hotel/i })).toBeInTheDocument()
   expect(screen.getByPlaceholderText(/ritz paris/i)).toHaveValue('Hotel Plaza Athenee')
@@ -437,11 +466,11 @@ test('a rejected hotel updateTrip shows a saving-failed message instead of crash
   expect(await screen.findByText(/saving your trip details failed/i)).toBeInTheDocument()
 })
 
-test('"Edit" dates opens the modal pre-filled with the trip\'s current dates', async () => {
+test('"Edit Dates" opens the modal pre-filled with the trip\'s current dates', async () => {
   getTrip.mockResolvedValue({ destination: 'Paris', start_date: '2026-08-01', end_date: '2026-08-10' })
   renderAt(1)
 
-  fireEvent.click(await screen.findByRole('button', { name: /^edit$/i }))
+  fireEvent.click(await screen.findByRole('button', { name: /^edit dates$/i }))
 
   expect(screen.getByRole('heading', { name: /edit dates/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/date depart/i)).toHaveValue('2026-08-01')
@@ -453,7 +482,7 @@ test('confirming the dates save calls updateTrip and the page reflects the new v
   updateTrip.mockResolvedValue({ destination: 'Paris', start_date: '2026-08-02', end_date: '2026-08-11' })
   renderAt(1)
 
-  fireEvent.click(await screen.findByRole('button', { name: /^edit$/i }))
+  fireEvent.click(await screen.findByRole('button', { name: /^edit dates$/i }))
   fireEvent.change(screen.getByLabelText(/date depart/i), { target: { value: '2026-08-02' } })
   fireEvent.change(screen.getByLabelText(/date return/i), { target: { value: '2026-08-11' } })
   fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
@@ -467,7 +496,7 @@ test('saving the dates does not regenerate immediately — it opens the review p
   updateTrip.mockResolvedValue({ destination: 'Paris', start_date: '2026-08-02', end_date: '2026-08-11' })
   renderAt(1)
 
-  fireEvent.click(await screen.findByRole('button', { name: /^edit$/i }))
+  fireEvent.click(await screen.findByRole('button', { name: /^edit dates$/i }))
   fireEvent.change(screen.getByLabelText(/date depart/i), { target: { value: '2026-08-02' } })
   fireEvent.change(screen.getByLabelText(/date return/i), { target: { value: '2026-08-11' } })
   fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
@@ -480,7 +509,7 @@ test('Cancel in the dates modal closes without saving', async () => {
   getTrip.mockResolvedValue({ destination: 'Paris', start_date: '2026-08-01', end_date: '2026-08-10' })
   renderAt(1)
 
-  fireEvent.click(await screen.findByRole('button', { name: /^edit$/i }))
+  fireEvent.click(await screen.findByRole('button', { name: /^edit dates$/i }))
   fireEvent.change(screen.getByLabelText(/date depart/i), { target: { value: '2026-08-02' } })
   fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }))
 
@@ -493,7 +522,7 @@ test('a rejected dates updateTrip shows a saving-failed message instead of crash
   updateTrip.mockRejectedValue(new Error('server error'))
   renderAt(1)
 
-  fireEvent.click(await screen.findByRole('button', { name: /^edit$/i }))
+  fireEvent.click(await screen.findByRole('button', { name: /^edit dates$/i }))
   fireEvent.change(screen.getByLabelText(/date depart/i), { target: { value: '2026-08-02' } })
   fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
 
@@ -504,13 +533,28 @@ test('an invalid date range (end before/equal to start) disables Save and never 
   getTrip.mockResolvedValue({ destination: 'Paris', start_date: '2026-08-01', end_date: '2026-08-10' })
   renderAt(1)
 
-  fireEvent.click(await screen.findByRole('button', { name: /^edit$/i }))
+  fireEvent.click(await screen.findByRole('button', { name: /^edit dates$/i }))
   fireEvent.change(screen.getByLabelText(/date depart/i), { target: { value: '2026-08-10' } })
   fireEvent.change(screen.getByLabelText(/date return/i), { target: { value: '2026-08-01' } })
 
   expect(screen.getByText(/end date must be after start date/i)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /^save$/i })).toBeDisabled()
 
+  fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
+  expect(updateTrip).not.toHaveBeenCalled()
+})
+
+test('clearing the start (or end) date field disables Save instead of allowing an incomplete draft through', async () => {
+  // Regression test: datesInvalid used to only check ordering when both
+  // fields were non-empty, so backspacing one date entirely left Save
+  // enabled and would have submitted an empty date string.
+  getTrip.mockResolvedValue({ destination: 'Paris', start_date: '2026-08-01', end_date: '2026-08-10' })
+  renderAt(1)
+
+  fireEvent.click(await screen.findByRole('button', { name: /^edit dates$/i }))
+  fireEvent.change(screen.getByLabelText(/date depart/i), { target: { value: '' } })
+
+  expect(screen.getByRole('button', { name: /^save$/i })).toBeDisabled()
   fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
   expect(updateTrip).not.toHaveBeenCalled()
 })
@@ -541,8 +585,8 @@ test('the review prompt offers Dates/Outbound/Return but not Hotel again, right 
   fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
 
   await screen.findByRole('heading', { name: /update anything else first/i })
-  expect(screen.queryByRole('button', { name: /^edit hotel$/i })).not.toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /^edit dates$/i })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /^update hotel$/i })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /^update dates$/i })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /edit outbound flight/i })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /edit return flight/i })).toBeInTheDocument()
 })
@@ -562,7 +606,7 @@ test('"Edit Outbound Flight" and "Edit Return Flight" in the review prompt navig
   expect(generateItinerary).not.toHaveBeenCalled()
 })
 
-test('"Edit Dates" in the review prompt (triggered by a hotel save) opens the dates modal', async () => {
+test('"Update Dates" in the review prompt (triggered by a hotel save) opens the dates modal', async () => {
   getTrip.mockResolvedValue({ destination: 'Paris', hotel_address: '', start_date: '2026-08-01', end_date: '2026-08-10' })
   updateTrip.mockResolvedValue({ destination: 'Paris', hotel_address: 'Hotel Plaza Athenee', start_date: '2026-08-01', end_date: '2026-08-10' })
   renderAt(1)
@@ -571,7 +615,7 @@ test('"Edit Dates" in the review prompt (triggered by a hotel save) opens the da
   fireEvent.change(screen.getByPlaceholderText(/ritz paris/i), { target: { value: 'Hotel Plaza Athenee' } })
   fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
 
-  fireEvent.click(await screen.findByRole('button', { name: /^edit dates$/i }))
+  fireEvent.click(await screen.findByRole('button', { name: /^update dates$/i }))
 
   expect(screen.getByRole('heading', { name: /edit dates/i })).toBeInTheDocument()
 })
@@ -584,7 +628,7 @@ test('reopens the review prompt on load if a flight edit left a pending review f
   expect(await screen.findByRole('heading', { name: /update anything else first/i })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /edit outbound flight/i })).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: /edit return flight/i })).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /^edit dates$/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /^update dates$/i })).toBeInTheDocument()
   // Regression guard: the flag must be cleared once shown, not left set —
   // otherwise simply reopening the trip later re-triggers the same prompt
   // even with no new edit pending.
@@ -618,6 +662,19 @@ test('saving hotel/dates in-page never writes a pending-review flag, so leaving 
   renderAt(1)
   await waitFor(() => expect(getTrip.mock.calls.length).toBe(callsBeforeReopen + 1))
   expect(screen.queryByRole('heading', { name: /update anything else first/i })).not.toBeInTheDocument()
+})
+
+test('the hero "Edit Dates" and hotel card "Edit Hotel" buttons have distinct accessible names when both dates and hotel are set', async () => {
+  // Regression test: both used to render as a bare "Edit" button, making
+  // them ambiguous to screen readers and to any getByRole('button', { name:
+  // /^edit$/i }) lookup once a trip had both fields set.
+  getTrip.mockResolvedValue({
+    destination: 'Paris', start_date: '2026-08-01', end_date: '2026-08-10', hotel_address: 'Hotel Plaza Athenee',
+  })
+  renderAt(1)
+
+  expect(await screen.findByRole('button', { name: /^edit dates$/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /^edit hotel$/i })).toBeInTheDocument()
 })
 
 test('hero card shows the real trip name, destination, dates, and a status derived from real dates', async () => {

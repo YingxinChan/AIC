@@ -154,13 +154,6 @@ export default function ItineraryPage() {
           setItinerary(itinData);
         }
 
-        if (tripData?.start_date && tripData?.end_date) {
-          const now = new Date();
-          const todayStr = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-          const inRange = todayStr >= tripData.start_date && todayStr <= tripData.end_date;
-          setSelectedDate(inRange ? todayStr : tripData.start_date);
-        }
-
         // Covers returning from FlightSelectPage (a full navigation, so this
         // effect re-runs) right after a leg was saved there — see
         // saveTripDetails below for the in-page Dates/Hotel case, which opens
@@ -173,39 +166,6 @@ export default function ItineraryPage() {
           setReviewModalOpen(true);
           clearPendingReview(tripId);
         }
-
-        if (tripData?.destination) {
-          geocodeCity(tripData.destination).then(coords => {
-            if (cancelled || !coords) {
-              setWeatherStatus('failed');
-              return;
-            }
-
-            const lat = parseFloat(coords[0]);
-            const lon = parseFloat(coords[1]);
-            setMapCenter([lat, lon]);
-
-            // FIX: Access tripData.start_date directly instead of a missing startDate variable
-            const tripStartDate = tripData.start_date; 
-            const tripEndDate = tripData.end_date;
-
-            Promise.all([
-                getForecast(lat, lon, tripStartDate, tripEndDate), 
-                getHourlyForecast(lat, lon, tripStartDate, tripEndDate)
-            ])
-              .then(([days, hours]) => {
-                if (!cancelled) {
-                  setForecast(days);
-                  setHourlyForecast(hours);
-                  setWeatherStatus('loaded');
-                }
-              })
-              .catch((err) => {
-                console.error("Weather fetch error:", err);
-                if (!cancelled) setWeatherStatus('failed');
-              });
-          });
-        }
       })
       .catch((err) => {
         console.error("Failed to load trip:", err);
@@ -213,6 +173,63 @@ export default function ItineraryPage() {
 
     return () => { cancelled = true };
   }, [tripId]);
+
+  // Re-fetches weather and re-clamps the selected day whenever the trip's
+  // own destination/dates change, not just once on initial load — otherwise
+  // editing dates in-place (see saveTripDetails) leaves forecast/mapCenter
+  // pointing at the old range, and selectedDate can end up outside the new
+  // tripDates range entirely.
+  useEffect(() => {
+    let cancelled = false;
+    if (!trip) return;
+
+    if (trip.start_date && trip.end_date) {
+      const now = new Date();
+      const todayStr = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+      const inRange = todayStr >= trip.start_date && todayStr <= trip.end_date;
+      setSelectedDate((prev) => {
+        // Keep the current selection if it's still valid in the (possibly
+        // new) range, rather than always jumping back to today/start on
+        // every trip update — only reclamp when it no longer fits.
+        if (prev && prev >= trip.start_date && prev <= trip.end_date) return prev;
+        return inRange ? todayStr : trip.start_date;
+      });
+    }
+
+    // Geocoding/weather doesn't require dates to be set — only the forecast
+    // fetch below uses them, and gracefully gets undefined if absent, same
+    // as before this was split into its own effect.
+    if (trip.destination) {
+      geocodeCity(trip.destination).then(coords => {
+        if (cancelled || !coords) {
+          setWeatherStatus('failed');
+          return;
+        }
+
+        const lat = parseFloat(coords[0]);
+        const lon = parseFloat(coords[1]);
+        setMapCenter([lat, lon]);
+
+        Promise.all([
+            getForecast(lat, lon, trip.start_date, trip.end_date),
+            getHourlyForecast(lat, lon, trip.start_date, trip.end_date)
+        ])
+          .then(([days, hours]) => {
+            if (!cancelled) {
+              setForecast(days);
+              setHourlyForecast(hours);
+              setWeatherStatus('loaded');
+            }
+          })
+          .catch((err) => {
+            console.error("Weather fetch error:", err);
+            if (!cancelled) setWeatherStatus('failed');
+          });
+      });
+    }
+
+    return () => { cancelled = true };
+  }, [trip?.destination, trip?.start_date, trip?.end_date]);
 
   // --- SECTION 4: ACTIONS ---
   const handleGenerate = async () => {
@@ -250,7 +267,7 @@ export default function ItineraryPage() {
     setDatesModalOpen(true)
   }
 
-  const datesInvalid = Boolean(startDraft) && Boolean(endDraft) && endDraft <= startDraft
+  const datesInvalid = !startDraft || !endDraft || endDraft <= startDraft
 
   const saveTripDetails = async (patch, { closeModal, source }) => {
     setSavingTrip(true)
@@ -333,7 +350,7 @@ export default function ItineraryPage() {
               {trip.start_date && trip.end_date && (
                 <p className="flex items-center gap-1.5 text-sm text-indigo-100 mt-2">
                   <Calendar size={14} /> {trip.start_date} &rarr; {trip.end_date}
-                  <button type="button" onClick={openDatesModal} className="ml-1 text-indigo-100 underline hover:text-white">Edit</button>
+                  <button type="button" onClick={openDatesModal} className="ml-1 text-indigo-100 underline hover:text-white">Edit Dates</button>
                 </p>
               )}
             </div>
@@ -400,7 +417,7 @@ export default function ItineraryPage() {
             <div className="flex items-center justify-between gap-2">
               <h2 className="text-lg font-semibold text-gray-800 mb-1">Hotel</h2>
               <button type="button" onClick={openHotelModal} className="text-sm text-indigo-600 font-medium hover:text-indigo-700">
-                {trip.hotel_address?.trim() ? 'Edit' : 'Add Hotel'}
+                {trip.hotel_address?.trim() ? 'Edit Hotel' : 'Add Hotel'}
               </button>
             </div>
             {hotelParts ? (
@@ -473,13 +490,17 @@ export default function ItineraryPage() {
         </p>
         <div className="flex flex-col gap-2">
           {lastEdited !== 'dates' && (
+            // "Update Dates", not "Edit Dates" — the hero card above already
+            // has its own "Edit Dates" button, and this modal renders as an
+            // overlay on top of it rather than replacing it, so reusing the
+            // same label would make both ambiguous to find/click.
             <button type="button" onClick={handleReviewEditDates} className="w-full text-left px-4 py-2 rounded-md text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50">
-              Edit Dates
+              Update Dates
             </button>
           )}
           {lastEdited !== 'hotel' && (
             <button type="button" onClick={handleReviewEditHotel} className="w-full text-left px-4 py-2 rounded-md text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50">
-              Edit Hotel
+              Update Hotel
             </button>
           )}
           {lastEdited !== 'outbound' && (

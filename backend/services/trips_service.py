@@ -113,6 +113,16 @@ async def update_trip_details(
     hotel_address: str | None = None,
 ) -> dict:
     trip = await _get_owned_trip(db, trip_id, user_id)
+
+    # Validate the resulting range, not just whichever field is being patched
+    # — a partial patch (e.g. only start_date) can otherwise push it past the
+    # trip's existing end_date with no check at all, since the frontend's
+    # datesInvalid guard is the only other thing enforcing this.
+    new_start = start_date if start_date is not None else trip.start_date
+    new_end = end_date if end_date is not None else trip.end_date
+    if new_start is not None and new_end is not None and new_end <= new_start:
+        raise HTTPException(status_code=400, detail="end_date must be after start_date")
+
     if start_date is not None:
         trip.start_date = start_date
     if end_date is not None:

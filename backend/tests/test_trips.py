@@ -259,6 +259,47 @@ def test_update_trip_partial_patch_leaves_other_fields_untouched(auth_client):
     assert trip["end_date"] == "2026-08-07"
     assert trip["hotel_address"] == "The Ritz, London"
 
+def test_update_trip_rejects_end_date_before_start_date(auth_client):
+    create = auth_client.post("/api/trips/", json={
+        "name": "Summer Trip", "start_date": "2026-08-01", "end_date": "2026-08-07"
+    })
+    trip_id = create.json()["id"]
+
+    response = auth_client.patch(f"/api/trips/{trip_id}", json={
+        "start_date": "2026-08-10", "end_date": "2026-08-05",
+    })
+    assert response.status_code == 400
+
+    trip = auth_client.get(f"/api/trips/{trip_id}").json()
+    assert trip["start_date"] == "2026-08-01"  # unchanged — rejected before saving
+    assert trip["end_date"] == "2026-08-07"
+
+def test_update_trip_rejects_end_date_equal_to_start_date(auth_client):
+    create = auth_client.post("/api/trips/", json={
+        "name": "Summer Trip", "start_date": "2026-08-01", "end_date": "2026-08-07"
+    })
+    trip_id = create.json()["id"]
+
+    response = auth_client.patch(f"/api/trips/{trip_id}", json={
+        "start_date": "2026-08-07", "end_date": "2026-08-07",
+    })
+    assert response.status_code == 400
+
+def test_update_trip_rejects_a_partial_start_date_patch_that_crosses_the_existing_end_date(auth_client):
+    # Regression test: patching only start_date (leaving end_date untouched)
+    # must still be validated against the trip's *existing* end_date, not
+    # skipped just because end_date wasn't part of this request.
+    create = auth_client.post("/api/trips/", json={
+        "name": "Summer Trip", "start_date": "2026-08-01", "end_date": "2026-08-07"
+    })
+    trip_id = create.json()["id"]
+
+    response = auth_client.patch(f"/api/trips/{trip_id}", json={"start_date": "2026-08-09"})
+    assert response.status_code == 400
+
+    trip = auth_client.get(f"/api/trips/{trip_id}").json()
+    assert trip["start_date"] == "2026-08-01"  # unchanged
+
 def test_update_trip_ignores_origin_since_it_is_permanently_locked(auth_client):
     # Origin (like destination) is fixed once a trip is created — passing it
     # here must have no effect, not silently accepted.
