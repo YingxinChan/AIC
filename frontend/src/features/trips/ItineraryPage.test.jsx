@@ -14,12 +14,14 @@ vi.mock('../../components/MapView', () => ({
 import ItineraryPage from './ItineraryPage'
 import { getTrip, updateTrip } from './tripsApi'
 import { getItinerary, generateItinerary } from './itineraryApi'
-import { geocodeCity } from '../../lib/geocode'
+import { geocodeCity, geocodeAddress } from '../../lib/geocode'
 import { getForecast, getHourlyForecast } from '../weather/weatherApi'
 import { searchPlaces } from '../../lib/nominatim'
 
 beforeEach(() => {
   mockMapView.mockClear()
+  getTrip.mockResolvedValue({ destination: 'London' })
+  getItinerary.mockResolvedValue({ status: 'not_generated' })
 })
 
 vi.mock('./tripsApi', () => ({
@@ -34,6 +36,7 @@ vi.mock('./itineraryApi', () => ({
 
 vi.mock('../../lib/geocode', () => ({
   geocodeCity: vi.fn().mockResolvedValue(null),
+  geocodeAddress: vi.fn().mockResolvedValue(null),
 }))
 
 vi.mock('../weather/weatherApi', () => ({
@@ -58,6 +61,7 @@ function renderAt(tripId) {
   )
 }
 
+<<<<<<< HEAD
 beforeEach(() => {
   updateTrip.mockReset()
   generateItinerary.mockReset()
@@ -66,6 +70,8 @@ beforeEach(() => {
   getItinerary.mockResolvedValue({ status: 'not_generated' })
 })
 
+=======
+>>>>>>> 8e9f5b3 (Add hotel marker and custom map pins)
 test('renders itinerary sections', async () => {
   renderAt(1)
 
@@ -747,42 +753,19 @@ test('passes selected day activities to MapView as stops', async () => {
     end_date: '2026-07-27',
   })
 
-  getItinerary.mockResolvedValue({
-    days: [
-      {
-        date: "2026-07-26",
-        activities: [
-          {
-            id: 1,
-            name: "British Museum",
-            lat: 51.5194,
-            lng: -0.127,
-            type: "indoor",
-            time_slot: "10:00"
-          }
-        ]
-      },
-      {
-        date: "2026-07-27",
-        activities: [
-          {
-            id: 2,
-            name: "Big Ben",
-            lat: 51.5007,
-            lng: -0.1246,
-            type: "outdoor",
-            time_slot: "10:00"
-          }
-        ]
-      }
-    ]
-  })
+  getItinerary.mockResolvedValue(mockItinerary)
 
   renderAt(1)
 
+  await screen.findByRole('button', { name: /day 1.*2026-07-26/i })
+
+  fireEvent.click(
+    screen.getByRole('button', { name: /day 1.*2026-07-26/i })
+  )
+
   await screen.findByText("British Museum")
 
-  expect(mockMapView).toHaveBeenCalledWith(
+  expect(mockMapView).toHaveBeenLastCalledWith(
     expect.objectContaining({
       stops: [
         {
@@ -836,10 +819,16 @@ test('updates MapView stops when switching days', async () => {
 
   renderAt(1)
 
-  await screen.findByText("British Museum")
+  await screen.findByRole('button', { name: /day 1.*2026-07-26/i })
 
   fireEvent.click(
-    screen.getByRole('button', { name: /day 2/i })
+    screen.getByRole('button', { name: /day 1.*2026-07-26/i })
+  )
+
+  await screen.findByText('British Museum')
+
+  fireEvent.click(
+    screen.getByRole('button', { name: /day 2.*2026-07-27/i })
   )
 
   await screen.findByText("Big Ben")
@@ -852,6 +841,70 @@ test('updates MapView stops when switching days', async () => {
           label: "Big Ben"
         }
       ]
+    }),
+    expect.anything()
+  )
+})
+
+// test hotel pin
+test('passes hotel location to MapView when hotel address exists', async () => {
+  getTrip.mockResolvedValue({
+    destination: 'Tokyo',
+    start_date: '2026-08-01',
+    end_date: '2026-08-01',
+    hotel_address: 'Park Hyatt Tokyo',
+  })
+
+  geocodeAddress.mockResolvedValue([35.6852, 139.6917])
+
+  getItinerary.mockResolvedValue({
+    days: [
+      {
+        date: "2026-08-01",
+        activities: [
+          {
+            id: 1,
+            name: "Tokyo Tower",
+            lat: 35.6586,
+            lng: 139.7454,
+            type: "outdoor",
+            time_slot: "10:00"
+          }
+        ]
+      }
+    ]
+  })
+
+  renderAt(1)
+
+  await screen.findByText("Park Hyatt Tokyo")
+
+  expect(mockMapView).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      hotel: {
+        position: [35.6852, 139.6917],
+        label: "Park Hyatt Tokyo",
+      }
+    }),
+    expect.anything()
+  )
+})
+
+test('does not pass hotel to MapView when hotel address is missing', async () => {
+  getTrip.mockResolvedValue({
+    destination: 'Tokyo',
+    start_date: '2026-08-01',
+    end_date: '2026-08-01',
+    hotel_address: '',
+  })
+
+  renderAt(1)
+
+  await waitFor(() => expect(getTrip).toHaveBeenCalled())
+
+  expect(mockMapView).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      hotel: null,
     }),
     expect.anything()
   )

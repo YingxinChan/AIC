@@ -11,3 +11,21 @@ export async function geocodeCity(query) {
     return null
   }
 }
+
+export async function geocodeAddress(address) {
+  if (!address) return null
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`
+    )
+    if (!response.ok) return null
+    const data = await response.json()
+    if (!data.length) return null
+    return [
+      parseFloat(data[0].lat),
+      parseFloat(data[0].lon),
+    ]
+  } catch (error) {
+    return null
+  }
+}

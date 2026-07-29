@@ -9,21 +9,30 @@ import {
 
 import "leaflet/dist/leaflet.css";
 
-delete L.Icon.Default.prototype._getIconUrl;
-
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: new URL(
-    "leaflet/dist/images/marker-icon-2x.png",
-    import.meta.url
-  ).href,
+const activityIcon = new L.Icon({
   iconUrl: new URL(
-    "leaflet/dist/images/marker-icon.png",
+    "leaflet-color-markers/img/marker-icon-red.png",
     import.meta.url
   ).href,
   shadowUrl: new URL(
-    "leaflet/dist/images/marker-shadow.png",
+    "leaflet-color-markers/img/marker-shadow.png",
     import.meta.url
   ).href,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+});
+
+const hotelIcon = new L.Icon({
+  iconUrl: new URL(
+    "leaflet-color-markers/img/marker-icon-blue.png",
+    import.meta.url
+  ).href,
+  shadowUrl: new URL(
+    "leaflet-color-markers/img/marker-shadow.png",
+    import.meta.url
+  ).href,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
 });
 
 const WORLD_CENTER = [20, 0];
@@ -33,8 +42,13 @@ const CITY_ZOOM = 11;
 export default function MapView({
   center,
   stops = [],
+  routeStops = [],
+  hotel = null,
   height = "h-64",
 }) {
+
+  console.log("hotel marker:", hotel)
+
   return (
     <MapContainer
       key={center ? center.join(",") : "world"}
@@ -47,14 +61,32 @@ export default function MapView({
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
 
+      {/* Activity pins */}
       {stops.map((stop, index) => (
-        <Marker key={index} position={stop.position}>
+        <Marker
+          key={index}
+          position={stop.position}
+          icon={activityIcon}
+        >
           <Popup>{stop.label}</Popup>
         </Marker>
       ))}
 
+      {/* Hotel pin */}
+      {hotel && (
+        <Marker
+          position={hotel.position}
+          icon={hotelIcon}
+        >
+          <Popup>{hotel.label}</Popup>
+        </Marker>
+      )}
+
       {stops.length > 1 && (
-        <Polyline positions={stops.map((stop) => stop.position)} />
+        <Polyline positions={routeStops.map((stop) => stop.position)}
+        color="#6366f1"
+        dashArray="10, 10"
+        />
       )}
     </MapContainer>
   );
