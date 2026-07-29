@@ -82,10 +82,11 @@ export default function MapView({
         </Marker>
       )}
 
-      {stops.length > 1 && (
-        <Polyline positions={routeStops.map((stop) => stop.position)}
-        color="#6366f1"
-        dashArray="10, 10"
+      {routeStops.length > 1 && (
+        <Polyline
+          positions={routeStops.map(stop => stop.position)}
+          color="#6366f1"
+          dashArray="10,10"
         />
       )}
     </MapContainer>

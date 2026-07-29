@@ -351,8 +351,8 @@ export default function ItineraryPage() {
   const stops = itineraryDay?.activities
     ?.filter(
       activity =>
-        activity.lat !== null &&
-        activity.lng !== null
+        activity.lat !== 0 &&
+        activity.lng !== 0
     )
     .map(activity => ({
       position: [activity.lat, activity.lng],
