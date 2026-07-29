@@ -17,9 +17,16 @@ def search_flights(
     Reads from the CSV database and filters based on user search parameters.
     """
     csv_path = get_csv_path()
-    
+
     if not os.path.exists(csv_path):
         return {"error": "Database file not found. Please run generate_flights.py."}
+
+    # An empty origin/destination is a substring of every row below, so a
+    # trip with a blank field (e.g. origin never filled in) would otherwise
+    # silently match every city instead of none — surfacing as "way too many
+    # flights, and most aren't even for the right route".
+    if not origin.strip() or not destination.strip():
+        return {"flights": []}
 
     filtered_flights = []
 

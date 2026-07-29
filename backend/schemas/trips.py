@@ -35,3 +35,12 @@ class SelectFlightRequest(BaseModel):
     airline: str
     time: str
     other_time: str = ""
+
+
+class UpdateTripRequest(BaseModel):
+    # Partial update — all fields optional. Destination and origin are
+    # deliberately excluded, this endpoint never touches them (both are
+    # permanently locked once a trip is created).
+    start_date: date | None = None
+    end_date: date | None = None
+    hotel_address: str | None = None
