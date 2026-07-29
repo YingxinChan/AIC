@@ -8,32 +8,46 @@ def flood_risk(
     heavy_rain_probability: float,
     rain_today: float,
     rain_tomorrow: float,
+    max_hourly_rain: float,
 ):
     score = 0
-    score += (heavy_rain_probability/100) * 60 # 100% heavy_rain -> 60 flood points
 
-    if rain_today >= 20:
+    # Heavy rain probability contribution (max 40 points)
+    score += (heavy_rain_probability / 100) * 40
+
+    # Today's rainfall (max 25 points)
+    if rain_today >= 50:
         score += 25
-    elif rain_today >= 10:
+    elif rain_today >= 20:
         score += 15
-    elif rain_today >= 5:
+    elif rain_today >= 10:
         score += 5
 
-    if rain_tomorrow >= 20:
+    # Tomorrow rainfall (max 15 points)
+    if rain_tomorrow >= 50:
         score += 15
+    elif rain_tomorrow >= 20:
+        score += 10
     elif rain_tomorrow >= 10:
-        score += 8
+        score += 5
 
-    score = min(score, 100) # Not letting score > 100
+    # Short intense rainfall / flash flood indicator (max 20 points)
+    if max_hourly_rain >= 30:
+        score += 20
+    elif max_hourly_rain >= 15:
+        score += 10
+    elif max_hourly_rain >= 5:
+        score += 5
 
-    # Risk level
+    score = min(score, 100)
+
     if score < 30:
         level = "Low"
     elif score < 60:
         level = "Moderate"
     else:
         level = "High"
-    
+
     return {
         "flood_score": round(score, 2),
         "flood_risk": level,
@@ -42,32 +56,51 @@ def flood_risk(
 # Heavy rain probability + wind + temp
 def beach_safety(
     heavy_rain_probability: float,
+    rain: float,
     wind: float,
-    temp: float,
+    feels_like_temp: float,
 ):
     score = 100
-    score -= (heavy_rain_probability/100) * 40
 
-    if wind > 30:
+    # Heavy rain probability
+    if heavy_rain_probability >= 80:
+        score -= 40
+    elif heavy_rain_probability >= 50:
+        score -= 25
+    elif heavy_rain_probability >= 20:
+        score -= 10
+
+    # Daily rainfall amount
+    if rain >= 30:
+        score -= 25
+    elif rain >= 10:
+        score -= 15
+    elif rain >= 5:
+        score -= 5
+
+    # Wind
+    if wind >= 50:
         score -= 30
-    elif wind > 20:
+    elif wind >= 35:
         score -= 15
-    # otherwise no change
+    elif wind >= 20:
+        score -= 5
 
-    if temp < 18:
+    # Feels-like temperature
+    if feels_like_temp >= 40:
+        score -= 25
+    elif feels_like_temp >= 35:
+        score -= 15
+    elif feels_like_temp <= 10:
         score -= 15
 
-    if heavy_rain_probability > 70:
-        score -= 15
+    score = max(0, score)
 
-    score = max(min(score, 100), 0)
-
-    # Risk level
-    if 80 <= score <= 100:
+    if score >= 80:
         level = "Excellent"
-    elif 60 <= score < 80:
+    elif score >= 60:
         level = "Good"
-    elif 40 <= score < 60:
+    elif score >= 40:
         level = "Moderate"
     else:
         level = "Poor"
@@ -80,18 +113,26 @@ def beach_safety(
 # Rainfall + wind + temperature
 def snow_probability(
     rain: float,
+    snowfall: float,
     temp: float,
 ):
-
-    if temp > 3:
-        probability = 0
-    elif temp > 1:
-        probability = min(rain / 30, 0.4)
-    else:
+    # Actual snowfall predicted
+    if snowfall > 0:
         probability = min(
-            0.4 + rain / 20,
+            snowfall / 5,
             1.0
         )
+
+    # Cold enough + precipitation but no snowfall prediction
+    elif temp <= 1 and rain > 0:
+        probability = min(
+            rain / 20,
+            0.8
+        )
+
+    # Too warm or no precipitation
+    else:
+        probability = 0
 
     return {
         "snow_probability": round(probability * 100, 2)
@@ -153,6 +194,106 @@ def wind_level(wind: float):
         return "Strong"
     else:
         return "Very Strong"
+
+# temp level
+def temp_level(feels_like_temp: float):
+    if feels_like_temp >= 35:
+        return "Extreme Heat"
+    elif feels_like_temp >= 30:
+            return "High Heat"
+    elif feels_like_temp <= -10:
+        return "Extreme Cold"
+    elif feels_like_temp <= 0:
+        return "Cold Conditions"
+
+    else:
+        return "Safe"
+
+# temp advice
+def temp_advice(temp_level: str):
+    advice = {
+        "Extreme Heat": 
+            "Avoid prolonged outdoor activities. Stay hydrated and seek shade.",
+
+        "High Heat":
+            "Limit intense outdoor activities, especially during midday.",
+
+        "Extreme Cold":
+            "Wear protective layers and avoid long exposure outdoors.",
+
+        "Cold Conditions":
+            "Dress warmly and prepare for cold outdoor conditions.",
+
+        "Safe":
+            "Temperature conditions are comfortable for outdoor activities."
+    }
+    return advice.get(
+        temp_level,
+        "Check local conditions before travelling."
+    )
+
+# hiking safety
+def hiking_safety(
+    heavy_rain_probability: float,
+    wind: float,
+    visibility: float,
+    temp_risk: str,
+    snow_probability: float,
+):
+    score = 100
+    if heavy_rain_probability >= 80:
+        score -= 30
+    elif heavy_rain_probability >= 50:
+        score -= 20
+    elif heavy_rain_probability >= 20:
+        score -= 10
+
+    if wind >= 50:
+        score -= 25
+    elif wind >= 35:
+        score -= 15
+    elif wind >= 20:
+        score -= 5
+
+    if visibility < 500:
+        score -= 20
+    elif visibility < 1000:
+        score -= 10
+    elif visibility < 3000:
+        score -= 5
+
+    if temp_risk == "Extreme Heat":
+        score -= 20
+    elif temp_risk == "Extreme Cold":
+        score -= 20
+    elif temp_risk == "High Heat":
+        score -= 10
+    elif temp_risk == "Cold Conditions":
+        score -= 5
+
+    if snow_probability >= 80:
+        score -= 20
+    elif snow_probability >= 50:
+        score -= 10
+    elif snow_probability >= 20:
+        score -= 5
+
+    score = max(0, score)
+
+    # hiking safety level
+    if score >= 80:
+        level = "Safe"
+    elif score >= 60:
+        level = "Caution"
+    elif score >= 40:
+        level = "Unsafe"
+    else:
+        level = "Dangerous"
+
+    return {
+            "hiking_safety_score": round(score, 2),
+            "hiking_safety_level": level,
+        }
 
 
 # For testing

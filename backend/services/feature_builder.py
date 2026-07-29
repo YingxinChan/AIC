@@ -1,4 +1,7 @@
 # To make features for forecasted data 
+# Open-Meteo returns local destination time (timezone=auto)
+# Aggregate hourly weather variables into daily ML features
+
 # Run: python services/feature_builder.py
 
 import pandas as pd
@@ -62,9 +65,9 @@ def build_features(forecast):
         "pressure": hourly["pressure_msl"],
         "radiation": hourly["shortwave_radiation"],
         "visibility": hourly["visibility"],
-        "wind": hourly["wind_speed_10m"],
-        "uv_index": hourly["uv_index"],
         "feels_like_temp": hourly["apparent_temperature"],
+        "precipitation": hourly["precipitation"],
+        "snowfall": hourly["snowfall"],
     })
 
     hourly_df["time"] = pd.to_datetime(hourly_df["time"])
@@ -77,8 +80,17 @@ def build_features(forecast):
             "pressure": "mean",
             "radiation": "sum",
             "visibility": "min",
+            "feels_like_temp": "max",
+            "precipitation": "max",
+            "snowfall": "sum"
         })
         .reset_index()
+    )
+
+    daily_hourly = daily_hourly.rename(
+        columns={
+            "precipitation": "max_hourly_rain"
+        }
     )
 
     df = df.merge(

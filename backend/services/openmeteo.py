@@ -21,6 +21,7 @@ def get_forecast(lat: float, lon: float, start_date: str = None, end_date: str =
         "shortwave_radiation",
         "precipitation",
         "precipitation_probability",
+        "snowfall",
         "temperature_2m",
         "weather_code",
         "visibility",
@@ -53,7 +54,7 @@ def get_forecast(lat: float, lon: float, start_date: str = None, end_date: str =
         f"&daily={daily}"
         f"&start_date={start_date}"
         f"&end_date={end_date}"
-        f"&timezone=GMT"
+        f"&timezone=auto"
     )
 
     response = requests.get(url)
