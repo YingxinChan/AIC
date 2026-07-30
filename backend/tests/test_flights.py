@@ -46,3 +46,14 @@ def test_flight_search_no_results_empty_list(auth_client):
     response = auth_client.get("/api/flights/search?origin=London,%20UK&departure=2026-07-16&return_date=2026-07-23&destination=Moon,%20Space&direction=arrival")
     assert response.status_code == 200
     assert response.json()["flights"] == []
+
+def test_flight_search_blank_origin_returns_no_results_not_every_city():
+    # Regression test: an empty origin (e.g. a trip whose origin was never
+    # filled in) is a substring of every departure_city, so the naive filter
+    # used to match every route in the file instead of none.
+    result = search_flights(origin="", departure="2026-07-16", return_date="2026-07-23", destination="Paris, France", direction="arrival")
+    assert result["flights"] == []
+
+def test_flight_search_blank_destination_returns_no_results_not_every_city():
+    result = search_flights(origin="London, UK", departure="2026-07-16", return_date="2026-07-23", destination="", direction="arrival")
+    assert result["flights"] == []

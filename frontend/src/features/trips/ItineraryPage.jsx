@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   Plane, Building2, MapPin, Calendar, CheckCircle2,
   Briefcase, Thermometer, Sparkles, Sun, Moon, Cloud,
@@ -9,12 +9,15 @@ import {
 } from 'lucide-react'
 import Placeholder from '../../components/Placeholder'
 import MapView from '../../components/MapView'
-import { getTrip } from './tripsApi'
+import Modal from '../../components/Modal'
+import HotelSearchInput from '../../components/HotelSearchInput'
+import { getTrip, updateTrip } from './tripsApi'
 import { getItinerary, generateItinerary } from './itineraryApi'
 import { tripStatus, STATUS_STYLES } from './tripStatus'
 import { geocodeCity } from '../../lib/geocode'
 import { capitalize } from '../../lib/format'
 import { getForecast, getHourlyForecast } from '../weather/weatherApi'
+import { getPendingReview, clearPendingReview } from '../../lib/pendingReview'
 
 // --- SECTION 1: HELPER FUNCTIONS ---
 
@@ -105,6 +108,20 @@ const visibilityLevel = (meters) => {
   return 'Poor';
 };
 
+// There's no separate "hotel name" field — hotel_address is a single string
+// that (when picked from the search dropdown) already comes formatted as
+// "Name, Street, City, ..." from Nominatim, so split on the first comma to
+// show the name and address on their own lines. A manually-typed value with
+// no comma just shows entirely as the name, with no second line.
+const splitHotelAddress = (hotelAddress) => {
+  const commaIndex = hotelAddress.indexOf(',');
+  if (commaIndex === -1) return { name: hotelAddress, address: '' };
+  return {
+    name: hotelAddress.slice(0, commaIndex).trim(),
+    address: hotelAddress.slice(commaIndex + 1).trim(),
+  };
+};
+
 const ONE_DAY_MS = 24 * 60 * 60 * 1000
 
 // start/end are plain "YYYY-MM-DD" calendar dates with no timezone meaning of
@@ -125,6 +142,7 @@ const datesBetween = (start, end) => {
 export default function ItineraryPage() {
   // --- SECTION 2: STATE VARIABLES ---
   const { tripId } = useParams()
+  const navigate = useNavigate()
   const [trip, setTrip] = useState(null)
   const [itinerary, setItinerary] = useState(null)
   const [itineraryNotice, setItineraryNotice] = useState('')
@@ -135,6 +153,18 @@ export default function ItineraryPage() {
   const [forecast, setForecast] = useState(null)
   const [hourlyForecast, setHourlyForecast] = useState(null)
   const [weatherStatus, setWeatherStatus] = useState('loading')
+
+  const [hotelModalOpen, setHotelModalOpen] = useState(false)
+  const [hotelDraft, setHotelDraft] = useState('')
+  const [datesModalOpen, setDatesModalOpen] = useState(false)
+  const [startDraft, setStartDraft] = useState('')
+  const [endDraft, setEndDraft] = useState('')
+  const [savingTrip, setSavingTrip] = useState(false)
+  const [reviewModalOpen, setReviewModalOpen] = useState(false)
+  // Which of dates/hotel/outbound/return was just saved — the review prompt
+  // excludes this one and only offers the others, so it never re-suggests
+  // editing the thing the user just finished editing.
+  const [lastEdited, setLastEdited] = useState(null)
 
   const destination = trip?.destination || ''
   const hasArrivalFlight = Boolean(trip?.arrival_flight_number)
@@ -177,49 +207,22 @@ export default function ItineraryPage() {
           setItinerary(itinData);
         }
 
-        if (tripData?.start_date && tripData?.end_date) {
-          // GMT-based best-effort default for which day tab to open — the
-          // destination's actual UTC offset isn't known yet at this point
-          // (forecast data, which carries it, hasn't loaded). This can be
-          // off by up to a day right at the destination's local midnight;
-          // isToday/getCurrentTemp below correct themselves once the real
-          // offset arrives, since they run on every render, not just here.
-          const todayStr = new Date().toISOString().split('T')[0];
-          const inRange = todayStr >= tripData.start_date && todayStr <= tripData.end_date;
-          setSelectedDate(inRange ? todayStr : tripData.start_date);
-        }
+        // selectedDate default + geocode/forecast fetch both moved into
+        // their own effect below, keyed on trip destination/dates instead of
+        // just tripId — so editing dates in-place (see saveTripDetails)
+        // re-fetches weather for the new range instead of leaving it stale.
 
-        if (tripData?.destination) {
-          geocodeCity(tripData.destination).then(coords => {
-            if (cancelled || !coords) {
-              setWeatherStatus('failed');
-              return;
-            }
-
-            const lat = parseFloat(coords[0]);
-            const lon = parseFloat(coords[1]);
-            setMapCenter([lat, lon]);
-
-            // FIX: Access tripData.start_date directly instead of a missing startDate variable
-            const tripStartDate = tripData.start_date; 
-            const tripEndDate = tripData.end_date;
-
-            Promise.all([
-                getForecast(lat, lon, tripStartDate, tripEndDate), 
-                getHourlyForecast(lat, lon, tripStartDate, tripEndDate)
-            ])
-              .then(([days, hours]) => {
-                if (!cancelled) {
-                  setForecast(days);
-                  setHourlyForecast(hours);
-                  setWeatherStatus('loaded');
-                }
-              })
-              .catch((err) => {
-                console.error("Weather fetch error:", err);
-                if (!cancelled) setWeatherStatus('failed');
-              });
-          });
+        // Covers returning from FlightSelectPage (a full navigation, so this
+        // effect re-runs) right after a leg was saved there — see
+        // saveTripDetails below for the in-page Dates/Hotel case, which opens
+        // this directly instead. Cleared immediately after showing it once,
+        // so simply reopening/reloading this trip later doesn't keep
+        // re-surfacing the same prompt.
+        const pendingSource = getPendingReview(tripId);
+        if (pendingSource) {
+          setLastEdited(pendingSource);
+          setReviewModalOpen(true);
+          clearPendingReview(tripId);
         }
       })
       .catch((err) => {
@@ -228,6 +231,68 @@ export default function ItineraryPage() {
 
     return () => { cancelled = true };
   }, [tripId]);
+
+  // Re-fetches weather and re-clamps the selected day whenever the trip's
+  // own destination/dates change, not just once on initial load — otherwise
+  // editing dates in-place (see saveTripDetails) leaves forecast/mapCenter
+  // pointing at the old range, and selectedDate can end up outside the new
+  // tripDates range entirely.
+  useEffect(() => {
+    let cancelled = false;
+    if (!trip) return;
+
+    if (trip.start_date && trip.end_date) {
+      // GMT-based best-effort default for which day tab to open — the
+      // destination's actual UTC offset isn't known yet at this point
+      // (forecast data, which carries it, hasn't loaded). This can be off by
+      // up to a day right at the destination's local midnight; isToday /
+      // getCurrentTemp elsewhere correct themselves once the real offset
+      // arrives, since they run on every render, not just here.
+      const todayStr = new Date().toISOString().split('T')[0];
+      const inRange = todayStr >= trip.start_date && todayStr <= trip.end_date;
+      setSelectedDate((prev) => {
+        // Keep the current selection if it's still valid in the (possibly
+        // new) range, rather than always jumping back to today/start on
+        // every trip update — only reclamp when it no longer fits.
+        if (prev && prev >= trip.start_date && prev <= trip.end_date) return prev;
+        return inRange ? todayStr : trip.start_date;
+      });
+    }
+
+    // Geocoding/weather doesn't require dates to be set — only the forecast
+    // fetch below uses them, and gracefully gets undefined if absent, same
+    // as before this was split into its own effect.
+    if (trip.destination) {
+      geocodeCity(trip.destination).then(coords => {
+        if (cancelled || !coords) {
+          setWeatherStatus('failed');
+          return;
+        }
+
+        const lat = parseFloat(coords[0]);
+        const lon = parseFloat(coords[1]);
+        setMapCenter([lat, lon]);
+
+        Promise.all([
+            getForecast(lat, lon, trip.start_date, trip.end_date),
+            getHourlyForecast(lat, lon, trip.start_date, trip.end_date)
+        ])
+          .then(([days, hours]) => {
+            if (!cancelled) {
+              setForecast(days);
+              setHourlyForecast(hours);
+              setWeatherStatus('loaded');
+            }
+          })
+          .catch((err) => {
+            console.error("Weather fetch error:", err);
+            if (!cancelled) setWeatherStatus('failed');
+          });
+      });
+    }
+
+    return () => { cancelled = true };
+  }, [trip?.destination, trip?.start_date, trip?.end_date]);
 
   // --- SECTION 4: ACTIONS ---
   const handleGenerate = async () => {
@@ -246,7 +311,82 @@ export default function ItineraryPage() {
     setGenerating(false)
   }
 
+  // Dates and hotel are baked into itinerary generation (day-1/last-day
+  // scheduling, routing anchor), so editing either no longer regenerates
+  // immediately — PATCH /api/trips/{id} just saves the field and returns
+  // the plain trip. Instead, saving here opens the review prompt so the
+  // user can batch in the other one before we regenerate once, via
+  // handleReviewRegenerateNow below. Each flight leg (see FlightSelectPage)
+  // is edited independently and marks pendingReview itself once saved,
+  // reopening this same prompt on return.
+  const openHotelModal = () => {
+    setHotelDraft(trip.hotel_address || '')
+    setHotelModalOpen(true)
+  }
+
+  const openDatesModal = () => {
+    setStartDraft(trip.start_date || '')
+    setEndDraft(trip.end_date || '')
+    setDatesModalOpen(true)
+  }
+
+  const datesInvalid = !startDraft || !endDraft || endDraft <= startDraft
+
+  const saveTripDetails = async (patch, { closeModal, source }) => {
+    setSavingTrip(true)
+    try {
+      const updatedTrip = await updateTrip(tripId, patch)
+      setTrip(updatedTrip)
+      closeModal()
+      setLastEdited(source)
+      setReviewModalOpen(true)
+    } catch (err) {
+      setItineraryNotice(err.response?.data?.detail || 'Saving your trip details failed — try again.')
+    }
+    setSavingTrip(false)
+  }
+
+  const handleSaveHotel = () => saveTripDetails(
+    { hotel_address: hotelDraft },
+    { closeModal: () => setHotelModalOpen(false), source: 'hotel' }
+  )
+
+  const handleSaveDates = () => {
+    if (datesInvalid) return
+    return saveTripDetails(
+      { start_date: startDraft, end_date: endDraft },
+      { closeModal: () => setDatesModalOpen(false), source: 'dates' }
+    )
+  }
+
+  const handleReviewEditHotel = () => {
+    setReviewModalOpen(false)
+    openHotelModal()
+  }
+
+  const handleReviewEditDates = () => {
+    setReviewModalOpen(false)
+    openDatesModal()
+  }
+
+  const handleReviewEditOutbound = () => {
+    setReviewModalOpen(false)
+    navigate(`/trips/${tripId}/flights/outbound`)
+  }
+
+  const handleReviewEditReturn = () => {
+    setReviewModalOpen(false)
+    navigate(`/trips/${tripId}/flights/return`)
+  }
+
+  const handleReviewRegenerateNow = async () => {
+    await handleGenerate()
+    clearPendingReview(tripId)
+    setReviewModalOpen(false)
+  }
+
   const status = trip?.start_date && trip?.end_date ? tripStatus(trip) : null
+  const hotelParts = trip?.hotel_address?.trim() ? splitHotelAddress(trip.hotel_address) : null
 
   // Day tabs are driven by the trip's own date range (see tripDates below),
   // not by itinerary.days or forecast — so both are looked up by date here,
@@ -284,7 +424,10 @@ export default function ItineraryPage() {
               <p className="flex items-center gap-1.5 text-sm text-indigo-200"><MapPin size={14} /> {capitalize(destination)}</p>
               <h2 className="text-3xl font-bold mt-1">{capitalize(trip.name || `${destination} Trip`)}</h2>
               {trip.start_date && trip.end_date && (
-                <p className="flex items-center gap-1.5 text-sm text-indigo-100 mt-2"><Calendar size={14} /> {trip.start_date} &rarr; {trip.end_date}</p>
+                <p className="flex items-center gap-1.5 text-sm text-indigo-100 mt-2">
+                  <Calendar size={14} /> {trip.start_date} &rarr; {trip.end_date}
+                  <button type="button" onClick={openDatesModal} className="ml-1 text-indigo-100 underline hover:text-white">Edit Dates</button>
+                </p>
               )}
             </div>
           </div>
@@ -292,11 +435,11 @@ export default function ItineraryPage() {
       )}
 
       {/* 5B: Flight Information */}
-      {(hasArrivalFlight || hasDepartureFlight) && (
+      {trip && (
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-800 mb-4"><Plane size={18} className="text-indigo-600" /> Selected Flights</h2>
           <div className="space-y-3">
-            {hasArrivalFlight && (
+            {hasArrivalFlight ? (
               <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-3">
                 <div className="w-11 h-11 shrink-0 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs">{airlineCode(trip.arrival_flight_number)}</div>
                 <div className="flex-1">
@@ -305,9 +448,18 @@ export default function ItineraryPage() {
                   <p className="text-xs text-gray-500">{trip.arrival_other_time} &rarr; {trip.arrival_time}</p>
                 </div>
                 <CheckCircle2 size={18} className="text-green-500" />
+                <Link to={`/trips/${tripId}/flights/outbound`} className="text-sm text-indigo-600 font-medium hover:text-indigo-700 shrink-0">Change Flight</Link>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-3">
+                <div className="flex-1">
+                  <p className="text-xs text-gray-500 mb-0.5">Outbound · {trip.start_date}</p>
+                  <p className="text-gray-400 text-sm italic">No outbound flight added yet.</p>
+                </div>
+                <Link to={`/trips/${tripId}/flights/outbound`} className="text-sm text-indigo-600 font-medium hover:text-indigo-700 shrink-0">Add Flight</Link>
               </div>
             )}
-            {hasDepartureFlight && (
+            {hasDepartureFlight ? (
               <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-3">
                 <div className="w-11 h-11 shrink-0 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs">{airlineCode(trip.departure_flight_number)}</div>
                 <div className="flex-1">
@@ -316,6 +468,15 @@ export default function ItineraryPage() {
                   <p className="text-xs text-gray-500">{trip.departure_time} &rarr; {trip.departure_other_time}</p>
                 </div>
                 <CheckCircle2 size={18} className="text-green-500" />
+                <Link to={`/trips/${tripId}/flights/return`} className="text-sm text-indigo-600 font-medium hover:text-indigo-700 shrink-0">Change Flight</Link>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-3">
+                <div className="flex-1">
+                  <p className="text-xs text-gray-500 mb-0.5">Return · {trip.end_date}</p>
+                  <p className="text-gray-400 text-sm italic">No return flight added yet.</p>
+                </div>
+                <Link to={`/trips/${tripId}/flights/return`} className="text-sm text-indigo-600 font-medium hover:text-indigo-700 shrink-0">Add Flight</Link>
               </div>
             )}
           </div>
@@ -323,15 +484,116 @@ export default function ItineraryPage() {
       )}
 
       {/* 5C: Hotel Information */}
-      {trip?.hotel_address && (
+      {trip && (
         <div className="bg-white rounded-lg border border-gray-200 p-6 flex items-center gap-4">
-          <div className="w-16 h-16 shrink-0 rounded-lg bg-gradient-to-br from-indigo-400 to-purple-400" />
-          <div>
-            <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-800 mb-1"><Building2 size={18} className="text-indigo-600" /> Hotel</h2>
-            <p className="text-gray-700 text-sm">{trip.hotel_address}</p>
+          <div className="w-16 h-16 shrink-0 flex items-center justify-center">
+            <Building2 size={32} className="text-indigo-600" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-lg font-semibold text-gray-800 mb-1">Hotel</h2>
+              <button type="button" onClick={openHotelModal} className="text-sm text-indigo-600 font-medium hover:text-indigo-700">
+                {trip.hotel_address?.trim() ? 'Edit Hotel' : 'Add Hotel'}
+              </button>
+            </div>
+            {hotelParts ? (
+              <>
+                <p className="text-gray-900 text-sm font-bold">{hotelParts.name}</p>
+                {hotelParts.address && <p className="text-gray-700 text-sm">{hotelParts.address}</p>}
+              </>
+            ) : (
+              <p className="text-gray-400 text-sm italic">No hotel added yet.</p>
+            )}
           </div>
         </div>
       )}
+
+      <Modal open={hotelModalOpen} onClose={() => setHotelModalOpen(false)} title={trip?.hotel_address ? 'Edit Hotel' : 'Add Hotel'}>
+        <HotelSearchInput
+          id="hotel-edit"
+          value={hotelDraft}
+          onChange={setHotelDraft}
+          cityContext={trip?.destination}
+          placeholder="e.g. The Ritz Paris"
+        />
+        <div className="flex justify-end gap-2 mt-4">
+          <button type="button" onClick={() => setHotelModalOpen(false)} className="px-4 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+            Cancel
+          </button>
+          <button type="button" onClick={handleSaveHotel} disabled={savingTrip} className="px-4 py-2 rounded-md text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">
+            {savingTrip ? 'Saving...' : 'Save'}
+          </button>
+        </div>
+      </Modal>
+
+      <Modal open={datesModalOpen} onClose={() => setDatesModalOpen(false)} title="Edit Dates">
+        <div className="space-y-3">
+          <div>
+            <label htmlFor="edit-start-date" className="block text-sm font-medium text-gray-700 mb-1">Date Depart</label>
+            <input
+              id="edit-start-date"
+              type="date"
+              value={startDraft}
+              onChange={(e) => setStartDraft(e.target.value)}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label htmlFor="edit-end-date" className="block text-sm font-medium text-gray-700 mb-1">Date Return</label>
+            <input
+              id="edit-end-date"
+              type="date"
+              value={endDraft}
+              onChange={(e) => setEndDraft(e.target.value)}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            />
+          </div>
+          {datesInvalid && <p className="text-sm text-red-600">End date must be after start date.</p>}
+        </div>
+        <div className="flex justify-end gap-2 mt-4">
+          <button type="button" onClick={() => setDatesModalOpen(false)} className="px-4 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+            Cancel
+          </button>
+          <button type="button" onClick={handleSaveDates} disabled={savingTrip || datesInvalid} className="px-4 py-2 rounded-md text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">
+            {savingTrip ? 'Saving...' : 'Save'}
+          </button>
+        </div>
+      </Modal>
+
+      <Modal open={reviewModalOpen} onClose={() => setReviewModalOpen(false)} title="Update anything else first?">
+        <p className="text-sm text-gray-600 mb-4">
+          Your itinerary is generated from your dates, hotel, and flights together — want to update anything else before we regenerate it?
+        </p>
+        <div className="flex flex-col gap-2">
+          {lastEdited !== 'dates' && (
+            // "Update Dates", not "Edit Dates" — the hero card above already
+            // has its own "Edit Dates" button, and this modal renders as an
+            // overlay on top of it rather than replacing it, so reusing the
+            // same label would make both ambiguous to find/click.
+            <button type="button" onClick={handleReviewEditDates} className="w-full text-left px-4 py-2 rounded-md text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50">
+              Update Dates
+            </button>
+          )}
+          {lastEdited !== 'hotel' && (
+            <button type="button" onClick={handleReviewEditHotel} className="w-full text-left px-4 py-2 rounded-md text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50">
+              Update Hotel
+            </button>
+          )}
+          {lastEdited !== 'outbound' && (
+            <button type="button" onClick={handleReviewEditOutbound} className="w-full text-left px-4 py-2 rounded-md text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50">
+              Edit Outbound Flight
+            </button>
+          )}
+          {lastEdited !== 'return' && (
+            <button type="button" onClick={handleReviewEditReturn} className="w-full text-left px-4 py-2 rounded-md text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50">
+              Edit Return Flight
+            </button>
+          )}
+          <button type="button" onClick={handleReviewRegenerateNow} disabled={generating} className="w-full px-4 py-2 rounded-md text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 mt-2">
+            {generating ? 'Regenerating...' : "No, regenerate now"}
+          </button>
+        </div>
+      </Modal>
 
       {/* 5D: Itinerary & Weather Section */}
       <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">

@@ -5,3 +5,4 @@ export const createTrip = (data) => api.post('/api/trips/', data).then(r => r.da
 export const getTrip = (id) => api.get(`/api/trips/${id}`).then(r => r.data)
 export const deleteTrip = (id) => api.delete(`/api/trips/${id}`)
 export const selectFlight = (id, data) => api.patch(`/api/trips/${id}/flight`, data).then(r => r.data)
+export const updateTrip = (id, data) => api.patch(`/api/trips/${id}`, data).then(r => r.data)

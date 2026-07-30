@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MapPin, Calendar, Building2, Camera, Plane, Search } from 'lucide-react'
 import ErrorMessage from '../../components/ErrorMessage'
+import HotelSearchInput from '../../components/HotelSearchInput'
 import { createTrip, selectFlight } from './tripsApi'
 import { useTripDraft } from './useTripDraft'
 
@@ -29,7 +30,7 @@ export default function NewTripPage() {
         origin: draft.origin,
         start_date: draft.startDate,
         end_date: draft.endDate,
-        hotel_address: draft.hotelAddress,
+        hotel_address: (draft.hotelAddress || '').trim(),
         original_plan: draft.placesToVisit,
       })
 
@@ -181,13 +182,12 @@ export default function NewTripPage() {
           <label htmlFor="hotel" className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-1">
             <Building2 size={16} className="text-indigo-600" /> Hotel
           </label>
-          <input
+          <HotelSearchInput
             id="hotel"
-            type="text"
             value={draft.hotelAddress || ''}
-            onChange={(e) => updateDraft({ hotelAddress: e.target.value })}
-            placeholder="e.g. Park Hyatt Tokyo"
-            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            onChange={(v) => updateDraft({ hotelAddress: v })}
+            cityContext={draft.destination}
+            placeholder="e.g. The Ritz Paris"
           />
         </div>
 
