@@ -1,16 +1,32 @@
+// Test: npm test itinerarypage
+
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { vi } from 'vitest'
+import userEvent from '@testing-library/user-event'
+
+const mockMapView = vi.hoisted(() => vi.fn(() => <div>Map</div>))
+
+vi.mock('../../components/MapView', () => ({
+  default: mockMapView,
+}))
+
 import ItineraryPage from './ItineraryPage'
 import { getTrip, updateTrip } from './tripsApi'
 import { getItinerary, generateItinerary, updateActivity } from './itineraryApi'
-import { geocodeCity } from '../../lib/geocode'
+import { geocodeCity, geocodeAddress } from '../../lib/geocode'
 import { getForecast, getHourlyForecast } from '../weather/weatherApi'
 import { searchPlaces } from '../../lib/nominatim'
 
-vi.mock('../../components/MapView', () => ({
-  default: () => <div>Map</div>,
-}))
+beforeEach(() => {
+  mockMapView.mockClear()
+  updateTrip.mockReset()
+  generateItinerary.mockReset()
+  updateActivity.mockReset()
+  sessionStorage.clear()
+  getTrip.mockResolvedValue({ destination: 'London' })
+  getItinerary.mockResolvedValue({ status: 'not_generated' })
+})
 
 vi.mock('./tripsApi', () => ({
   getTrip: vi.fn(),
@@ -25,6 +41,7 @@ vi.mock('./itineraryApi', () => ({
 
 vi.mock('../../lib/geocode', () => ({
   geocodeCity: vi.fn().mockResolvedValue(null),
+  geocodeAddress: vi.fn().mockResolvedValue(null),
 }))
 
 vi.mock('../weather/weatherApi', () => ({
@@ -48,15 +65,6 @@ function renderAt(tripId) {
     </MemoryRouter>
   )
 }
-
-beforeEach(() => {
-  updateTrip.mockReset()
-  generateItinerary.mockReset()
-  updateActivity.mockReset()
-  sessionStorage.clear()
-  getTrip.mockResolvedValue({ destination: 'London' })
-  getItinerary.mockResolvedValue({ status: 'not_generated' })
-})
 
 test('renders itinerary sections', async () => {
   renderAt(1)
@@ -699,6 +707,202 @@ test('renders a Back to My Trips link to /dashboard', async () => {
   expect(screen.getByRole('link', { name: /back to my trips/i })).toHaveAttribute('href', '/dashboard')
 })
 
+// Test itinerary data
+const mockItinerary = {
+  days: [
+    {
+      date: "2026-07-26",
+      activities: [
+        {
+          id: 1,
+          name: "British Museum",
+          lat: 51.5194,
+          lng: -0.127,
+          type: "indoor",
+          time_slot: "10:00"
+        }
+      ]
+    },
+    {
+      date: "2026-07-27",
+      activities: [
+        {
+          id: 2,
+          name: "Big Ben",
+          lat: 51.5007,
+          lng: -0.1246,
+          type: "outdoor",
+          time_slot: "10:00"
+        }
+      ]
+    }
+  ]
+}
+
+// test first day stop
+test('passes selected day activities to MapView as stops', async () => {
+  getTrip.mockResolvedValue({
+    destination: 'London',
+    start_date: '2026-07-26',
+    end_date: '2026-07-27',
+  })
+
+  getItinerary.mockResolvedValue(mockItinerary)
+
+  renderAt(1)
+
+  await screen.findByRole('button', { name: /day 1.*2026-07-26/i })
+
+  fireEvent.click(
+    screen.getByRole('button', { name: /day 1.*2026-07-26/i })
+  )
+
+  await screen.findByText("British Museum")
+
+  expect(mockMapView).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      stops: [
+        {
+          position: [51.5194, -0.127],
+          label: "British Museum"
+        }
+      ]
+    }),
+    expect.anything()
+  )
+})
+
+// test changing day
+test('updates MapView stops when switching days', async () => {
+  getTrip.mockResolvedValue({
+    destination: 'London',
+    start_date: '2026-07-26',
+    end_date: '2026-07-27',
+  })
+
+  getItinerary.mockResolvedValue({
+    days: [
+      {
+        date: "2026-07-26",
+        activities: [
+          {
+            id: 1,
+            name: "British Museum",
+            lat: 51.5194,
+            lng: -0.127,
+            type: "indoor",
+            time_slot: "10:00"
+          }
+        ]
+      },
+      {
+        date: "2026-07-27",
+        activities: [
+          {
+            id: 2,
+            name: "Big Ben",
+            lat: 51.5007,
+            lng: -0.1246,
+            type: "outdoor",
+            time_slot: "10:00"
+          }
+        ]
+      }
+    ]
+  })
+
+  renderAt(1)
+
+  await screen.findByRole('button', { name: /day 1.*2026-07-26/i })
+
+  fireEvent.click(
+    screen.getByRole('button', { name: /day 1.*2026-07-26/i })
+  )
+
+  await screen.findByText('British Museum')
+
+  fireEvent.click(
+    screen.getByRole('button', { name: /day 2.*2026-07-27/i })
+  )
+
+  await screen.findByText("Big Ben")
+
+  expect(mockMapView).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      stops: [
+        {
+          position: [51.5007, -0.1246],
+          label: "Big Ben"
+        }
+      ]
+    }),
+    expect.anything()
+  )
+})
+
+// test hotel pin
+test('passes hotel location to MapView when hotel address exists', async () => {
+  getTrip.mockResolvedValue({
+    destination: 'Tokyo',
+    start_date: '2026-08-01',
+    end_date: '2026-08-01',
+    hotel_address: 'Park Hyatt Tokyo',
+  })
+
+  geocodeAddress.mockResolvedValue([35.6852, 139.6917])
+
+  getItinerary.mockResolvedValue({
+    days: [
+      {
+        date: "2026-08-01",
+        activities: [
+          {
+            id: 1,
+            name: "Tokyo Tower",
+            lat: 35.6586,
+            lng: 139.7454,
+            type: "outdoor",
+            time_slot: "10:00"
+          }
+        ]
+      }
+    ]
+  })
+
+  renderAt(1)
+
+  await screen.findByText("Park Hyatt Tokyo")
+
+  expect(mockMapView).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      hotel: {
+        position: [35.6852, 139.6917],
+        label: "Park Hyatt Tokyo",
+      }
+    }),
+    expect.anything()
+  )
+})
+
+test('does not pass hotel to MapView when hotel address is missing', async () => {
+  getTrip.mockResolvedValue({
+    destination: 'Tokyo',
+    start_date: '2026-08-01',
+    end_date: '2026-08-01',
+    hotel_address: '',
+  })
+
+  renderAt(1)
+
+  await waitFor(() => expect(getTrip).toHaveBeenCalled())
+
+  expect(mockMapView).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      hotel: null,
+    }),
+    expect.anything()
+  )
+})
 function mockGeneratedActivity(overrides = {}) {
   return {
     id: 1, day_date: '2026-08-01', name: 'British Museum', type: 'indoor',

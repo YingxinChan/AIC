@@ -1,3 +1,5 @@
+// Test: npm test mapview
+
 import { render, screen } from '@testing-library/react'
 import { vi } from 'vitest'
 import MapView from './MapView'
@@ -12,37 +14,72 @@ vi.mock('react-leaflet', () => ({
   Polyline: () => <div data-testid="polyline" />,
 }))
 
+// react-leaflet requires a DOM with sizing; jsdom doesn't fully support it.
+// We test that the container renders without crashing.
 test('renders map container', () => {
   const { container } = render(<MapView />)
   expect(container.firstChild).not.toBeNull()
 })
 
-test('renders no markers or route when stops are empty', () => {
-  render(<MapView />)
-  expect(screen.queryByTestId('marker')).not.toBeInTheDocument()
-  expect(screen.queryByTestId('polyline')).not.toBeInTheDocument()
-})
-
-test('renders one marker per stop with its label', () => {
+// markers render test
+test('renders markers when stops are provided', () => {
   const stops = [
-    { position: [51.5194, -0.1270], label: 'British Museum' },
-    { position: [51.5081, -0.0759], label: 'Tower Bridge' },
+    {
+      position: [51.5074, -0.1278],
+      label: 'British Museum',
+    },
+    {
+      position: [51.5007, -0.1246],
+      label: 'Big Ben',
+    },
   ]
+
   render(<MapView stops={stops} />)
 
   expect(screen.getAllByTestId('marker')).toHaveLength(2)
   expect(screen.getByText('British Museum')).toBeInTheDocument()
-  expect(screen.getByText('Tower Bridge')).toBeInTheDocument()
+  expect(screen.getByText('Big Ben')).toBeInTheDocument()
 })
 
-test('renders a route line only when there are 2+ route stops', () => {
-  const oneStop = [[51.5194, -0.1270]]
-  const { rerender } = render(<MapView routeStops={oneStop} />)
-  expect(screen.queryByTestId('polyline')).not.toBeInTheDocument()
+// empty stops test
+test('does not render markers or route when stops are empty', () => {
+  render(<MapView stops={[]} />)
 
-  const twoStops = [[51.5194, -0.1270], [51.5081, -0.0759]]
-  rerender(<MapView routeStops={twoStops} />)
+  expect(screen.queryByTestId('marker')).not.toBeInTheDocument()
+  expect(screen.queryByTestId('polyline')).not.toBeInTheDocument()
+})
+
+// polyline test
+test('renders route line when there are multiple stops', () => {
+  const stops = [
+    {
+      position: [51.5074, -0.1278],
+      label: 'British Museum',
+    },
+    {
+      position: [51.5007, -0.1246],
+      label: 'Big Ben',
+    },
+  ]
+
+  render(<MapView stops={stops} />)
+
   expect(screen.getByTestId('polyline')).toBeInTheDocument()
+})
+
+// coordinate privacy test
+test('does not display raw coordinates', () => {
+  const stops = [
+    {
+      position: [51.5074, -0.1278],
+      label: 'British Museum',
+    },
+  ]
+
+  render(<MapView stops={stops} />)
+
+  expect(screen.queryByText('51.5074')).not.toBeInTheDocument()
+  expect(screen.queryByText('-0.1278')).not.toBeInTheDocument()
 })
 
 test('renders a distinct hotel marker when provided', () => {
@@ -56,4 +93,17 @@ test('renders a distinct hotel marker when provided', () => {
 test('does not render a hotel marker when hotel is null', () => {
   render(<MapView hotel={null} />)
   expect(screen.queryByTestId('marker')).not.toBeInTheDocument()
+})
+
+test('route line brackets stops with the hotel at both ends when a hotel is set', () => {
+  const stops = [{ position: [51.5194, -0.1270], label: 'British Museum' }]
+  const hotel = { position: [51.5, -0.12], label: 'The Ritz London' }
+
+  // No hotel -> single stop alone isn't enough for a route line.
+  const { rerender } = render(<MapView stops={stops} />)
+  expect(screen.queryByTestId('polyline')).not.toBeInTheDocument()
+
+  // Hotel + single stop -> hotel/stop/hotel is 3 points, route line renders.
+  rerender(<MapView stops={stops} hotel={hotel} />)
+  expect(screen.getByTestId('polyline')).toBeInTheDocument()
 })
