@@ -1,9 +1,58 @@
 # Run: python -m pytest tests/test_weather.py
+from datetime import date, timedelta
+from unittest.mock import patch
+
+from services.weather_service import FORECAST_HORIZON_DAYS
+
+
+def test_prediction_beyond_horizon_falls_back_to_climatology(
+    auth_client,
+):
+    far_start_date = (
+        date.today()
+        + timedelta(days=FORECAST_HORIZON_DAYS + 5)
+    )
+
+    far_end_date = far_start_date + timedelta(days=1)
+
+    empty_historical_response = {
+        "daily": {
+            "time": [],
+            "temperature_2m_max": [],
+            "temperature_2m_min": [],
+            "weather_code": [],
+            "precipitation_sum": [],
+            "wind_speed_10m_mean": [],
+        },
+    }
+
+    with patch(
+        "services.climatology_service.get_historical_forecast",
+        return_value=empty_historical_response,
+    ):
+        response = auth_client.get(
+            "/api/weather/prediction"
+            f"?lat=51.5074"
+            f"&lon=-0.1278"
+            f"&start_date={far_start_date.isoformat()}"
+            f"&end_date={far_end_date.isoformat()}"
+        )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert len(data) == 2
+    assert all(day["is_climatology"] is True for day in data)
+    assert all(day["weather_code"] is None for day in data)
+    assert all(day["condition"] == "Unknown" for day in data)
+
 
 def test_prediction_requires_auth(client):
     response = client.get(
         "/api/weather/prediction?lat=51.5074&lon=-0.1278"
     )
+
     assert response.status_code == 401
 
 
@@ -39,6 +88,7 @@ def test_prediction_returns_forecast(auth_client):
         isinstance(day["uv_advice"], str) and day["uv_advice"]
         for day in data
     )
+
 
 def test_hourly_returns_forecast(auth_client):
     response = auth_client.get(

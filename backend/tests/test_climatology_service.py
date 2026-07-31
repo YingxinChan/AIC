@@ -3,6 +3,7 @@ from datetime import date
 from unittest.mock import patch
 
 from services.climatology_service import (
+    _climatology_day,
     _fetch_historical_rows,
     _rows_near_target,
     get_climatology_days,
@@ -11,7 +12,60 @@ from services.climatology_service import (
     _summarize_climatology_rows,
 )
 
+def test_one_bad_climatology_date_does_not_drop_the_batch():
+    dates = [
+        date(2026, 7, 1),
+        date(2026, 7, 2),
+        date(2026, 7, 3),
+    ]
 
+    historical_response = {
+        "daily": {
+            "time": [
+                "2023-07-01",
+                "2023-07-02",
+                "2023-07-03",
+            ],
+            "temperature_2m_max": [20.0, 21.0, 22.0],
+            "temperature_2m_min": [10.0, 11.0, 12.0],
+            "weather_code": [1, 2, 3],
+            "precipitation_sum": [0.0, 1.0, 2.0],
+            "wind_speed_10m_mean": [8.0, 9.0, 10.0],
+        },
+    }
+
+    real_summarize = _summarize_climatology_rows
+
+    def summarize_with_one_failure(target, rows):
+        if target == date(2026, 7, 2) and rows:
+            raise TypeError("unexpected archive value")
+
+        return real_summarize(target, rows)
+
+    with patch(
+        "services.climatology_service.get_historical_forecast",
+        return_value=historical_response,
+    ), patch(
+        "services.climatology_service._summarize_climatology_rows",
+        side_effect=summarize_with_one_failure,
+    ):
+        results = get_climatology_days(
+            51.5074,
+            -0.1278,
+            dates,
+        )
+
+    assert len(results) == 3
+
+    assert results[0]["date"] == "2026-07-01"
+    assert results[1]["date"] == "2026-07-02"
+    assert results[2]["date"] == "2026-07-03"
+
+    assert results[1]["condition"] == "Unknown"
+    assert results[1]["weather_code"] is None
+    assert results[1]["temp_max"] is None
+    assert results[1]["temp_min"] is None
+    
 def test_safe_replace_year_handles_leap_day_into_non_leap_year():
     feb_29_2024 = date(2024, 2, 29)
     assert _safe_replace_year(feb_29_2024, 2023) == date(2023, 2, 28)
@@ -80,9 +134,14 @@ def test_get_climatology_days_returns_a_safe_placeholder_per_date():
     dates = [date(2026, 9, 25), date(2026, 9, 26)]
 
     with patch("services.climatology_service.get_historical_forecast", return_value={
-        "daily": {"time": [], "temperature_2m_max": [], "temperature_2m_min": [],
-                  "weather_code": [], "precipitation_sum": []},
-    }):
+        "daily": {
+        "time": [],
+        "temperature_2m_max": [],
+        "temperature_2m_min": [],
+        "weather_code": [],
+        "precipitation_sum": [],
+        "wind_speed_10m_mean": [],
+    },}):
         results = get_climatology_days(51.5074, -0.1278, dates)
 
     assert [r["date"] for r in results] == ["2026-09-25", "2026-09-26"]
@@ -210,3 +269,45 @@ def test_summarize_climatology_rows_empty_rows():
     assert result["temp_max"] is None
     assert result["temp_min"] is None
     assert result["rain_chance"] is None
+
+def test_get_climatology_days_fetches_archive_once_for_multiple_dates():
+    dates = [
+        date(2026, 7, 1),
+        date(2026, 7, 2),
+        date(2026, 7, 3),
+    ]
+
+    historical_response = {
+        "daily": {
+            "time": [
+                "2023-06-28",
+                "2023-07-01",
+                "2023-07-02",
+                "2023-07-03",
+                "2023-07-06",
+            ],
+            "temperature_2m_max": [20.0, 21.0, 22.0, 23.0, 24.0],
+            "temperature_2m_min": [10.0, 11.0, 12.0, 13.0, 14.0],
+            "weather_code": [1, 1, 2, 2, 3],
+            "precipitation_sum": [0.0, 1.0, 2.0, 0.0, 3.0],
+            "wind_speed_10m_mean": [8.0, 9.0, 10.0, 11.0, 12.0],
+        },
+    }
+
+    with patch(
+        "services.climatology_service.get_historical_forecast",
+        return_value=historical_response,
+    ) as mocked:
+        results = get_climatology_days(
+            51.5074,
+            -0.1278,
+            dates,
+        )
+
+    assert len(results) == 3
+    mocked.assert_called_once_with(
+        51.5074,
+        -0.1278,
+        "2016-07-01",
+        "2025-07-03",
+    )

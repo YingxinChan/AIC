@@ -56,10 +56,16 @@ def _climatology_day(
         target,
     )
 
-    return _summarize_climatology_rows(
-        target,
-        rows,
-    )
+    try:
+        return _summarize_climatology_rows(
+            target,
+            rows,
+        )
+    except Exception:
+        return _summarize_climatology_rows(
+            target,
+            [],
+        )
 
 
 def _fetch_historical_rows(
