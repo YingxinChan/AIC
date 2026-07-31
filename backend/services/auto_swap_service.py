@@ -12,7 +12,7 @@ from services.weather_service import get_hourly_weather, get_weather_prediction
 FORECAST_HORIZON_DAYS = 15  # Open-Meteo only reliably forecasts ~16 days out
 
 
-async def run_auto_swap(db: AsyncSession) -> list[dict]:
+async def run_auto_swap(db: AsyncSession) -> dict:
     """Re-check weather for upcoming/active trips and auto-swap outdoor
     activities affected by any ACTIVE_RULES condition (rain, fog, wind,
     extreme heat/cold/UV, poor beach safety) for a suitable alternative.
@@ -21,11 +21,20 @@ async def run_auto_swap(db: AsyncSession) -> list[dict]:
     testing) — Activity.is_swapped is the idempotency guard, so an
     already-swapped activity is never re-evaluated or re-notified.
 
-    Returns a list of {trip_id, activity_id, reason, rain_mm, day_date,
-    original_name, original_location, alternate_name, alternate_location}
-    for activities swapped during this run (consumed by
-    notifications_service.send_swap_digest_emails to build the per-user
-    digest email).
+    Returns {"swapped": [...], "tips": [...]}:
+    - "swapped": {trip_id, activity_id, reason, rain_mm, day_date,
+      original_name, original_location, alternate_name, alternate_location}
+      for activities swapped during this run.
+    - "tips": {trip_id, activity_id, reason, tip, day_date, name, location}
+      for *fixed* activities affected by a rule — these are never swapped
+      (is_fixed excludes them from the swap-candidate pool entirely), so
+      this is informational only, no row is mutated. Not deduped across
+      runs — a fixed activity on a rainy day may generate the same tip on
+      each scheduled check until the day passes or the forecast clears;
+      accepted trade-off since tips are non-destructive, unlike a swap.
+
+    Both are consumed by notifications_service.send_swap_digest_emails to
+    build the per-user digest email.
     """
     today = date.today()
     horizon = today + timedelta(days=FORECAST_HORIZON_DAYS)
@@ -34,6 +43,7 @@ async def run_auto_swap(db: AsyncSession) -> list[dict]:
     trips = result.scalars().all()
 
     swapped = []
+    tips = []
     for trip in trips:
         if trip.lat == 0.0 and trip.lng == 0.0:
             coords = geocoding_service.geocode(trip.destination)
@@ -78,6 +88,7 @@ async def run_auto_swap(db: AsyncSession) -> list[dict]:
                 Activity.trip_id == trip.id,
                 Activity.type == "outdoor",
                 Activity.is_swapped.is_(False),
+                Activity.is_fixed.is_(False),
                 Activity.day_date >= window_start,
                 Activity.day_date <= window_end,
             )
@@ -85,6 +96,22 @@ async def run_auto_swap(db: AsyncSession) -> list[dict]:
         activities_by_date: dict[str, list[Activity]] = {}
         for activity in activities_result.scalars().all():
             activities_by_date.setdefault(activity.day_date.isoformat(), []).append(activity)
+
+        # Fixed activities in the same window get a tip instead of a swap
+        # (see run_auto_swap's docstring) — not filtered to type=="outdoor"
+        # since a fixed indoor activity just won't match any rule in
+        # practice, no need to assume that structurally.
+        fixed_activities_result = await db.execute(
+            select(Activity).where(
+                Activity.trip_id == trip.id,
+                Activity.is_fixed.is_(True),
+                Activity.day_date >= window_start,
+                Activity.day_date <= window_end,
+            )
+        )
+        fixed_activities_by_date: dict[str, list[Activity]] = {}
+        for activity in fixed_activities_result.scalars().all():
+            fixed_activities_by_date.setdefault(activity.day_date.isoformat(), []).append(activity)
 
         # Everything actually happening elsewhere on this trip right now — the
         # current plan for a day is its alternate_name once swapped, not the
@@ -99,6 +126,26 @@ async def run_auto_swap(db: AsyncSession) -> list[dict]:
         }
 
         for forecast_day in forecast_days:
+            # Fixed activities affected by a rule get a tip instead of a
+            # swap — no Claude call, no apply_swap, no is_swapped mutation.
+            # Checked before the swappable-activities early-exit below, so a
+            # day with only a fixed activity (no swap candidates at all)
+            # still gets its tip generated.
+            for activity in fixed_activities_by_date.get(forecast_day["date"], []):
+                for rule in ACTIVE_RULES:
+                    reason = rule.evaluate(forecast_day, activity, hourly=hourly_by_date.get(forecast_day["date"]))
+                    if reason:
+                        tips.append({
+                            "trip_id": trip.id,
+                            "activity_id": activity.id,
+                            "reason": reason,
+                            "tip": rule.tip(forecast_day),
+                            "day_date": activity.day_date.isoformat(),
+                            "name": activity.name,
+                            "location": activity.location,
+                        })
+                        break
+
             day_activities = activities_by_date.get(forecast_day["date"])
             if not day_activities:
                 continue
@@ -142,4 +189,4 @@ async def run_auto_swap(db: AsyncSession) -> list[dict]:
                 except Exception:
                     continue  # one bad Claude call shouldn't abort the rest of the batch
 
-    return swapped
+    return {"swapped": swapped, "tips": tips}

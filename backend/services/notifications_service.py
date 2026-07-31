@@ -38,41 +38,61 @@ async def send_test_email(db: AsyncSession, user_id: int) -> dict:
     )
 
 
-async def send_swap_digest_emails(db: AsyncSession, swapped: list[dict]) -> list[dict]:
-    """Send one digest email per affected user summarizing this run's
-    weather-triggered swaps, respecting their email_enabled/rain_threshold_mm
-    preferences. `swapped` is the list run_auto_swap() returns."""
-    if not swapped:
+async def send_swap_digest_emails(db: AsyncSession, swapped: list[dict], tips: list[dict] | None = None) -> list[dict]:
+    """Send one combined digest email per affected user summarizing this
+    run's weather-triggered swaps and any fixed-activity tips, respecting
+    their email_enabled preference. `swapped` and `tips` are the two
+    collections run_auto_swap() returns.
+
+    Swaps are additionally gated by rain_threshold_mm (a silent plan
+    change should meet the user's bar); tips are not — they're informational
+    only, no plan was changed, so only email_enabled applies to them."""
+    tips = tips or []
+    if not swapped and not tips:
         return []
 
-    trip_ids = {s["trip_id"] for s in swapped}
+    trip_ids = {s["trip_id"] for s in swapped} | {t["trip_id"] for t in tips}
     trips_result = await db.execute(select(Trip).where(Trip.id.in_(trip_ids)))
     trip_by_id = {t.id: t for t in trips_result.scalars().all()}
 
-    by_user: dict[int, list[dict]] = {}
+    by_user_swaps: dict[int, list[dict]] = {}
     for s in swapped:
         trip = trip_by_id.get(s["trip_id"])
         if trip is None:
             continue
-        by_user.setdefault(trip.user_id, []).append({**s, "trip_name": trip.name})
+        by_user_swaps.setdefault(trip.user_id, []).append({**s, "trip_name": trip.name})
+
+    by_user_tips: dict[int, list[dict]] = {}
+    for t in tips:
+        trip = trip_by_id.get(t["trip_id"])
+        if trip is None:
+            continue
+        by_user_tips.setdefault(trip.user_id, []).append({**t, "trip_name": trip.name})
 
     results = []
-    for user_id, user_swaps in by_user.items():
+    for user_id in set(by_user_swaps) | set(by_user_tips):
         prefs = await get_preferences(db, user_id)
         if not prefs["email_enabled"]:
             continue
 
-        qualifying = [s for s in user_swaps if (s.get("rain_mm") or 0) >= prefs["rain_threshold_mm"]]
-        if not qualifying:
+        user_swaps = by_user_swaps.get(user_id, [])
+        user_tips = by_user_tips.get(user_id, [])
+
+        qualifying_swaps = [s for s in user_swaps if (s.get("rain_mm") or 0) >= prefs["rain_threshold_mm"]]
+        if not qualifying_swaps and not user_tips:
             continue
 
         user = await db.get(User, user_id)
         if user is None:
             continue
 
-        html, text = email_templates.swap_digest_email(qualifying)
+        subject = (
+            "SmartTrip AI: itinerary updated for weather" if qualifying_swaps
+            else "SmartTrip AI: weather tips for your trip"
+        )
+        html, text = email_templates.swap_digest_email(qualifying_swaps, user_tips)
         result = await asyncio.to_thread(
-            email_service.send_email, user.email, "SmartTrip AI: itinerary updated for weather", html, text,
+            email_service.send_email, user.email, subject, html, text,
         )
         results.append({"user_id": user_id, **result})
 

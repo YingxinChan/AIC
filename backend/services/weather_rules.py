@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from ml.risk_calculator import temp_advice
 from services.time_slot import parse_time_slot, hourly_window_is_rainy
 
 
@@ -27,6 +28,15 @@ class WeatherRiskRule:
         """Human-readable trigger reason. Only ever called after
         day_triggers() has already returned True."""
         raise NotImplementedError
+
+    def tip(self, forecast_day: dict) -> str:
+        """Short traveler-facing advice for a *fixed* activity affected by
+        this rule — used instead of reason()+swap when the activity can't
+        be substituted (see auto_swap_service.py's fixed-activity tip
+        path). Only ever called after day_triggers()/evaluate() has already
+        matched. Default falls back to reason() verbatim; override where a
+        short concrete tip reads better than the trigger sentence itself."""
+        return self.reason(forecast_day)
 
     def evaluate(self, forecast_day: dict, activity=None, hourly: list[dict] | None = None) -> str | None:
         """Full check used by the swap job: the day-level condition must be
@@ -119,6 +129,9 @@ class RainRule(WeatherRiskRule):
         start, end = min(rainy_hours), max(rainy_hours)
         return f"between {start:02d}:00 and {min(end + 1, 24):02d}:00"
 
+    def tip(self, forecast_day: dict) -> str:
+        return "Bring an umbrella and a waterproof layer."
+
 
 class FogRule(WeatherRiskRule):
     id = "fog"
@@ -133,6 +146,9 @@ class FogRule(WeatherRiskRule):
     def reason(self, forecast_day: dict) -> str:
         return f"Reduced visibility expected ({forecast_day['visibility_km']}km) — the view would be ruined"
 
+    def tip(self, forecast_day: dict) -> str:
+        return "Visibility will likely be poor — the view may be disappointing, consider a photo backup plan."
+
 
 class WindRule(WeatherRiskRule):
     id = "wind"
@@ -145,6 +161,9 @@ class WindRule(WeatherRiskRule):
 
     def reason(self, forecast_day: dict) -> str:
         return f"{forecast_day['wind_level']} winds expected — unsafe/unpleasant for this activity"
+
+    def tip(self, forecast_day: dict) -> str:
+        return "Strong winds expected — dress warmly and hold onto loose belongings."
 
 
 class ExtremeHeatRule(WeatherRiskRule):
@@ -160,6 +179,9 @@ class ExtremeHeatRule(WeatherRiskRule):
     def reason(self, forecast_day: dict) -> str:
         return f"Extreme heat expected (around {forecast_day['temp_max']}°C) — unsafe for extended outdoor exertion"
 
+    def tip(self, forecast_day: dict) -> str:
+        return temp_advice("Extreme Heat")
+
 
 class ExtremeColdRule(WeatherRiskRule):
     id = "extreme_cold"
@@ -174,6 +196,9 @@ class ExtremeColdRule(WeatherRiskRule):
     def reason(self, forecast_day: dict) -> str:
         return f"Extreme cold expected (around {forecast_day['temp_min']}°C) — unsafe for extended outdoor exertion"
 
+    def tip(self, forecast_day: dict) -> str:
+        return temp_advice("Extreme Cold")
+
 
 class ExtremeUVRule(WeatherRiskRule):
     id = "extreme_uv"
@@ -187,6 +212,13 @@ class ExtremeUVRule(WeatherRiskRule):
     def reason(self, forecast_day: dict) -> str:
         return f"{forecast_day['uv_level']} UV expected — unsafe for extended sun exposure"
 
+    def tip(self, forecast_day: dict) -> str:
+        # Static, not threaded through hourly UV data (unlike
+        # ml.risk_calculator.uv_advice's "until 3:45 PM" phrasing) — wiring
+        # per-hour UV into the auto-swap tip path is disproportionate
+        # plumbing for a one-line notification string.
+        return "Very high UV expected — wear sunscreen and a hat."
+
 
 class BeachSafetyRule(WeatherRiskRule):
     id = "beach_safety"
@@ -198,6 +230,9 @@ class BeachSafetyRule(WeatherRiskRule):
 
     def reason(self, forecast_day: dict) -> str:
         return "Poor beach safety conditions expected"
+
+    def tip(self, forecast_day: dict) -> str:
+        return "Beach conditions may be unsafe for swimming — check local flags/lifeguard signage before going in the water."
 
 
 # Add new WeatherRiskRule subclasses here as more weather aspects are
