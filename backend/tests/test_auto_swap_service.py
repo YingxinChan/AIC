@@ -29,7 +29,7 @@ def _create_trip(auth_client, monkeypatch):
 
 def _add_activity(
     trip_id, activity_type, is_swapped=False, name="Hyde Park Walk", day_date=TODAY, weather_sensitivity="",
-    time_slot="10:00 - 12:00",
+    time_slot="10:00 - 12:00", is_fixed=False,
 ):
     async def _inner():
         async with _TestSessionLocal() as db:
@@ -37,7 +37,7 @@ def _add_activity(
                 trip_id=trip_id, day_date=day_date, name=name, type=activity_type,
                 time_slot=time_slot, location="Hyde Park", is_swapped=is_swapped,
                 lat=51.5073, lng=-0.1657,  # Hyde Park's real coordinates
-                weather_sensitivity=weather_sensitivity,
+                weather_sensitivity=weather_sensitivity, is_fixed=is_fixed,
             )
             db.add(activity)
             await db.commit()
@@ -104,7 +104,7 @@ def test_auto_swap_swaps_outdoor_activity_on_rainy_day(auth_client, monkeypatch)
     _mock_hourly_weather(monkeypatch)
     _mock_find_alternative(monkeypatch)
 
-    swapped = _run_auto_swap()
+    swapped = _run_auto_swap()["swapped"]
     our_swaps = [s for s in swapped if s["trip_id"] == trip_id]
 
     assert len(our_swaps) == 1
@@ -129,8 +129,8 @@ def test_auto_swap_is_idempotent(auth_client, monkeypatch):
     _mock_hourly_weather(monkeypatch)
     mock_find = _mock_find_alternative(monkeypatch)
 
-    first = [s for s in _run_auto_swap() if s["trip_id"] == trip_id]
-    second = [s for s in _run_auto_swap() if s["trip_id"] == trip_id]
+    first = [s for s in _run_auto_swap()["swapped"] if s["trip_id"] == trip_id]
+    second = [s for s in _run_auto_swap()["swapped"] if s["trip_id"] == trip_id]
 
     assert len(first) == 1
     assert len(second) == 0
@@ -146,7 +146,7 @@ def test_auto_swap_skips_indoor_and_already_swapped_activities(auth_client, monk
     _mock_hourly_weather(monkeypatch)
     mock_find = _mock_find_alternative(monkeypatch)
 
-    swapped = _run_auto_swap()
+    swapped = _run_auto_swap()["swapped"]
     our_swaps = [s for s in swapped if s["trip_id"] == trip_id]
 
     assert our_swaps == []
@@ -203,7 +203,7 @@ def test_auto_swap_targeted_rule_only_swaps_the_tagged_activity(auth_client, mon
     _mock_hourly_weather(monkeypatch)
     _mock_find_alternative(monkeypatch)
 
-    swapped = _run_auto_swap()
+    swapped = _run_auto_swap()["swapped"]
     our_swaps = {s["activity_id"] for s in swapped if s["trip_id"] == trip_id}
 
     assert our_swaps == {viewpoint_id}
@@ -219,7 +219,7 @@ def test_auto_swap_does_not_trigger_without_rain(auth_client, monkeypatch):
     _mock_hourly_weather(monkeypatch)
     mock_find = _mock_find_alternative(monkeypatch)
 
-    swapped = _run_auto_swap()
+    swapped = _run_auto_swap()["swapped"]
     our_swaps = [s for s in swapped if s["trip_id"] == trip_id]
 
     assert our_swaps == []
@@ -246,7 +246,7 @@ def test_auto_swap_hourly_only_swaps_the_activity_overlapping_the_rainy_window(a
     _mock_hourly_weather(monkeypatch, hourly=_RAINY_MORNING_HOURLY)
     _mock_find_alternative(monkeypatch)
 
-    swapped = _run_auto_swap()
+    swapped = _run_auto_swap()["swapped"]
     our_swaps = {s["activity_id"] for s in swapped if s["trip_id"] == trip_id}
 
     assert our_swaps == {morning_id}
@@ -264,7 +264,7 @@ def test_auto_swap_falls_back_to_blanket_when_hourly_fetch_fails(auth_client, mo
     monkeypatch.setattr("services.auto_swap_service.get_hourly_weather", _raise)
     _mock_find_alternative(monkeypatch)
 
-    swapped = _run_auto_swap()
+    swapped = _run_auto_swap()["swapped"]
     our_swaps = {s["activity_id"] for s in swapped if s["trip_id"] == trip_id}
 
     # No hourly data available at all -> falls back to the original
@@ -283,7 +283,70 @@ def test_auto_swap_falls_back_to_blanket_when_hourly_data_is_for_a_different_dat
     _mock_hourly_weather(monkeypatch, hourly=[{"time": f"{other_date}T09:00", "rain_probability": 90}])
     _mock_find_alternative(monkeypatch)
 
-    swapped = _run_auto_swap()
+    swapped = _run_auto_swap()["swapped"]
     our_swaps = {s["activity_id"] for s in swapped if s["trip_id"] == trip_id}
 
     assert our_swaps == {afternoon_id}
+
+
+def test_auto_swap_never_swaps_a_fixed_activity(auth_client, monkeypatch):
+    trip_id = _create_trip(auth_client, monkeypatch)
+    fixed_id = _add_activity(trip_id, "outdoor", is_fixed=True)
+    _mock_weather(monkeypatch)
+    _mock_hourly_weather(monkeypatch)
+    mock_find = _mock_find_alternative(monkeypatch)
+
+    swapped = _run_auto_swap()["swapped"]
+    our_swaps = [s for s in swapped if s["trip_id"] == trip_id]
+
+    assert our_swaps == []
+    calls_for_fixed = [c for c in mock_find.call_args_list if c.args[0].id == fixed_id]
+    assert calls_for_fixed == []
+
+    activity = _get_activity(fixed_id)
+    assert activity.is_swapped is False
+
+
+def test_auto_swap_generates_a_tip_for_a_fixed_activity_on_a_rainy_day(auth_client, monkeypatch):
+    trip_id = _create_trip(auth_client, monkeypatch)
+    fixed_id = _add_activity(trip_id, "outdoor", name="Beach Day", is_fixed=True)
+    _mock_weather(monkeypatch)
+    _mock_hourly_weather(monkeypatch)
+    mock_find = _mock_find_alternative(monkeypatch)
+
+    result = _run_auto_swap()
+    our_tips = [t for t in result["tips"] if t["trip_id"] == trip_id]
+
+    assert len(our_tips) == 1
+    assert our_tips[0]["activity_id"] == fixed_id
+    assert "80.0" in our_tips[0]["reason"]
+    assert "umbrella" in our_tips[0]["tip"].lower()
+    assert our_tips[0]["name"] == "Beach Day"
+
+    # Still never swapped — a tip is informational only, no row mutation.
+    activity = _get_activity(fixed_id)
+    assert activity.is_swapped is False
+    mock_find.assert_not_called()
+
+
+def test_auto_swap_fixed_activity_tip_respects_weather_sensitivity_tag(auth_client, monkeypatch):
+    """Fixed activities go through the same targeted-rule tag check as
+    swappable ones — an untagged fixed activity shouldn't get a fog tip."""
+    trip_id = _create_trip(auth_client, monkeypatch)
+    tagged_id = _add_activity(
+        trip_id, "outdoor", name="Fixed Viewpoint Tour", weather_sensitivity="view_dependent", is_fixed=True,
+    )
+    untagged_id = _add_activity(trip_id, "outdoor", name="Fixed Market Tour", weather_sensitivity="", is_fixed=True)
+    _mock_weather(monkeypatch, forecast=[{
+        "date": TODAY.isoformat(), "heavy_rain_warning": False, "heavy_rain_probability": 2.0,
+        "visibility_km": 0.8,
+    }])
+    _mock_hourly_weather(monkeypatch)
+    _mock_find_alternative(monkeypatch)
+
+    result = _run_auto_swap()
+    our_tip_ids = {t["activity_id"] for t in result["tips"] if t["trip_id"] == trip_id}
+
+    assert our_tip_ids == {tagged_id}
+    assert untagged_id not in our_tip_ids
+    assert result["swapped"] == [] or all(s["trip_id"] != trip_id for s in result["swapped"])

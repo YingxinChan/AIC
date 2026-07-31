@@ -81,3 +81,29 @@ test('does not display raw coordinates', () => {
   expect(screen.queryByText('51.5074')).not.toBeInTheDocument()
   expect(screen.queryByText('-0.1278')).not.toBeInTheDocument()
 })
+
+test('renders a distinct hotel marker when provided', () => {
+  const hotel = { position: [51.5, -0.12], label: 'The Ritz London' }
+  render(<MapView hotel={hotel} />)
+
+  expect(screen.getByTestId('marker')).toBeInTheDocument()
+  expect(screen.getByText('The Ritz London')).toBeInTheDocument()
+})
+
+test('does not render a hotel marker when hotel is null', () => {
+  render(<MapView hotel={null} />)
+  expect(screen.queryByTestId('marker')).not.toBeInTheDocument()
+})
+
+test('route line brackets stops with the hotel at both ends when a hotel is set', () => {
+  const stops = [{ position: [51.5194, -0.1270], label: 'British Museum' }]
+  const hotel = { position: [51.5, -0.12], label: 'The Ritz London' }
+
+  // No hotel -> single stop alone isn't enough for a route line.
+  const { rerender } = render(<MapView stops={stops} />)
+  expect(screen.queryByTestId('polyline')).not.toBeInTheDocument()
+
+  // Hotel + single stop -> hotel/stop/hotel is 3 points, route line renders.
+  rerender(<MapView stops={stops} hotel={hotel} />)
+  expect(screen.getByTestId('polyline')).toBeInTheDocument()
+})

@@ -13,13 +13,17 @@ vi.mock('../../components/MapView', () => ({
 
 import ItineraryPage from './ItineraryPage'
 import { getTrip, updateTrip } from './tripsApi'
-import { getItinerary, generateItinerary } from './itineraryApi'
+import { getItinerary, generateItinerary, updateActivity } from './itineraryApi'
 import { geocodeCity, geocodeAddress } from '../../lib/geocode'
 import { getForecast, getHourlyForecast } from '../weather/weatherApi'
 import { searchPlaces } from '../../lib/nominatim'
 
 beforeEach(() => {
   mockMapView.mockClear()
+  updateTrip.mockReset()
+  generateItinerary.mockReset()
+  updateActivity.mockReset()
+  sessionStorage.clear()
   getTrip.mockResolvedValue({ destination: 'London' })
   getItinerary.mockResolvedValue({ status: 'not_generated' })
 })
@@ -32,6 +36,7 @@ vi.mock('./tripsApi', () => ({
 vi.mock('./itineraryApi', () => ({
   getItinerary: vi.fn(),
   generateItinerary: vi.fn(),
+  updateActivity: vi.fn(),
 }))
 
 vi.mock('../../lib/geocode', () => ({
@@ -61,17 +66,6 @@ function renderAt(tripId) {
   )
 }
 
-<<<<<<< HEAD
-beforeEach(() => {
-  updateTrip.mockReset()
-  generateItinerary.mockReset()
-  sessionStorage.clear()
-  getTrip.mockResolvedValue({ destination: 'London' })
-  getItinerary.mockResolvedValue({ status: 'not_generated' })
-})
-
-=======
->>>>>>> 8e9f5b3 (Add hotel marker and custom map pins)
 test('renders itinerary sections', async () => {
   renderAt(1)
 
@@ -908,4 +902,158 @@ test('does not pass hotel to MapView when hotel address is missing', async () =>
     }),
     expect.anything()
   )
+})
+function mockGeneratedActivity(overrides = {}) {
+  return {
+    id: 1, day_date: '2026-08-01', name: 'British Museum', type: 'indoor',
+    time_slot: '09:00 - 11:00', location: 'Great Russell St', description: 'Free museum.',
+    lat: 51.5194, lng: -0.127, is_swapped: false, alternate_name: '', alternate_location: '',
+    swap_reason: '', weather_sensitivity: '', is_fixed: false,
+    ...overrides,
+  }
+}
+
+test('shows a Fixed pill on activities marked is_fixed, and not on others', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  getItinerary.mockResolvedValue({
+    days: [{ date: '2026-08-01', activities: [
+      mockGeneratedActivity({ id: 1, name: 'British Museum', is_fixed: true }),
+      mockGeneratedActivity({ id: 2, name: 'Hyde Park', is_fixed: false }),
+    ] }],
+  })
+  renderAt(1)
+
+  await screen.findByText('British Museum')
+  expect(screen.getByText('Fixed')).toBeInTheDocument()
+  // Only one activity is fixed, so exactly one pill should render.
+  expect(screen.getAllByText('Fixed')).toHaveLength(1)
+})
+
+test('clicking the edit icon opens the modal pre-filled with the activity\'s current values', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  getItinerary.mockResolvedValue({
+    days: [{ date: '2026-08-01', activities: [mockGeneratedActivity()] }],
+  })
+  renderAt(1)
+
+  await screen.findByText('British Museum')
+  fireEvent.click(screen.getByRole('button', { name: /edit british museum/i }))
+
+  expect(screen.getByRole('heading', { name: /edit activity/i })).toBeInTheDocument()
+  expect(screen.getByLabelText(/^day$/i)).toHaveValue('2026-08-01')
+  expect(screen.getByLabelText(/start time/i)).toHaveValue('09:00')
+  expect(screen.getByLabelText(/end time/i)).toHaveValue('11:00')
+  expect(screen.getByLabelText(/^name$/i)).toHaveValue('British Museum')
+  expect(screen.getByPlaceholderText(/search for a place/i)).toHaveValue('Great Russell St')
+  expect(screen.getByRole('checkbox', { name: /fixed/i })).not.toBeChecked()
+})
+
+test('saving an activity edit calls updateActivity with the full patch and updates the list from the response', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  getItinerary.mockResolvedValue({
+    days: [{ date: '2026-08-01', activities: [mockGeneratedActivity()] }],
+  })
+  updateActivity.mockResolvedValue({
+    days: [{ date: '2026-08-01', activities: [mockGeneratedActivity({ name: 'National Gallery' })] }],
+  })
+  renderAt(1)
+
+  await screen.findByText('British Museum')
+  fireEvent.click(screen.getByRole('button', { name: /edit british museum/i }))
+  fireEvent.change(screen.getByLabelText(/^name$/i), { target: { value: 'National Gallery' } })
+  fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
+
+  await waitFor(() => expect(updateActivity).toHaveBeenCalledWith('1', 1, {
+    day_date: '2026-08-01',
+    time_slot: '09:00 - 11:00',
+    name: 'National Gallery',
+    location: 'Great Russell St',
+    lat: 51.5194,
+    lng: -0.127,
+    is_fixed: false,
+  }))
+  expect(await screen.findByText('National Gallery')).toBeInTheDocument()
+  expect(screen.queryByRole('heading', { name: /edit activity/i })).not.toBeInTheDocument()
+})
+
+test('checking Fixed and saving includes is_fixed: true in the patch', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  getItinerary.mockResolvedValue({
+    days: [{ date: '2026-08-01', activities: [mockGeneratedActivity()] }],
+  })
+  updateActivity.mockResolvedValue({
+    days: [{ date: '2026-08-01', activities: [mockGeneratedActivity({ is_fixed: true })] }],
+  })
+  renderAt(1)
+
+  await screen.findByText('British Museum')
+  fireEvent.click(screen.getByRole('button', { name: /edit british museum/i }))
+  fireEvent.click(screen.getByRole('checkbox', { name: /fixed/i }))
+  fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
+
+  await waitFor(() => expect(updateActivity).toHaveBeenCalledWith(
+    '1', 1, expect.objectContaining({ is_fixed: true }),
+  ))
+})
+
+test('selecting a new location from the dropdown updates both the address field and the coordinates sent on save', async () => {
+  searchPlaces.mockResolvedValue([
+    { label: 'Tower Bridge, London', lat: 51.5055, lon: -0.0754, isLodging: false },
+  ])
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  getItinerary.mockResolvedValue({
+    days: [{ date: '2026-08-01', activities: [mockGeneratedActivity()] }],
+  })
+  updateActivity.mockResolvedValue({
+    days: [{ date: '2026-08-01', activities: [mockGeneratedActivity({
+      location: 'Tower Bridge, London', lat: 51.5055, lng: -0.0754,
+    })] }],
+  })
+  renderAt(1)
+
+  await screen.findByText('British Museum')
+  fireEvent.click(screen.getByRole('button', { name: /edit british museum/i }))
+
+  const locationInput = screen.getByPlaceholderText(/search for a place/i)
+  fireEvent.change(locationInput, { target: { value: 'Tower Bridge' } })
+
+  const option = await screen.findByText('Tower Bridge, London')
+  fireEvent.click(option)
+  fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
+
+  await waitFor(() => expect(updateActivity).toHaveBeenCalledWith('1', 1, expect.objectContaining({
+    location: 'Tower Bridge, London', lat: 51.5055, lng: -0.0754,
+  })))
+})
+
+test('Cancel in the edit-activity modal closes without saving', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  getItinerary.mockResolvedValue({
+    days: [{ date: '2026-08-01', activities: [mockGeneratedActivity()] }],
+  })
+  renderAt(1)
+
+  await screen.findByText('British Museum')
+  fireEvent.click(screen.getByRole('button', { name: /edit british museum/i }))
+  fireEvent.change(screen.getByLabelText(/^name$/i), { target: { value: 'Something Else' } })
+  fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }))
+
+  expect(updateActivity).not.toHaveBeenCalled()
+  expect(screen.queryByRole('heading', { name: /edit activity/i })).not.toBeInTheDocument()
+  expect(screen.getByText('British Museum')).toBeInTheDocument()
+})
+
+test('a rejected activity save shows a saving-failed message instead of crashing', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  getItinerary.mockResolvedValue({
+    days: [{ date: '2026-08-01', activities: [mockGeneratedActivity()] }],
+  })
+  updateActivity.mockRejectedValue(new Error('server error'))
+  renderAt(1)
+
+  await screen.findByText('British Museum')
+  fireEvent.click(screen.getByRole('button', { name: /edit british museum/i }))
+  fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
+
+  expect(await screen.findByText(/saving this activity failed/i)).toBeInTheDocument()
 })

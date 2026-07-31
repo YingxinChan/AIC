@@ -191,3 +191,47 @@ def test_active_rules_includes_all_expected_rule_types():
     assert rule_types == {
         RainRule, FogRule, WindRule, ExtremeHeatRule, ExtremeColdRule, ExtremeUVRule, BeachSafetyRule,
     }
+
+
+# tip() — used instead of a swap for a "fixed" activity that can't be
+# substituted; each rule should give a short, non-empty, concrete tip.
+def test_rain_rule_tip_mentions_umbrella():
+    assert "umbrella" in RainRule().tip({"heavy_rain_warning": True, "heavy_rain_probability": 72.5}).lower()
+
+
+def test_fog_rule_tip_mentions_view():
+    assert "view" in FogRule().tip({"visibility_km": 0.9}).lower()
+
+
+def test_wind_rule_tip_mentions_wind():
+    assert "wind" in WindRule().tip({"wind_level": "Strong"}).lower()
+
+
+def test_extreme_heat_rule_tip_reuses_temp_advice():
+    from ml.risk_calculator import temp_advice
+    assert ExtremeHeatRule().tip({"temp_max": 36}) == temp_advice("Extreme Heat")
+
+
+def test_extreme_cold_rule_tip_reuses_temp_advice():
+    from ml.risk_calculator import temp_advice
+    assert ExtremeColdRule().tip({"temp_min": -10}) == temp_advice("Extreme Cold")
+
+
+def test_extreme_uv_rule_tip_mentions_sunscreen():
+    assert "sunscreen" in ExtremeUVRule().tip({"uv_level": "Extreme"}).lower()
+
+
+def test_beach_safety_rule_tip_mentions_swimming():
+    assert "swim" in BeachSafetyRule().tip({"beach_safety_level": "Poor"}).lower()
+
+
+def test_default_tip_falls_back_to_reason():
+    # WindRule doesn't need this (it overrides tip()), but the base-class
+    # fallback itself is worth a direct test independent of any subclass.
+    class _NoTipOverride(WindRule):
+        def tip(self, forecast_day):
+            return super(WindRule, self).tip(forecast_day)  # calls the base class's tip()
+
+    rule = _NoTipOverride()
+    day = {"wind_level": "Strong"}
+    assert rule.tip(day) == rule.reason(day)
