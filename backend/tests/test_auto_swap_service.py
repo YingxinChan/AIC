@@ -33,6 +33,7 @@ def _add_activity(trip_id, activity_type, is_swapped=False, name="Hyde Park Walk
             activity = Activity(
                 trip_id=trip_id, day_date=day_date, name=name, type=activity_type,
                 time_slot="10:00 - 12:00", location="Hyde Park", is_swapped=is_swapped,
+                lat=51.5073, lng=-0.1657,  # Hyde Park's real coordinates
             )
             db.add(activity)
             await db.commit()
@@ -64,7 +65,10 @@ def _mock_weather(monkeypatch, forecast=RAINY_FORECAST):
 
 
 def _mock_find_alternative(monkeypatch, alternate=None):
-    alternate = alternate or {"name": "British Museum", "location": "Great Russell St"}
+    alternate = alternate or {
+        "name": "British Museum", "location": "Great Russell St",
+        "lat": 51.5194, "lng": -0.1270,
+    }
     mock = AsyncMock(return_value=alternate)
     monkeypatch.setattr("services.auto_swap_service.swap_service.find_indoor_alternative", mock)
     return mock
@@ -94,6 +98,10 @@ def test_auto_swap_swaps_outdoor_activity_on_rainy_day(auth_client, monkeypatch)
     assert activity.alternate_name == "British Museum"
     assert activity.alternate_location == "Great Russell St"
     assert activity.swap_reason == our_swaps[0]["reason"]
+    # The map pin must move to the alternate's coordinates, not stay at the
+    # rained-out original's — otherwise it silently shows the wrong location
+    # under the new activity's name.
+    assert (activity.lat, activity.lng) == (51.5194, -0.1270)
 
 
 def test_auto_swap_is_idempotent(auth_client, monkeypatch):

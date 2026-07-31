@@ -14,8 +14,10 @@ ALTERNATE_ACTIVITY_SCHEMA = {
     "properties": {
         "name": {"type": "string"},
         "location": {"type": "string"},
+        "lat": {"type": "number"},
+        "lng": {"type": "number"},
     },
-    "required": ["name", "location"],
+    "required": ["name", "location", "lat", "lng"],
     "additionalProperties": False,
 }
 
@@ -55,7 +57,10 @@ async def find_indoor_alternative(activity: Activity, trip: Trip, exclude_names:
             f"You suggest indoor activity alternatives for {trip.destination} travel "
             f"itineraries when outdoor plans get rained out. Suggest one real, well-known "
             f"indoor venue reasonably close to the original activity's location, suitable "
-            f"for the same time slot, that isn't already planned elsewhere on the trip."
+            f"for the same time slot, that isn't already planned elsewhere on the trip. "
+            f"Also give its real approximate latitude and longitude (as decimal degrees, "
+            f"e.g. lat 51.5194, lng -0.1270 for the British Museum) — use your knowledge "
+            f"of the actual location, not a placeholder or the original activity's coordinates."
         ),
         messages=[{"role": "user", "content": content}],
         output_config={"format": {"type": "json_schema", "schema": ALTERNATE_ACTIVITY_SCHEMA}},
@@ -69,4 +74,10 @@ async def apply_swap(db: AsyncSession, activity: Activity, alternate: dict, reas
     activity.alternate_name = alternate["name"]
     activity.alternate_location = alternate["location"]
     activity.swap_reason = reason
+    # The map pin (lat/lng) has no separate pre/post-swap field — it always
+    # reflects the activity's current plan, so it must move to the
+    # alternative's coordinates here or it silently keeps pointing at the
+    # rained-out original instead of the new indoor venue.
+    activity.lat = alternate["lat"]
+    activity.lng = alternate["lng"]
     await db.commit()

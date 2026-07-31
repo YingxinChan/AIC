@@ -8,7 +8,10 @@ from services import swap_service
 
 
 def _mock_claude(monkeypatch, alternate=None):
-    alternate = alternate or {"name": "British Museum", "location": "Great Russell St"}
+    alternate = alternate or {
+        "name": "British Museum", "location": "Great Russell St",
+        "lat": 51.5194, "lng": -0.1270,
+    }
     fake_block = MagicMock(type="text", text=json.dumps(alternate))
     fake_response = MagicMock(content=[fake_block])
     mock_client = MagicMock()
@@ -22,6 +25,7 @@ def _activity(**overrides):
     defaults = dict(
         id=1, trip_id=1, name="Hyde Park Walk", type="outdoor",
         time_slot="10:00 - 12:00", location="Hyde Park",
+        lat=51.5073, lng=-0.1657,  # Hyde Park's real coordinates
     )
     defaults.update(overrides)
     return Activity(**defaults)
@@ -76,3 +80,44 @@ def test_prompt_never_excludes_the_activity_being_swapped_itself(monkeypatch):
     # its own name shouldn't appear in the exclusion clause
     exclusion_clause = prompt.split("already includes: ")[1]
     assert "Hyde Park Walk" not in exclusion_clause
+
+
+def test_alternative_request_asks_for_coordinates(monkeypatch):
+    mock_client = _mock_claude(monkeypatch)
+    activity = _activity()
+    trip = _trip()
+
+    asyncio.run(swap_service.find_indoor_alternative(activity, trip))
+
+    system_prompt = mock_client.messages.create.call_args.kwargs["system"]
+    assert "latitude" in system_prompt and "longitude" in system_prompt
+
+
+def test_find_indoor_alternative_returns_the_alternates_coordinates(monkeypatch):
+    _mock_claude(monkeypatch, alternate={
+        "name": "British Museum", "location": "Great Russell St",
+        "lat": 51.5194, "lng": -0.1270,
+    })
+    activity = _activity()
+    trip = _trip()
+
+    alternate = asyncio.run(swap_service.find_indoor_alternative(activity, trip))
+
+    assert alternate["lat"] == 51.5194
+    assert alternate["lng"] == -0.1270
+
+
+def test_apply_swap_moves_the_map_pin_to_the_alternates_coordinates():
+    # Regression test: apply_swap used to only touch alternate_name/
+    # alternate_location, leaving lat/lng pointing at the original
+    # (pre-swap) activity — so the map pin silently showed the wrong
+    # location under the new activity's label.
+    activity = _activity()  # Hyde Park's real coordinates
+    alternate = {
+        "name": "British Museum", "location": "Great Russell St",
+        "lat": 51.5194, "lng": -0.1270,
+    }
+
+    asyncio.run(swap_service.apply_swap(AsyncMock(), activity, alternate, "Heavy rain expected"))
+
+    assert (activity.lat, activity.lng) == (51.5194, -0.1270)
