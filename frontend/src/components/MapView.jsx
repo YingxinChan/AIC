@@ -42,12 +42,14 @@ const CITY_ZOOM = 11;
 export default function MapView({
   center,
   stops = [],
-  routeStops = [],
   hotel = null,
   height = "h-64",
 }) {
 
-  console.log("hotel marker:", hotel)
+  const routeStops =
+    hotel && stops.length > 0
+      ? [hotel, ...stops, hotel]
+      : stops
 
   return (
     <MapContainer

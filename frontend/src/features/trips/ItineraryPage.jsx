@@ -232,18 +232,20 @@ export default function ItineraryPage() {
     return () => { cancelled = true };
   }, [trip?.destination, trip?.start_date, trip?.end_date]);
   useEffect(() => {
-    async function geocodeHotel() {
-      if (!trip?.hotel_address) return;
-
-      const coords = await geocodeAddress(trip.hotel_address);
-
-      if (coords) {
-        setHotelLocation(coords);
-      }
+    if (!trip?.hotel_address) {
+      setHotelLocation(null)
+      return
     }
-
-    geocodeHotel();
-  }, [trip?.hotel_address]);
+    let cancelled = false
+    geocodeAddress(trip.hotel_address).then(coords => {
+      if (!cancelled) {
+        setHotelLocation(coords)
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [trip?.hotel_address])
 
   // --- SECTION 4: ACTIONS ---
   const handleGenerate = async () => {
@@ -349,14 +351,10 @@ export default function ItineraryPage() {
 
   // Build map stops for selected day's itinerary
   const stops = itineraryDay?.activities
-    ?.filter(
-      activity =>
-        activity.lat !== 0 &&
-        activity.lng !== 0
-    )
+    ?.filter(activity => activity.lat !== 0 && activity.lng !== 0)
     .map(activity => ({
       position: [activity.lat, activity.lng],
-      label: activity.name
+      label: activity.is_swapped ? activity.alternate_name : activity.name,
     })) || []
 
   const routeStops = hotelLocation
@@ -726,7 +724,6 @@ export default function ItineraryPage() {
         <MapView height="h-80" 
                  center={mapCenter} 
                  stops={stops}
-                 routeStops={routeStops}
                  hotel={
                   hotelLocation && trip?.hotel_address
                     ? {
