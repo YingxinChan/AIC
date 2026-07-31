@@ -859,3 +859,172 @@ def test_update_activity_does_not_reset_swap_state_when_unrelated_fields_change(
     )
     assert activity["is_swapped"] is True
     assert activity["alternate_name"] == "Science Museum"
+
+
+def _mock_tag_claude(monkeypatch, tags=None):
+    """Mocks the same anthropic client create_activity()'s tagging call
+    uses, returning the {"weather_sensitivity": [...]} shape (not
+    _mock_claude's {"days": [...]} shape — this is a different Claude call)."""
+    fake_block = MagicMock(type="text", text=json.dumps({"weather_sensitivity": tags or []}))
+    fake_response = MagicMock(content=[fake_block])
+    mock_client = MagicMock()
+    mock_client.messages.create = AsyncMock(return_value=fake_response)
+    monkeypatch.setattr("services.itinerary_service.settings.anthropic_api_key", "fake-key")
+    monkeypatch.setattr(
+        "services.itinerary_service.anthropic.AsyncAnthropic",
+        lambda **kwargs: mock_client,
+    )
+    return mock_client
+
+
+def _create_activity_payload(**overrides):
+    payload = {
+        "day_date": "2026-08-01",
+        "time_slot": "09:00 - 11:00",
+        "name": "British Museum",
+        "location": "Great Russell St",
+        "lat": 51.5194,
+        "lng": -0.1270,
+        "type": "indoor",
+    }
+    payload.update(overrides)
+    return payload
+
+
+def test_create_activity_requires_auth(client):
+    response = client.post("/api/trips/1/itinerary/activities", json=_create_activity_payload())
+    assert response.status_code == 401
+
+
+def test_create_activity_404_for_missing_trip(auth_client, monkeypatch):
+    _mock_tag_claude(monkeypatch)
+    response = auth_client.post(
+        "/api/trips/999999/itinerary/activities", json=_create_activity_payload(),
+    )
+    assert response.status_code == 404
+
+
+def test_create_activity_rejects_day_outside_trip_range(auth_client, monkeypatch):
+    _mock_tag_claude(monkeypatch)
+    trip_id = _create_trip(auth_client, start="2026-08-01", end="2026-08-02")
+
+    response = auth_client.post(
+        f"/api/trips/{trip_id}/itinerary/activities",
+        json=_create_activity_payload(day_date="2026-08-10"),
+    )
+    assert response.status_code == 400
+
+
+def test_create_activity_adds_it_to_the_itinerary(auth_client, monkeypatch):
+    _mock_tag_claude(monkeypatch, tags=["view_dependent"])
+    trip_id = _create_trip(auth_client, start="2026-08-01", end="2026-08-02")
+
+    response = auth_client.post(
+        f"/api/trips/{trip_id}/itinerary/activities",
+        json=_create_activity_payload(is_fixed=True),
+    )
+    assert response.status_code == 200
+
+    day = next(d for d in response.json()["days"] if d["date"] == "2026-08-01")
+    activity = next(a for a in day["activities"] if a["name"] == "British Museum")
+    assert activity["location"] == "Great Russell St"
+    assert activity["lat"] == 51.5194
+    assert activity["lng"] == -0.1270
+    assert activity["type"] == "indoor"
+    assert activity["is_fixed"] is True
+    assert activity["weather_sensitivity"] == "view_dependent"
+    assert activity["is_swapped"] is False
+
+
+def test_create_activity_defaults_is_fixed_false_when_omitted(auth_client, monkeypatch):
+    _mock_tag_claude(monkeypatch)
+    trip_id = _create_trip(auth_client, start="2026-08-01", end="2026-08-02")
+
+    response = auth_client.post(
+        f"/api/trips/{trip_id}/itinerary/activities", json=_create_activity_payload(),
+    )
+    assert response.status_code == 200
+
+    activity = _get_activity_by_name(trip_id, "British Museum")
+    assert activity.is_fixed is False
+
+
+def test_create_activity_without_api_key_still_creates_untagged(auth_client, monkeypatch):
+    """Claude tagging is best-effort — a missing/failing API key shouldn't
+    block adding the activity, it just leaves weather_sensitivity empty."""
+    monkeypatch.setattr("services.itinerary_service.settings.anthropic_api_key", "")
+    trip_id = _create_trip(auth_client, start="2026-08-01", end="2026-08-02")
+
+    response = auth_client.post(
+        f"/api/trips/{trip_id}/itinerary/activities", json=_create_activity_payload(),
+    )
+    assert response.status_code == 200
+
+    activity = _get_activity_by_name(trip_id, "British Museum")
+    assert activity.weather_sensitivity == ""
+
+
+def test_create_activity_tagging_failure_does_not_block_creation(auth_client, monkeypatch):
+    monkeypatch.setattr("services.itinerary_service.settings.anthropic_api_key", "fake-key")
+
+    def _raise(**kwargs):
+        raise RuntimeError("Claude API unavailable")
+    monkeypatch.setattr("services.itinerary_service.anthropic.AsyncAnthropic", _raise)
+
+    trip_id = _create_trip(auth_client, start="2026-08-01", end="2026-08-02")
+    response = auth_client.post(
+        f"/api/trips/{trip_id}/itinerary/activities", json=_create_activity_payload(),
+    )
+    assert response.status_code == 200
+    activity = _get_activity_by_name(trip_id, "British Museum")
+    assert activity.weather_sensitivity == ""
+
+
+def test_delete_activity_requires_auth(client):
+    response = client.delete("/api/trips/1/itinerary/activities/1")
+    assert response.status_code == 401
+
+
+def test_delete_activity_404_for_missing_trip(auth_client):
+    response = auth_client.delete("/api/trips/999999/itinerary/activities/1")
+    assert response.status_code == 404
+
+
+def test_delete_activity_404_for_missing_activity(auth_client):
+    trip_id = _create_trip(auth_client)
+    response = auth_client.delete(f"/api/trips/{trip_id}/itinerary/activities/999999")
+    assert response.status_code == 404
+
+
+def test_delete_activity_removes_only_that_activity(auth_client, monkeypatch):
+    _mock_tag_claude(monkeypatch)
+    trip_id = _create_trip(auth_client, start="2026-08-01", end="2026-08-02")
+    auth_client.post(
+        f"/api/trips/{trip_id}/itinerary/activities",
+        json=_create_activity_payload(name="British Museum"),
+    )
+    auth_client.post(
+        f"/api/trips/{trip_id}/itinerary/activities",
+        json=_create_activity_payload(name="Tate Modern", location="Bankside"),
+    )
+    to_delete = _get_activity_by_name(trip_id, "British Museum")
+
+    response = auth_client.delete(f"/api/trips/{trip_id}/itinerary/activities/{to_delete.id}")
+    assert response.status_code == 200
+
+    day = next(d for d in response.json()["days"] if d["date"] == "2026-08-01")
+    names = [a["name"] for a in day["activities"]]
+    assert names == ["Tate Modern"]
+
+
+def test_delete_activity_last_one_returns_not_generated(auth_client, monkeypatch):
+    _mock_tag_claude(monkeypatch)
+    trip_id = _create_trip(auth_client, start="2026-08-01", end="2026-08-02")
+    auth_client.post(
+        f"/api/trips/{trip_id}/itinerary/activities", json=_create_activity_payload(),
+    )
+    activity = _get_activity_by_name(trip_id, "British Museum")
+
+    response = auth_client.delete(f"/api/trips/{trip_id}/itinerary/activities/{activity.id}")
+    assert response.status_code == 200
+    assert response.json()["status"] == "not_generated"

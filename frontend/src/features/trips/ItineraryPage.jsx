@@ -5,7 +5,7 @@ import {
   Briefcase, Thermometer, Sparkles, Sun, Moon, Cloud,
   CloudSun, CloudMoon, CloudFog, CloudRain, CloudSnow,
   CloudLightning, AlertTriangle, Waves, Umbrella, Snowflake,
-  Pencil, Lock
+  Pencil, Lock, Trash2, Plus
 } from 'lucide-react'
 import Placeholder from '../../components/Placeholder'
 import MapView from '../../components/MapView'
@@ -13,7 +13,7 @@ import Modal from '../../components/Modal'
 import HotelSearchInput from '../../components/HotelSearchInput'
 import ActivityLocationInput from '../../components/ActivityLocationInput'
 import { getTrip, updateTrip } from './tripsApi'
-import { getItinerary, generateItinerary, updateActivity } from './itineraryApi'
+import { getItinerary, generateItinerary, updateActivity, createActivity, deleteActivity } from './itineraryApi'
 import { tripStatus, STATUS_STYLES } from './tripStatus'
 import { geocodeCity, geocodeAddress } from '../../lib/geocode'
 import { capitalize } from '../../lib/format'
@@ -132,6 +132,20 @@ export default function ItineraryPage() {
   const [activityLatLngDraft, setActivityLatLngDraft] = useState(null)
   const [activityFixedDraft, setActivityFixedDraft] = useState(false)
   const [savingActivity, setSavingActivity] = useState(false)
+
+  const [addActivityModalOpen, setAddActivityModalOpen] = useState(false)
+  const [newActivityDayDraft, setNewActivityDayDraft] = useState('')
+  const [newActivityStartDraft, setNewActivityStartDraft] = useState('')
+  const [newActivityEndDraft, setNewActivityEndDraft] = useState('')
+  const [newActivityNameDraft, setNewActivityNameDraft] = useState('')
+  const [newActivityLocationDraft, setNewActivityLocationDraft] = useState('')
+  // Same {label, lat, lon}-only-on-selection contract as activityLatLngDraft
+  // above — the backend requires lat/lng on create, so Save stays disabled
+  // until this is actually set (see the disabled check on the Add button).
+  const [newActivityLatLngDraft, setNewActivityLatLngDraft] = useState(null)
+  const [newActivityTypeDraft, setNewActivityTypeDraft] = useState('outdoor')
+  const [newActivityFixedDraft, setNewActivityFixedDraft] = useState(false)
+  const [savingNewActivity, setSavingNewActivity] = useState(false)
 
   const destination = trip?.destination || ''
   const hasArrivalFlight = Boolean(trip?.arrival_flight_number)
@@ -386,6 +400,54 @@ export default function ItineraryPage() {
       setItineraryNotice(err.response?.data?.detail || 'Saving this activity failed — try again.')
     }
     setSavingActivity(false)
+  }
+
+  const openAddActivityModal = () => {
+    setNewActivityDayDraft(selectedDate || trip?.start_date || '')
+    setNewActivityStartDraft('')
+    setNewActivityEndDraft('')
+    setNewActivityNameDraft('')
+    setNewActivityLocationDraft('')
+    setNewActivityLatLngDraft(null)
+    setNewActivityTypeDraft('outdoor')
+    setNewActivityFixedDraft(false)
+    setAddActivityModalOpen(true)
+  }
+
+  const newActivityInvalid =
+    !newActivityDayDraft || !newActivityStartDraft || !newActivityEndDraft ||
+    !newActivityNameDraft.trim() || !newActivityLatLngDraft
+
+  const handleCreateActivity = async () => {
+    setSavingNewActivity(true)
+    try {
+      const updated = await createActivity(tripId, {
+        day_date: newActivityDayDraft,
+        time_slot: joinTimeSlot(newActivityStartDraft, newActivityEndDraft),
+        name: newActivityNameDraft,
+        location: newActivityLocationDraft,
+        lat: newActivityLatLngDraft.lat,
+        lng: newActivityLatLngDraft.lon,
+        type: newActivityTypeDraft,
+        is_fixed: newActivityFixedDraft,
+      })
+      setItinerary(updated)
+      setAddActivityModalOpen(false)
+    } catch (err) {
+      setItineraryNotice(err.response?.data?.detail || 'Adding this activity failed — try again.')
+    }
+    setSavingNewActivity(false)
+  }
+
+  const handleDeleteActivity = async (activity) => {
+    const label = activity.is_swapped ? activity.alternate_name : activity.name
+    if (!window.confirm(`Remove "${label}" from this day?`)) return
+    try {
+      const updated = await deleteActivity(tripId, activity.id)
+      setItinerary(updated.days ? updated : { days: [] })
+    } catch (err) {
+      setItineraryNotice(err.response?.data?.detail || 'Removing this activity failed — try again.')
+    }
   }
 
   const status = trip?.start_date && trip?.end_date ? tripStatus(trip) : null
@@ -647,6 +709,111 @@ export default function ItineraryPage() {
         </div>
       </Modal>
 
+      <Modal open={addActivityModalOpen} onClose={() => setAddActivityModalOpen(false)} title="Add Activity">
+        <div className="space-y-3">
+          <div>
+            <label htmlFor="new-activity-day" className="block text-sm font-medium text-gray-700 mb-1">Day</label>
+            <input
+              id="new-activity-day"
+              type="date"
+              min={trip?.start_date}
+              max={trip?.end_date}
+              value={newActivityDayDraft}
+              onChange={(e) => setNewActivityDayDraft(e.target.value)}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            />
+          </div>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <label htmlFor="new-activity-start" className="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+              <input
+                id="new-activity-start"
+                type="time"
+                value={newActivityStartDraft}
+                onChange={(e) => setNewActivityStartDraft(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              />
+            </div>
+            <div className="flex-1">
+              <label htmlFor="new-activity-end" className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+              <input
+                id="new-activity-end"
+                type="time"
+                value={newActivityEndDraft}
+                onChange={(e) => setNewActivityEndDraft(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              />
+            </div>
+          </div>
+          <div>
+            <label htmlFor="new-activity-name" className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+            <input
+              id="new-activity-name"
+              type="text"
+              value={newActivityNameDraft}
+              onChange={(e) => setNewActivityNameDraft(e.target.value)}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label htmlFor="new-activity-location" className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+            <ActivityLocationInput
+              id="new-activity-location"
+              value={newActivityLocationDraft}
+              onChange={({ label, lat, lon }) => {
+                setNewActivityLocationDraft(label)
+                setNewActivityLatLngDraft({ lat, lon })
+              }}
+              cityContext={trip?.destination}
+              placeholder="Search for a place"
+            />
+          </div>
+          <div className="flex items-center gap-4">
+            <div>
+              <span className="block text-sm font-medium text-gray-700 mb-1">Type</span>
+              <div className="flex gap-3 pt-1">
+                <label className="flex items-center gap-1.5 text-sm text-gray-700">
+                  <input
+                    type="radio"
+                    name="new-activity-type"
+                    value="outdoor"
+                    checked={newActivityTypeDraft === 'outdoor'}
+                    onChange={() => setNewActivityTypeDraft('outdoor')}
+                  />
+                  Outdoor
+                </label>
+                <label className="flex items-center gap-1.5 text-sm text-gray-700">
+                  <input
+                    type="radio"
+                    name="new-activity-type"
+                    value="indoor"
+                    checked={newActivityTypeDraft === 'indoor'}
+                    onChange={() => setNewActivityTypeDraft('indoor')}
+                  />
+                  Indoor
+                </label>
+              </div>
+            </div>
+            <label className="flex items-center gap-1.5 text-sm text-gray-700 shrink-0 pt-6">
+              <input
+                type="checkbox"
+                checked={newActivityFixedDraft}
+                onChange={(e) => setNewActivityFixedDraft(e.target.checked)}
+              />
+              Fixed
+            </label>
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 mt-4">
+          <button type="button" onClick={() => setAddActivityModalOpen(false)} className="px-4 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+            Cancel
+          </button>
+          <button type="button" onClick={handleCreateActivity} disabled={savingNewActivity || newActivityInvalid} className="px-4 py-2 rounded-md text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">
+            {savingNewActivity ? 'Adding...' : 'Add'}
+          </button>
+        </div>
+      </Modal>
+
       <Modal open={reviewModalOpen} onClose={() => setReviewModalOpen(false)} title="Update anything else first?">
         <p className="text-sm text-gray-600 mb-4">
           Your itinerary is generated from your dates, hotel, and flights together — want to update anything else before we regenerate it?
@@ -790,66 +957,82 @@ export default function ItineraryPage() {
         )}
 
         {/* Itinerary List */}
-        {itineraryDay && (
+        {itinerary && selectedDate && (
           <div className="border-t border-gray-100 pt-6">
-            <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-800 mb-3">
-              <Sparkles size={16} className="text-indigo-600" /> Itinerary for Day {selectedDayNumber}
-            </h3>
-            <ul className="space-y-2">
-              {itineraryDay.activities.map((activity, index) => (
-                <li key={activity.id} className="flex items-start gap-3 bg-gray-50 rounded-lg p-3">
-                  <span className="w-6 h-6 shrink-0 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center mt-0.5">
-                    {index + 1}
-                  </span>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`font-medium text-gray-900 ${activity.is_swapped ? 'line-through text-gray-400' : ''}`}>
-                        {activity.name}
-                      </span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${(activity.is_swapped ? 'indoor' : activity.type) === 'indoor' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
-                        {activity.is_swapped ? 'indoor' : activity.type}
-                      </span>
-                      {activity.is_swapped && (
-                        <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
-                          <CloudRain size={12} /> Swapped
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-800">
+                <Sparkles size={16} className="text-indigo-600" /> Itinerary for Day {selectedDayNumber}
+              </h3>
+              <button type="button" onClick={openAddActivityModal} className="flex items-center gap-1 text-sm text-indigo-600 font-medium hover:text-indigo-700">
+                <Plus size={14} /> Add Activity
+              </button>
+            </div>
+            {itineraryDay ? (
+              <ul className="space-y-2">
+                {itineraryDay.activities.map((activity, index) => (
+                  <li key={activity.id} className="flex items-start gap-3 bg-gray-50 rounded-lg p-3">
+                    <span className="w-6 h-6 shrink-0 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center mt-0.5">
+                      {index + 1}
+                    </span>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`font-medium text-gray-900 ${activity.is_swapped ? 'line-through text-gray-400' : ''}`}>
+                          {activity.name}
                         </span>
-                      )}
-                      {activity.is_fixed && (
-                        <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
-                          <Lock size={12} /> Fixed
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${(activity.is_swapped ? 'indoor' : activity.type) === 'indoor' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
+                          {activity.is_swapped ? 'indoor' : activity.type}
                         </span>
+                        {activity.is_swapped && (
+                          <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                            <CloudRain size={12} /> Swapped
+                          </span>
+                        )}
+                        {activity.is_fixed && (
+                          <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
+                            <Lock size={12} /> Fixed
+                          </span>
+                        )}
+                        <div className="ml-auto flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => openEditActivityModal(activity)}
+                            className="text-gray-400 hover:text-indigo-600"
+                            aria-label={`Edit ${activity.name}`}
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteActivity(activity)}
+                            className="text-gray-400 hover:text-red-600"
+                            aria-label={`Delete ${activity.name}`}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                      {activity.is_swapped ? (
+                        <>
+                          <p className="font-medium text-gray-900 text-sm mt-1">{activity.alternate_name}</p>
+                          <p className="text-sm text-gray-500">{activity.time_slot}</p>
+                          <p className="text-sm text-gray-600">{activity.alternate_location}</p>
+                          <p className="text-xs text-amber-700 italic mt-1">{activity.swap_reason}</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm text-gray-500">{activity.time_slot}</p>
+                          <p className="text-sm text-gray-600">{activity.location}</p>
+                          <p className="text-sm text-gray-500">{activity.description}</p>
+                        </>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => openEditActivityModal(activity)}
-                        className="ml-auto text-gray-400 hover:text-indigo-600 shrink-0"
-                        aria-label={`Edit ${activity.name}`}
-                      >
-                        <Pencil size={14} />
-                      </button>
                     </div>
-                    {activity.is_swapped ? (
-                      <>
-                        <p className="font-medium text-gray-900 text-sm mt-1">{activity.alternate_name}</p>
-                        <p className="text-sm text-gray-500">{activity.time_slot}</p>
-                        <p className="text-sm text-gray-600">{activity.alternate_location}</p>
-                        <p className="text-xs text-amber-700 italic mt-1">{activity.swap_reason}</p>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-sm text-gray-500">{activity.time_slot}</p>
-                        <p className="text-sm text-gray-600">{activity.location}</p>
-                        <p className="text-sm text-gray-500">{activity.description}</p>
-                      </>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-gray-400 italic">No activities generated for this day yet.</p>
+            )}
           </div>
-        )}
-        {itinerary && !itineraryDay && selectedDate && (
-          <p className="text-sm text-gray-400 italic border-t border-gray-100 pt-6">No activities generated for this day yet.</p>
         )}
         {!itinerary && !itineraryNotice && (
           <Placeholder label="AI-generated itinerary will appear here once generated." />

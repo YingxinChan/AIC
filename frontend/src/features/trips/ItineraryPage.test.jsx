@@ -13,7 +13,7 @@ vi.mock('../../components/MapView', () => ({
 
 import ItineraryPage from './ItineraryPage'
 import { getTrip, updateTrip } from './tripsApi'
-import { getItinerary, generateItinerary, updateActivity } from './itineraryApi'
+import { getItinerary, generateItinerary, updateActivity, createActivity, deleteActivity } from './itineraryApi'
 import { geocodeCity, geocodeAddress } from '../../lib/geocode'
 import { getForecast, getHourlyForecast } from '../weather/weatherApi'
 import { searchPlaces } from '../../lib/nominatim'
@@ -23,6 +23,8 @@ beforeEach(() => {
   updateTrip.mockReset()
   generateItinerary.mockReset()
   updateActivity.mockReset()
+  createActivity.mockReset()
+  deleteActivity.mockReset()
   sessionStorage.clear()
   getTrip.mockResolvedValue({ destination: 'London' })
   getItinerary.mockResolvedValue({ status: 'not_generated' })
@@ -37,6 +39,8 @@ vi.mock('./itineraryApi', () => ({
   getItinerary: vi.fn(),
   generateItinerary: vi.fn(),
   updateActivity: vi.fn(),
+  createActivity: vi.fn(),
+  deleteActivity: vi.fn(),
 }))
 
 vi.mock('../../lib/geocode', () => ({
@@ -1056,4 +1060,180 @@ test('a rejected activity save shows a saving-failed message instead of crashing
   fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
 
   expect(await screen.findByText(/saving this activity failed/i)).toBeInTheDocument()
+})
+
+test('"Add Activity" is available even when no activities exist yet for the selected day', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  getItinerary.mockResolvedValue({ days: [] })
+  renderAt(1)
+
+  expect(await screen.findByText(/no activities generated for this day yet/i)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /add activity/i })).toBeInTheDocument()
+})
+
+test('clicking "Add Activity" opens the modal pre-filled with the selected day and empty fields', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  getItinerary.mockResolvedValue({
+    days: [{ date: '2026-08-01', activities: [mockGeneratedActivity()] }],
+  })
+  renderAt(1)
+
+  await screen.findByText('British Museum')
+  fireEvent.click(screen.getByRole('button', { name: /add activity/i }))
+
+  expect(screen.getByRole('heading', { name: /add activity/i })).toBeInTheDocument()
+  expect(screen.getByLabelText(/^day$/i)).toHaveValue('2026-08-01')
+  expect(screen.getByLabelText(/start time/i)).toHaveValue('')
+  expect(screen.getByLabelText(/^name$/i)).toHaveValue('')
+  expect(screen.getByRole('radio', { name: /outdoor/i })).toBeChecked()
+  expect(screen.getByRole('checkbox', { name: /fixed/i })).not.toBeChecked()
+  expect(screen.getByRole('button', { name: /^add$/i })).toBeDisabled()
+})
+
+test('Add stays disabled until a location is actually picked from the dropdown', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  getItinerary.mockResolvedValue({ days: [] })
+  renderAt(1)
+
+  await screen.findByRole('button', { name: /add activity/i })
+  fireEvent.click(screen.getByRole('button', { name: /add activity/i }))
+  fireEvent.change(screen.getByLabelText(/start time/i), { target: { value: '09:00' } })
+  fireEvent.change(screen.getByLabelText(/end time/i), { target: { value: '11:00' } })
+  fireEvent.change(screen.getByLabelText(/^name$/i), { target: { value: 'Tate Modern' } })
+
+  // Typing a location without selecting a dropdown option never fires
+  // onChange (see ActivityLocationInput) — Add must stay disabled since
+  // there's no lat/lng yet to send.
+  fireEvent.change(screen.getByPlaceholderText(/search for a place/i), { target: { value: 'Tate Modern' } })
+  expect(screen.getByRole('button', { name: /^add$/i })).toBeDisabled()
+})
+
+test('saving a new activity calls createActivity with the full payload and updates the list from the response', async () => {
+  searchPlaces.mockResolvedValue([
+    { label: 'Tate Modern, London', lat: 51.5076, lon: -0.0994, isLodging: false },
+  ])
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  getItinerary.mockResolvedValue({ days: [] })
+  createActivity.mockResolvedValue({
+    days: [{ date: '2026-08-01', activities: [mockGeneratedActivity({
+      id: 2, name: 'Tate Modern', location: 'Tate Modern, London', lat: 51.5076, lng: -0.0994, type: 'indoor',
+    })] }],
+  })
+  renderAt(1)
+
+  await screen.findByRole('button', { name: /add activity/i })
+  fireEvent.click(screen.getByRole('button', { name: /add activity/i }))
+  fireEvent.change(screen.getByLabelText(/start time/i), { target: { value: '09:00' } })
+  fireEvent.change(screen.getByLabelText(/end time/i), { target: { value: '11:00' } })
+  fireEvent.change(screen.getByLabelText(/^name$/i), { target: { value: 'Tate Modern' } })
+  fireEvent.click(screen.getByRole('radio', { name: /indoor/i }))
+  fireEvent.click(screen.getByRole('checkbox', { name: /fixed/i }))
+
+  const locationInput = screen.getByPlaceholderText(/search for a place/i)
+  fireEvent.change(locationInput, { target: { value: 'Tate Modern' } })
+  fireEvent.click(await screen.findByText('Tate Modern, London'))
+
+  fireEvent.click(screen.getByRole('button', { name: /^add$/i }))
+
+  await waitFor(() => expect(createActivity).toHaveBeenCalledWith('1', {
+    day_date: '2026-08-01',
+    time_slot: '09:00 - 11:00',
+    name: 'Tate Modern',
+    location: 'Tate Modern, London',
+    lat: 51.5076,
+    lng: -0.0994,
+    type: 'indoor',
+    is_fixed: true,
+  }))
+  expect(await screen.findByText('Tate Modern')).toBeInTheDocument()
+  expect(screen.queryByRole('heading', { name: /add activity/i })).not.toBeInTheDocument()
+})
+
+test('Cancel in the add-activity modal closes without saving', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  getItinerary.mockResolvedValue({ days: [] })
+  renderAt(1)
+
+  await screen.findByRole('button', { name: /add activity/i })
+  fireEvent.click(screen.getByRole('button', { name: /add activity/i }))
+  fireEvent.change(screen.getByLabelText(/^name$/i), { target: { value: 'Something' } })
+  fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }))
+
+  expect(createActivity).not.toHaveBeenCalled()
+  expect(screen.queryByRole('heading', { name: /add activity/i })).not.toBeInTheDocument()
+})
+
+test('a rejected activity add shows an adding-failed message instead of crashing', async () => {
+  searchPlaces.mockResolvedValue([
+    { label: 'Tate Modern, London', lat: 51.5076, lon: -0.0994, isLodging: false },
+  ])
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  getItinerary.mockResolvedValue({ days: [] })
+  createActivity.mockRejectedValue(new Error('server error'))
+  renderAt(1)
+
+  await screen.findByRole('button', { name: /add activity/i })
+  fireEvent.click(screen.getByRole('button', { name: /add activity/i }))
+  fireEvent.change(screen.getByLabelText(/start time/i), { target: { value: '09:00' } })
+  fireEvent.change(screen.getByLabelText(/end time/i), { target: { value: '11:00' } })
+  fireEvent.change(screen.getByLabelText(/^name$/i), { target: { value: 'Tate Modern' } })
+  const locationInput = screen.getByPlaceholderText(/search for a place/i)
+  fireEvent.change(locationInput, { target: { value: 'Tate Modern' } })
+  fireEvent.click(await screen.findByText('Tate Modern, London'))
+  fireEvent.click(screen.getByRole('button', { name: /^add$/i }))
+
+  expect(await screen.findByText(/adding this activity failed/i)).toBeInTheDocument()
+})
+
+test('deleting an activity asks for confirmation, then calls deleteActivity and updates the list from the response', async () => {
+  vi.spyOn(window, 'confirm').mockReturnValue(true)
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  getItinerary.mockResolvedValue({
+    days: [{ date: '2026-08-01', activities: [mockGeneratedActivity()] }],
+  })
+  deleteActivity.mockResolvedValue({ status: 'not_generated' })
+  renderAt(1)
+
+  await screen.findByText('British Museum')
+  fireEvent.click(screen.getByRole('button', { name: /delete british museum/i }))
+
+  expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('British Museum'))
+  await waitFor(() => expect(deleteActivity).toHaveBeenCalledWith('1', 1))
+  expect(await screen.findByText(/no activities generated for this day yet/i)).toBeInTheDocument()
+
+  window.confirm.mockRestore()
+})
+
+test('declining the delete confirmation does not call deleteActivity', async () => {
+  vi.spyOn(window, 'confirm').mockReturnValue(false)
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  getItinerary.mockResolvedValue({
+    days: [{ date: '2026-08-01', activities: [mockGeneratedActivity()] }],
+  })
+  renderAt(1)
+
+  await screen.findByText('British Museum')
+  fireEvent.click(screen.getByRole('button', { name: /delete british museum/i }))
+
+  expect(deleteActivity).not.toHaveBeenCalled()
+  expect(screen.getByText('British Museum')).toBeInTheDocument()
+
+  window.confirm.mockRestore()
+})
+
+test('a rejected delete shows a removal-failed message instead of crashing', async () => {
+  vi.spyOn(window, 'confirm').mockReturnValue(true)
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  getItinerary.mockResolvedValue({
+    days: [{ date: '2026-08-01', activities: [mockGeneratedActivity()] }],
+  })
+  deleteActivity.mockRejectedValue(new Error('server error'))
+  renderAt(1)
+
+  await screen.findByText('British Museum')
+  fireEvent.click(screen.getByRole('button', { name: /delete british museum/i }))
+
+  expect(await screen.findByText(/removing this activity failed/i)).toBeInTheDocument()
+
+  window.confirm.mockRestore()
 })
