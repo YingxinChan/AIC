@@ -1,12 +1,39 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plane, Calendar, ChevronRight } from 'lucide-react'
+import { Plane, Calendar, ChevronRight, Trash2 } from 'lucide-react'
 import ErrorMessage from '../../components/ErrorMessage'
 import { useTrips } from './useTrips'
+import { deleteTrip } from './tripsApi'
 import { tripStatus, STATUS_STYLES } from './tripStatus'
 import { capitalize } from '../../lib/format'
 
 export default function MyTripsPage() {
-  const { trips, loading, error } = useTrips()
+  const { trips, loading, error, removeTrip } = useTrips()
+  const [deletingId, setDeletingId] = useState(null)
+  const [deleteError, setDeleteError] = useState('')
+
+  const handleDelete = async (event, trip) => {
+  event.preventDefault()
+  event.stopPropagation()
+
+  const confirmed = window.confirm(
+    `Delete "${trip.name}"? This cannot be undone.`
+  )
+
+  if (!confirmed) return
+
+  setDeleteError('')
+  setDeletingId(trip.id)
+
+  try {
+    await deleteTrip(trip.id)
+    removeTrip(trip.id)
+  } catch {
+    setDeleteError(`Couldn't delete "${trip.name}" — try again.`)
+  } finally {
+    setDeletingId(null)
+  }
+  }
 
   return (
     <div className="space-y-6">
@@ -23,6 +50,7 @@ export default function MyTripsPage() {
         </Link>
       </div>
 
+      {deleteError && <ErrorMessage message={deleteError} />}
       {loading && <p className="text-sm text-gray-500">Loading your trips...</p>}
 
       {!loading && error && <ErrorMessage message="Something went wrong while loading your trips." />}
@@ -52,9 +80,21 @@ export default function MyTripsPage() {
                   <span className={`inline-block mt-2 text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_STYLES[status]}`}>
                     {status}
                   </span>
-                  <p className="flex items-center gap-1 text-sm text-indigo-600 font-medium mt-3">
+                  <div className="flex items-center justify-between mt-3">
+                  <p className="flex items-center gap-1 text-sm text-indigo-600 font-medium">
                     View Details <ChevronRight size={14} />
                   </p>
+
+                  <button
+                    type="button"
+                    aria-label={`Delete ${trip.name}`}
+                    disabled={deletingId === trip.id}
+                    onClick={(event) => handleDelete(event, trip)}
+                    className="p-2 rounded-md text-red-500 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                   > 
+                   <Trash2 size={16} />
+                   </button>
+                </div>
                 </div>
               </Link>
             )

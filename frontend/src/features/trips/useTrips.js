@@ -8,12 +8,34 @@ export function useTrips() {
 
   useEffect(() => {
     let cancelled = false
+
     getTrips()
-      .then((data) => { if (!cancelled) setTrips(data) })
-      .catch((err) => { if (!cancelled) setError(err) })
-      .finally(() => { if (!cancelled) setLoading(false) })
-    return () => { cancelled = true }
+      .then((data) => {
+        if (!cancelled) setTrips(data)
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
-  return { trips, loading, error }
+  // Add this
+  const removeTrip = (id) => {
+    setTrips((currentTrips) =>
+      currentTrips.filter((trip) => trip.id !== id)
+    )
+  }
+
+  return {
+    trips,
+    loading,
+    error,
+    removeTrip,
+  }
 }

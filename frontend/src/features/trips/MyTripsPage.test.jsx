@@ -1,11 +1,13 @@
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { vi } from 'vitest'
 import MyTripsPage from './MyTripsPage'
-import { getTrips } from './tripsApi'
+import { getTrips, deleteTrip } from './tripsApi'
 
 vi.mock('./tripsApi', () => ({
   getTrips: vi.fn(),
+  deleteTrip: vi.fn(),
 }))
 
 function renderPage() {
@@ -56,4 +58,35 @@ test('renders every trip as a card with name, dates, status, and a link to its i
   expect(screen.getAllByText(/view details/i).length).toBe(2)
   expect(screen.getByText(/completed/i)).toBeInTheDocument()
   expect(screen.getByText(/upcoming/i)).toBeInTheDocument()
+})
+
+test('shows an error and keeps the trip visible when deletion fails', async () => {
+  const user = userEvent.setup()
+
+  getTrips.mockResolvedValue([
+    {
+      id: 1,
+      name: 'Summer Trip',
+      destination: 'Tokyo',
+      start_date: '2099-01-01',
+      end_date: '2099-01-07',
+    },
+  ])
+
+  deleteTrip.mockRejectedValueOnce(new Error('network error'))
+  vi.spyOn(window, 'confirm').mockReturnValueOnce(true)
+
+  renderPage()
+
+  expect(await screen.findByText('Summer Trip')).toBeInTheDocument()
+
+  await user.click(
+    screen.getByRole('button', { name: /delete summer trip/i })
+  )
+
+  expect(
+    await screen.findByText(/couldn't delete/i)
+  ).toBeInTheDocument()
+
+  expect(screen.getByText('Summer Trip')).toBeInTheDocument()
 })
