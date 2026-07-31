@@ -888,73 +888,154 @@ export default function ItineraryPage() {
         )}
 
         {weatherStatus === 'loaded' && forecastDay && (
-            <div className="border border-gray-100 p-4 rounded-lg bg-gray-50/50 space-y-4">
+  <div className="border border-gray-100 p-4 rounded-lg bg-gray-50/50 space-y-4">
 
-                {/* Daily Summary Header */}
-                <div className="flex justify-between items-start">
-                    <div>
-                        <div className="text-sm font-semibold text-gray-500">{forecastDay.date}</div>
-                        <div className="flex items-baseline gap-2 my-1">
-                            {/* Big number shows current temp if today, or max temp if future */}
-                            <span className="text-4xl font-bold text-gray-900">{getDisplayTemp()}°</span>
-                            {/* Smaller text shows High and Low */}
-                            <span className="text-sm font-medium text-gray-500 ml-1">
-                                H: {Math.round(forecastDay.temp_max)}° &nbsp; L: {Math.round(forecastDay.temp_min)}°
-                            </span>
-                        </div>
-                        <div className="text-md font-medium text-gray-700 capitalize">{forecastDay.condition}</div>
-                    </div>
-                    <WeatherIcon condition={forecastDay.condition} timeStr={forecastDay.date + "T12:00:00"} className="w-10 h-10 text-indigo-500" />
-                </div>
+    {/* Daily Summary Header */}
+    <div className="flex justify-between items-start">
+      <div>
+        <div className="text-sm font-semibold text-gray-500">
+          {forecastDay.date}
+        </div>
 
-                <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-800 pt-2 border-t">
-                    <Thermometer size={16} className="text-indigo-600" /> Weather
-                </h3>
-
-                {/* Risk Cards Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {[
-                    { l: 'Heavy Rain', v: forecastDay.heavy_rain_probability + '%', s: forecastDay.heavy_rain_warning ? 'High' : 'Low', i: Umbrella },
-                    { l: 'Flood', v: Math.round(forecastDay.flood_score) + '%', s: forecastDay.flood_risk, i: Waves },
-                    { l: 'Beach Safety', v: Math.round(forecastDay.beach_safety_score) + '%', s: forecastDay.beach_safety_level, i: Sun },
-                    { l: 'Snow', v: forecastDay.snow_probability + '%', s: snowLevel(forecastDay.snow_probability), i: Snowflake }
-                  ].map((c, i) => (
-                      <div key={i} className="bg-white p-3 rounded border text-center">
-                          <div className="text-[10px] text-gray-500 uppercase flex items-center justify-center gap-1"><c.i size={12} /> {c.l}</div>
-                          <div className="font-bold my-1 text-sm">{c.v}</div>
-                          <span className={`text-[10px] px-2 rounded-full ${c.s === 'High' || c.s === 'Poor' ? 'bg-red-100 text-red-800' : c.s === 'Moderate' || c.s === 'Low' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
-                              {c.s}
-                          </span>
-                      </div>
-                  ))}
-                </div>
-
-                {/* Hourly Forecast */}
-                <div className="flex overflow-x-auto gap-4 pb-2 cursor-grab active:cursor-grabbing">
-                  {hourlyForecast
-                      .filter(h => h.time.startsWith(forecastDay.date))
-                      .map((h, i) => (
-                          <div key={i} className="flex flex-col items-center min-w-[50px] shrink-0 gap-0.5">
-                              <span className="text-[10px] text-gray-500">{formatHour(h.time)}</span>
-                              
-                              <WeatherIcon condition={h.condition} timeStr={h.time} className="w-5 h-5 text-indigo-500" />
-                              
-                              {/* Fixed-height container (h-4) that holds rain OR empty space */}
-                              <div className="h-4 flex items-center justify-center">
-                                  {h.rain_probability != null && (
-                                      <span className="text-[9px] font-bold text-blue-600 leading-none">
-                                          {Math.round(h.rain_probability)}%
-                                      </span>
-                                  )}
-                              </div>
-                              
-                              {/* Temperature stays in the exact same spot regardless of rain */}
-                              <span className="font-bold text-sm leading-none mt-0.5">{Math.round(h.temperature)}°</span>
-                          </div>
-                      ))}
-              </div>
-            </div>
+        {forecastDay.is_climatology && (
+          <div className="inline-flex mt-1 mb-2 text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-700">
+            Typical weather (historical average)
+          </div>
         )}
+
+        <div className="flex items-baseline gap-2 my-1">
+          <span className="text-4xl font-bold text-gray-900">
+            {forecastDay.temp_max == null ? '—' : `${getDisplayTemp()}°`}
+          </span>
+
+          <span className="text-sm font-medium text-gray-500 ml-1">
+            H: {forecastDay.temp_max == null ? '—' : `${Math.round(forecastDay.temp_max)}°`}
+            &nbsp; L: {forecastDay.temp_min == null ? '—' : `${Math.round(forecastDay.temp_min)}°`}
+          </span>
+        </div>
+
+        <div className="text-md font-medium text-gray-700 capitalize">
+          {forecastDay.condition}
+        </div>
+      </div>
+
+      <WeatherIcon
+        condition={forecastDay.condition}
+        timeStr={`${forecastDay.date}T12:00:00`}
+        className="w-10 h-10 text-indigo-500"
+      />
+    </div>
+
+    <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-800 pt-2 border-t">
+      <Thermometer size={16} className="text-indigo-600" />
+      Weather
+    </h3>
+
+    {/* Risk Cards Grid */}
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {[
+        {
+          l: 'Heavy Rain',
+          v: forecastDay.heavy_rain_probability == null
+            ? '—'
+            : `${forecastDay.heavy_rain_probability}%`,
+          s: forecastDay.heavy_rain_probability == null
+            ? 'Unknown'
+            : forecastDay.heavy_rain_warning
+              ? 'High'
+              : 'Low',
+          i: Umbrella,
+        },
+        {
+          l: 'Flood',
+          v: forecastDay.flood_score == null
+            ? '—'
+            : `${Math.round(forecastDay.flood_score)}%`,
+          s: forecastDay.flood_risk || 'Unknown',
+          i: Waves,
+        },
+        {
+          l: 'Beach Safety',
+          v: forecastDay.beach_safety_score == null
+            ? '—'
+            : `${Math.round(forecastDay.beach_safety_score)}%`,
+          s: forecastDay.beach_safety_level || 'Unknown',
+          i: Sun,
+        },
+        {
+          l: 'Snow',
+          v: forecastDay.snow_probability == null
+            ? '—'
+            : `${forecastDay.snow_probability}%`,
+          s: forecastDay.snow_probability == null
+            ? 'Unknown'
+            : snowLevel(forecastDay.snow_probability),
+          i: Snowflake,
+        },
+      ].map((c, i) => {
+        const statusClass =
+          c.s === 'Unknown'
+            ? 'bg-gray-100 text-gray-700'
+            : c.s === 'High' || c.s === 'Poor'
+              ? 'bg-red-100 text-red-800'
+              : c.s === 'Moderate' || c.s === 'Low'
+                ? 'bg-yellow-100 text-yellow-800'
+                : 'bg-green-100 text-green-800'
+
+        return (
+          <div key={i} className="bg-white p-3 rounded border text-center">
+            <div className="text-[10px] text-gray-500 uppercase flex items-center justify-center gap-1">
+              <c.i size={12} />
+              {c.l}
+            </div>
+
+            <div className="font-bold my-1 text-sm">{c.v}</div>
+
+            <span className={`text-[10px] px-2 rounded-full ${statusClass}`}>
+              {c.s}
+            </span>
+          </div>
+        )
+      })}
+    </div>
+
+    {/* Hourly Forecast — only for real forecast days */}
+    {!forecastDay.is_climatology && hourlyForecast && (
+      <div className="flex overflow-x-auto gap-4 pb-2 cursor-grab active:cursor-grabbing">
+        {hourlyForecast
+          .filter((h) => h.time.startsWith(forecastDay.date))
+          .map((h, i) => (
+            <div
+              key={i}
+              className="flex flex-col items-center min-w-[50px] shrink-0 gap-0.5"
+            >
+              <span className="text-[10px] text-gray-500">
+                {formatHour(h.time)}
+              </span>
+
+              <WeatherIcon
+                condition={h.condition}
+                timeStr={h.time}
+                className="w-5 h-5 text-indigo-500"
+              />
+
+              <div className="h-4 flex items-center justify-center">
+                {h.rain_probability != null && (
+                  <span className="text-[9px] font-bold text-blue-600 leading-none">
+                    {Math.round(h.rain_probability)}%
+                  </span>
+                )}
+              </div>
+
+              <span className="font-bold text-sm leading-none mt-0.5">
+                {Math.round(h.temperature)}°
+              </span>
+            </div>
+          ))}
+      </div>
+    )}
+  </div>
+)}
 
         {/* Itinerary List */}
         {itinerary && selectedDate && (
