@@ -1,20 +1,23 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { 
-  Plane, Building2, MapPin, Calendar, CheckCircle2, 
-  Briefcase, Thermometer, Sparkles, Sun, Moon, Cloud, 
-  CloudSun, CloudMoon, CloudFog, CloudRain, CloudSnow, 
-  CloudLightning, AlertTriangle, Waves, Umbrella, Snowflake 
+import {
+  Plane, Building2, MapPin, Calendar, CheckCircle2,
+  Briefcase, Thermometer, Sparkles, Sun, Moon, Cloud,
+  CloudSun, CloudMoon, CloudFog, CloudRain, CloudSnow,
+  CloudLightning, AlertTriangle, Waves, Umbrella, Snowflake,
+  Pencil, Lock
 } from 'lucide-react'
 import Placeholder from '../../components/Placeholder'
 import MapView from '../../components/MapView'
 import Modal from '../../components/Modal'
 import HotelSearchInput from '../../components/HotelSearchInput'
+import ActivityLocationInput from '../../components/ActivityLocationInput'
 import { getTrip, updateTrip } from './tripsApi'
-import { getItinerary, generateItinerary } from './itineraryApi'
+import { getItinerary, generateItinerary, updateActivity } from './itineraryApi'
 import { tripStatus, STATUS_STYLES } from './tripStatus'
 import { geocodeCity } from '../../lib/geocode'
 import { capitalize } from '../../lib/format'
+import { splitTimeSlot, joinTimeSlot } from '../../lib/timeSlot'
 import { getForecast, getHourlyForecast } from '../weather/weatherApi'
 import { getPendingReview, clearPendingReview } from '../../lib/pendingReview'
 
@@ -114,6 +117,20 @@ export default function ItineraryPage() {
   // excludes this one and only offers the others, so it never re-suggests
   // editing the thing the user just finished editing.
   const [lastEdited, setLastEdited] = useState(null)
+
+  const [editActivityModalOpen, setEditActivityModalOpen] = useState(false)
+  const [editingActivityId, setEditingActivityId] = useState(null)
+  const [activityDayDraft, setActivityDayDraft] = useState('')
+  const [activityStartDraft, setActivityStartDraft] = useState('')
+  const [activityEndDraft, setActivityEndDraft] = useState('')
+  const [activityNameDraft, setActivityNameDraft] = useState('')
+  const [activityLocationDraft, setActivityLocationDraft] = useState('')
+  // {label, lat, lon} once the user picks a place, or null if the location
+  // hasn't been touched this session — only sent in the patch when set, so
+  // an untouched location never gets re-saved with stale/absent coordinates.
+  const [activityLatLngDraft, setActivityLatLngDraft] = useState(null)
+  const [activityFixedDraft, setActivityFixedDraft] = useState(false)
+  const [savingActivity, setSavingActivity] = useState(false)
 
   const destination = trip?.destination || ''
   const hasArrivalFlight = Boolean(trip?.arrival_flight_number)
@@ -322,6 +339,39 @@ export default function ItineraryPage() {
     setReviewModalOpen(false)
   }
 
+  const openEditActivityModal = (activity) => {
+    setEditingActivityId(activity.id)
+    setActivityDayDraft(activity.day_date)
+    const [start, end] = splitTimeSlot(activity.time_slot)
+    setActivityStartDraft(start)
+    setActivityEndDraft(end)
+    setActivityNameDraft(activity.is_swapped ? activity.alternate_name : activity.name)
+    setActivityLocationDraft(activity.is_swapped ? activity.alternate_location : activity.location)
+    setActivityLatLngDraft({ lat: activity.lat, lon: activity.lng })
+    setActivityFixedDraft(activity.is_fixed)
+    setEditActivityModalOpen(true)
+  }
+
+  const handleSaveActivity = async () => {
+    setSavingActivity(true)
+    try {
+      const updated = await updateActivity(tripId, editingActivityId, {
+        day_date: activityDayDraft,
+        time_slot: joinTimeSlot(activityStartDraft, activityEndDraft),
+        name: activityNameDraft,
+        location: activityLocationDraft,
+        lat: activityLatLngDraft.lat,
+        lng: activityLatLngDraft.lon,
+        is_fixed: activityFixedDraft,
+      })
+      setItinerary(updated)
+      setEditActivityModalOpen(false)
+    } catch (err) {
+      setItineraryNotice(err.response?.data?.detail || 'Saving this activity failed — try again.')
+    }
+    setSavingActivity(false)
+  }
+
   const status = trip?.start_date && trip?.end_date ? tripStatus(trip) : null
   const hotelParts = trip?.hotel_address?.trim() ? splitHotelAddress(trip.hotel_address) : null
 
@@ -332,6 +382,19 @@ export default function ItineraryPage() {
   const forecastDay = forecast?.find(d => d.date === selectedDate)
   const itineraryDay = itinerary?.days?.find(d => d.date === selectedDate)
   const selectedDayNumber = tripDates.indexOf(selectedDate) + 1
+
+  // Map pins for the currently-selected day only, not the whole trip — one
+  // marker per activity, plus the route line connecting them in order.
+  // activity.lat/lng already reflect the current plan regardless of
+  // is_swapped (apply_swap overwrites them to the alternate's coordinates
+  // on swap), so only the label needs the is_swapped branch, not position.
+  const stops = (itineraryDay?.activities || [])
+    .filter(a => a.lat !== 0 && a.lng !== 0)
+    .map(a => ({
+      position: [a.lat, a.lng],
+      label: a.is_swapped ? a.alternate_name : a.name,
+    }))
+  const routeStops = stops.map(s => s.position)
 
   // --- SECTION 5: UI RENDERING ---
   return (
@@ -480,6 +543,89 @@ export default function ItineraryPage() {
           </button>
           <button type="button" onClick={handleSaveDates} disabled={savingTrip || datesInvalid} className="px-4 py-2 rounded-md text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">
             {savingTrip ? 'Saving...' : 'Save'}
+          </button>
+        </div>
+      </Modal>
+
+      <Modal open={editActivityModalOpen} onClose={() => setEditActivityModalOpen(false)} title="Edit Activity">
+        <div className="space-y-3">
+          <div>
+            <label htmlFor="edit-activity-day" className="block text-sm font-medium text-gray-700 mb-1">Day</label>
+            <input
+              id="edit-activity-day"
+              type="date"
+              min={trip?.start_date}
+              max={trip?.end_date}
+              value={activityDayDraft}
+              onChange={(e) => setActivityDayDraft(e.target.value)}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            />
+          </div>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <label htmlFor="edit-activity-start" className="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+              <input
+                id="edit-activity-start"
+                type="time"
+                value={activityStartDraft}
+                onChange={(e) => setActivityStartDraft(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              />
+            </div>
+            <div className="flex-1">
+              <label htmlFor="edit-activity-end" className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+              <input
+                id="edit-activity-end"
+                type="time"
+                value={activityEndDraft}
+                onChange={(e) => setActivityEndDraft(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              />
+            </div>
+          </div>
+          <div>
+            <label htmlFor="edit-activity-name" className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+            <input
+              id="edit-activity-name"
+              type="text"
+              value={activityNameDraft}
+              onChange={(e) => setActivityNameDraft(e.target.value)}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            />
+          </div>
+          <div className="flex items-end gap-3">
+            <div className="flex-1">
+              <label htmlFor="edit-activity-location" className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+              <ActivityLocationInput
+                id="edit-activity-location"
+                value={activityLocationDraft}
+                onChange={({ label, lat, lon }) => {
+                  setActivityLocationDraft(label)
+                  setActivityLatLngDraft({ lat, lon })
+                }}
+                cityContext={trip?.destination}
+                placeholder="Search for a place"
+              />
+            </div>
+            {/* Fixed checkbox lives to the right of the location field —
+                the field most relevant to "is this still the same booked
+                thing" is the natural pairing for this toggle. */}
+            <label className="flex items-center gap-1.5 text-sm text-gray-700 shrink-0 pb-2">
+              <input
+                type="checkbox"
+                checked={activityFixedDraft}
+                onChange={(e) => setActivityFixedDraft(e.target.checked)}
+              />
+              Fixed
+            </label>
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 mt-4">
+          <button type="button" onClick={() => setEditActivityModalOpen(false)} className="px-4 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+            Cancel
+          </button>
+          <button type="button" onClick={handleSaveActivity} disabled={savingActivity} className="px-4 py-2 rounded-md text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">
+            {savingActivity ? 'Saving...' : 'Save'}
           </button>
         </div>
       </Modal>
@@ -651,6 +797,19 @@ export default function ItineraryPage() {
                           <CloudRain size={12} /> Swapped
                         </span>
                       )}
+                      {activity.is_fixed && (
+                        <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
+                          <Lock size={12} /> Fixed
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => openEditActivityModal(activity)}
+                        className="ml-auto text-gray-400 hover:text-indigo-600 shrink-0"
+                        aria-label={`Edit ${activity.name}`}
+                      >
+                        <Pencil size={14} />
+                      </button>
                     </div>
                     {activity.is_swapped ? (
                       <>
@@ -682,7 +841,7 @@ export default function ItineraryPage() {
 
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-800 mb-4"><MapPin size={18} className="text-indigo-600" /> {capitalize(destination || 'Trip')} Map</h2>
-        <MapView height="h-80" center={mapCenter} />
+        <MapView height="h-80" center={mapCenter} stops={stops} routeStops={routeStops} />
       </div>
 
       <div className="flex justify-center">
