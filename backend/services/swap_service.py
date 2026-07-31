@@ -14,14 +14,27 @@ ALTERNATE_ACTIVITY_SCHEMA = {
     "properties": {
         "name": {"type": "string"},
         "location": {"type": "string"},
+        "lat": {"type": "number"},
+        "lng": {"type": "number"},
     },
-    "required": ["name", "location"],
+    "required": ["name", "location", "lat", "lng"],
     "additionalProperties": False,
 }
 
 
-async def find_indoor_alternative(activity: Activity, trip: Trip, exclude_names: list[str] = ()) -> dict:
-    """Ask Claude for one real indoor venue to replace a rained-out outdoor activity.
+async def find_alternative_activity(
+    activity: Activity, trip: Trip, reason: str, exclude_names: list[str] = ()
+) -> dict:
+    """Ask Claude for one real alternative to replace a weather-affected activity.
+
+    `reason` is the WeatherRiskRule's trigger message (e.g. "Heavy rain expected
+    (80% chance)", "Reduced visibility expected (900m) — the view would be
+    ruined"). Rather than always assuming "go indoor" — right for rain, wrong
+    for e.g. a foggy viewpoint where a different outdoor spot with no view
+    dependency could fit just as well — the reason is passed straight through
+    so Claude can judge whether the actual problem is the outdoor setting
+    itself (go indoor) or something specific to the original activity (pick a
+    different outdoor activity that doesn't have the same vulnerability).
 
     `exclude_names` should list every other activity already planned elsewhere in
     the trip (including past alternate names from earlier swaps) so Claude doesn't
@@ -36,9 +49,10 @@ async def find_indoor_alternative(activity: Activity, trip: Trip, exclude_names:
         raise RuntimeError("ANTHROPIC_API_KEY not configured")
 
     content = (
-        f'The outdoor activity "{activity.name}" at "{activity.location}" '
-        f'(time slot {activity.time_slot}) is rained out. Suggest one indoor '
-        f'alternative nearby in {trip.destination}.'
+        f'The activity "{activity.name}" at "{activity.location}" '
+        f'(time slot {activity.time_slot}) is affected by this: {reason}. Suggest one '
+        f'real alternative nearby in {trip.destination} that avoids this specific '
+        f'problem.'
     )
     other_activities = [n for n in exclude_names if n and n != activity.name]
     if other_activities:
@@ -52,10 +66,21 @@ async def find_indoor_alternative(activity: Activity, trip: Trip, exclude_names:
         model=MODEL,
         max_tokens=512,
         system=(
-            f"You suggest indoor activity alternatives for {trip.destination} travel "
-            f"itineraries when outdoor plans get rained out. Suggest one real, well-known "
-            f"indoor venue reasonably close to the original activity's location, suitable "
-            f"for the same time slot, that isn't already planned elsewhere on the trip."
+            f"You suggest activity alternatives for {trip.destination} travel "
+            f"itineraries when a planned activity is affected by weather. Suggest one "
+            f"real, well-known venue reasonably close to the original activity's "
+            f"location, suitable for the same time slot, that isn't already planned "
+            f"elsewhere on the trip. Choose indoor if the problem is weather generally "
+            f"(like rain or a thunderstorm) — going inside fixes that regardless of "
+            f"activity. Choose a different outdoor spot instead if the problem is "
+            f"specific to what the original activity needed (e.g. a view fog would "
+            f"ruin, or open-water/height wind would make unsafe) rather than the "
+            f"outdoor setting itself — outdoor is fine as long as the new activity "
+            f"doesn't have the same specific vulnerability. Also give its real "
+            f"approximate latitude and longitude (as decimal degrees, e.g. lat "
+            f"51.5194, lng -0.1270 for the British Museum) — use your knowledge of "
+            f"the actual location, not a placeholder or the original activity's "
+            f"coordinates."
         ),
         messages=[{"role": "user", "content": content}],
         output_config={"format": {"type": "json_schema", "schema": ALTERNATE_ACTIVITY_SCHEMA}},
@@ -69,4 +94,10 @@ async def apply_swap(db: AsyncSession, activity: Activity, alternate: dict, reas
     activity.alternate_name = alternate["name"]
     activity.alternate_location = alternate["location"]
     activity.swap_reason = reason
+    # The map pin (lat/lng) has no separate pre/post-swap field — it always
+    # reflects the activity's current plan, so it must move to the
+    # alternative's coordinates here or it silently keeps pointing at the
+    # rained-out original instead of the new indoor venue.
+    activity.lat = alternate["lat"]
+    activity.lng = alternate["lng"]
     await db.commit()

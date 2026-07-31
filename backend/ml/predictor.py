@@ -42,7 +42,6 @@ class WeatherPredictor:
         # Put all probs in each day in dictionary
         results = []
         for i, probability in enumerate(probabilities):
-            
             warning = probability >= self.threshold
 
             results.append({
