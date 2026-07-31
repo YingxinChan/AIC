@@ -124,7 +124,7 @@ def test_active_rules_includes_rain_rule():
 
 def test_fog_rule_only_fires_for_view_dependent_activities():
     rule = FogRule()
-    day = {"visibility_m": 900}
+    day = {"visibility_km": 0.9}
     assert rule.evaluate(day, _activity("view_dependent")) is not None
     assert rule.evaluate(day, _activity("wind_exposed")) is None
     assert rule.evaluate(day, _activity("")) is None
@@ -132,15 +132,15 @@ def test_fog_rule_only_fires_for_view_dependent_activities():
 
 def test_fog_rule_does_not_fire_above_threshold():
     rule = FogRule()
-    day = {"visibility_m": 5000}
+    day = {"visibility_km": 5.0}
     assert rule.evaluate(day, _activity("view_dependent")) is None
 
 
 def test_fog_rule_day_triggers_ignores_activity_entirely():
     rule = FogRule()
-    assert rule.day_triggers({"visibility_m": 900}) is True
-    assert rule.day_triggers({"visibility_m": 5000}) is False
-    assert rule.day_triggers({"visibility_m": None}) is False
+    assert rule.day_triggers({"visibility_km": 0.9}) is True
+    assert rule.day_triggers({"visibility_km": 5.0}) is False
+    assert rule.day_triggers({"visibility_km": None}) is False
 
 
 def test_wind_rule_only_fires_for_wind_exposed_activities_on_strong_wind():
@@ -183,7 +183,7 @@ def test_targeted_rule_fires_for_activity_with_multiple_tags():
     off just its own matching tag being present among others."""
     rule = FogRule()
     activity = _activity("strenuous_outdoor,view_dependent")
-    assert rule.evaluate({"visibility_m": 900}, activity) is not None
+    assert rule.evaluate({"visibility_km": 0.9}, activity) is not None
 
 
 def test_active_rules_includes_all_expected_rule_types():

@@ -124,14 +124,14 @@ class FogRule(WeatherRiskRule):
     id = "fog"
     activity_tag = "view_dependent"
     avoid_phrase = "viewpoint or scenic-vista activities"
-    VISIBILITY_THRESHOLD_M = 2000  # TODO: confirm with team
+    VISIBILITY_THRESHOLD_KM = 2.0  # TODO: confirm with team
 
     def day_triggers(self, forecast_day: dict) -> bool:
-        visibility = forecast_day.get("visibility_m")
-        return visibility is not None and visibility < self.VISIBILITY_THRESHOLD_M
+        visibility = forecast_day.get("visibility_km")
+        return visibility is not None and visibility < self.VISIBILITY_THRESHOLD_KM
 
     def reason(self, forecast_day: dict) -> str:
-        return f"Reduced visibility expected ({int(forecast_day['visibility_m'])}m) — the view would be ruined"
+        return f"Reduced visibility expected ({forecast_day['visibility_km']}km) — the view would be ruined"
 
 
 class WindRule(WeatherRiskRule):
