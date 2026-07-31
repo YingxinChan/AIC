@@ -378,59 +378,171 @@ def _tip(trip_id, activity_id, day_date="2026-08-01", name="Beach Day", location
     }
 
 
-def test_send_tip_only_digest_sends_an_email(auth_client, monkeypatch):
-    trip_id = _create_trip(auth_client, monkeypatch)
-    mock_send = MagicMock(return_value={"status": "sent"})
-    monkeypatch.setattr("services.notifications_service.email_service.send_email", mock_send)
+def test_send_tip_only_digest_sends_an_email(
+    auth_client,
+    monkeypatch,
+):
+    trip_id, trip_start_date = _create_trip(
+        auth_client,
+        monkeypatch,
+    )
 
-    results = _run_digest([], tips=[_tip(trip_id, 1)])
+    mock_send = MagicMock(
+        return_value={"status": "sent"}
+    )
+    monkeypatch.setattr(
+        "services.notifications_service.email_service.send_email",
+        mock_send,
+    )
+
+    results = _run_digest(
+        [],
+        tips=[
+            _tip(
+                trip_id,
+                1,
+                day_date=trip_start_date.isoformat(),
+            )
+        ],
+    )
 
     assert len(results) == 1
     assert results[0]["status"] == "sent"
+
     subject = mock_send.call_args.args[1]
     assert "tips" in subject.lower()
+
     body = mock_send.call_args.args[2]
     assert "Beach Day" in body
     assert "Bondi Beach" in body
     assert "check local flags" in body
 
 
-def test_tips_bypass_the_rain_threshold_filter(auth_client, monkeypatch):
-    """Tips are informational, not a plan change — they shouldn't be gated
-    by the same threshold that controls silent swap notifications."""
-    trip_id = _create_trip(auth_client, monkeypatch)
-    auth_client.put("/api/notifications/preferences", json={"email_enabled": True, "rain_threshold_mm": 100.0})
-    mock_send = MagicMock(return_value={"status": "sent"})
-    monkeypatch.setattr("services.notifications_service.email_service.send_email", mock_send)
+def test_tips_bypass_the_rain_threshold_filter(
+    auth_client,
+    monkeypatch,
+):
+    """Tips are informational, not a plan change, so they should not be
+    gated by the threshold that controls silent swap notifications."""
+    trip_id, trip_start_date = _create_trip(
+        auth_client,
+        monkeypatch,
+    )
 
-    results = _run_digest([], tips=[_tip(trip_id, 1)])
+    preferences_response = auth_client.put(
+        "/api/notifications/preferences",
+        json={
+            "email_enabled": True,
+            "rain_threshold_mm": 100.0,
+        },
+    )
+
+    assert preferences_response.status_code == 200
+
+    mock_send = MagicMock(
+        return_value={"status": "sent"}
+    )
+    monkeypatch.setattr(
+        "services.notifications_service.email_service.send_email",
+        mock_send,
+    )
+
+    results = _run_digest(
+        [],
+        tips=[
+            _tip(
+                trip_id,
+                1,
+                day_date=trip_start_date.isoformat(),
+            )
+        ],
+    )
 
     assert len(results) == 1
     mock_send.assert_called_once()
 
 
-def test_tips_still_respect_email_enabled(auth_client, monkeypatch):
-    trip_id = _create_trip(auth_client, monkeypatch)
-    auth_client.put("/api/notifications/preferences", json={"email_enabled": False, "rain_threshold_mm": 0.0})
-    mock_send = MagicMock(return_value={"status": "sent"})
-    monkeypatch.setattr("services.notifications_service.email_service.send_email", mock_send)
+def test_tips_still_respect_email_enabled(
+    auth_client,
+    monkeypatch,
+):
+    trip_id, trip_start_date = _create_trip(
+        auth_client,
+        monkeypatch,
+    )
 
-    results = _run_digest([], tips=[_tip(trip_id, 1)])
+    preferences_response = auth_client.put(
+        "/api/notifications/preferences",
+        json={
+            "email_enabled": False,
+            "rain_threshold_mm": 0.0,
+        },
+    )
+
+    assert preferences_response.status_code == 200
+
+    mock_send = MagicMock(
+        return_value={"status": "sent"}
+    )
+    monkeypatch.setattr(
+        "services.notifications_service.email_service.send_email",
+        mock_send,
+    )
+
+    results = _run_digest(
+        [],
+        tips=[
+            _tip(
+                trip_id,
+                1,
+                day_date=trip_start_date.isoformat(),
+            )
+        ],
+    )
 
     assert results == []
     mock_send.assert_not_called()
 
 
-def test_combined_swap_and_tip_digest_sends_one_email(auth_client, monkeypatch):
-    trip_id = _create_trip(auth_client, monkeypatch)
-    mock_send = MagicMock(return_value={"status": "sent"})
-    monkeypatch.setattr("services.notifications_service.email_service.send_email", mock_send)
+def test_combined_swap_and_tip_digest_sends_one_email(
+    auth_client,
+    monkeypatch,
+):
+    trip_id, trip_start_date = _create_trip(
+        auth_client,
+        monkeypatch,
+    )
 
-    results = _run_digest([_swap(trip_id, 1)], tips=[_tip(trip_id, 2)])
+    mock_send = MagicMock(
+        return_value={"status": "sent"}
+    )
+    monkeypatch.setattr(
+        "services.notifications_service.email_service.send_email",
+        mock_send,
+    )
+
+    day_date = trip_start_date.isoformat()
+
+    results = _run_digest(
+        [
+            _swap(
+                trip_id,
+                1,
+                day_date,
+            )
+        ],
+        tips=[
+            _tip(
+                trip_id,
+                2,
+                day_date=day_date,
+            )
+        ],
+    )
 
     assert len(results) == 1
     mock_send.assert_called_once()
+
     body = mock_send.call_args.args[2]
-    assert "British Museum" in body  # from the swap
-    assert "Beach Day" in body  # from the tip
->>>>>>> origin/main
+    assert "British Museum" in body
+    assert "Beach Day" in body
