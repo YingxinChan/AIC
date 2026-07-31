@@ -33,6 +33,12 @@ def test_prediction_returns_forecast(auth_client):
     assert "beach_safety_score" in first_day
     assert "beach_safety_level" in first_day
     assert "snow_probability" in first_day
+    assert "uv_level" in first_day
+    assert "uv_advice" in first_day
+    assert all(
+        isinstance(day["uv_advice"], str) and day["uv_advice"]
+        for day in data
+    )
 
 def test_hourly_returns_forecast(auth_client):
     response = auth_client.get(
@@ -50,6 +56,11 @@ def test_hourly_returns_forecast(auth_client):
 
     assert "time" in first_hour
     assert "temperature" in first_hour
+    assert "feels_like_temp" in first_hour
     assert "rain_mm" in first_hour
     assert "rain_probability" in first_hour
+    assert "wind_speed" in first_hour
+    assert "uv_index" in first_hour
+    assert "visibility_km" in first_hour
     assert "condition" in first_hour
+
