@@ -198,7 +198,7 @@ def test_auto_swap_targeted_rule_only_swaps_the_tagged_activity(auth_client, mon
     market_id = _add_activity(trip_id, "outdoor", name="Borough Market", weather_sensitivity="")
     _mock_weather(monkeypatch, forecast=[{
         "date": TODAY.isoformat(), "heavy_rain_warning": False, "heavy_rain_probability": 2.0,
-        "visibility_m": 800,
+        "visibility_km": 0.8,
     }])
     _mock_hourly_weather(monkeypatch)
     _mock_find_alternative(monkeypatch)

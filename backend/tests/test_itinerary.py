@@ -154,8 +154,8 @@ def test_generate_itinerary_prompt_includes_targeted_rule_steering_when_triggere
     monkeypatch.setattr(
         "services.itinerary_service.get_weather_prediction",
         lambda lat, lon, start, end: [
-            {"date": TODAY.isoformat(), "heavy_rain_warning": False, "visibility_m": 800},
-            {"date": (TODAY + timedelta(days=1)).isoformat(), "heavy_rain_warning": False, "visibility_m": 5000},
+            {"date": TODAY.isoformat(), "heavy_rain_warning": False, "visibility_km": 0.8},
+            {"date": (TODAY + timedelta(days=1)).isoformat(), "heavy_rain_warning": False, "visibility_km": 5.0},
         ],
     )
     monkeypatch.setattr("services.itinerary_service.get_hourly_weather", lambda lat, lon, start, end: [])
@@ -174,7 +174,7 @@ def test_generate_itinerary_prompt_omits_targeted_rule_steering_when_not_trigger
     monkeypatch.setattr(
         "services.itinerary_service.get_weather_prediction",
         lambda lat, lon, start, end: [
-            {"date": TODAY.isoformat(), "heavy_rain_warning": False, "visibility_m": 8000},
+            {"date": TODAY.isoformat(), "heavy_rain_warning": False, "visibility_km": 8.0},
         ],
     )
     monkeypatch.setattr("services.itinerary_service.get_hourly_weather", lambda lat, lon, start, end: [])
