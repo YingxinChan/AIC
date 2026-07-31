@@ -27,3 +27,10 @@ class Activity(Base):
     # activities a given weather condition actually affects. Empty string
     # (not one of the tags) means "not specifically weather-sensitive".
     weather_sensitivity: Mapped[str] = mapped_column(String(255), default="", server_default="")
+
+    # User-set: marks this activity as already booked/committed (e.g. a
+    # timed museum ticket) — excluded from weather auto-swap entirely, and
+    # preserved (not deleted) across a full itinerary regeneration. See
+    # services/itinerary_service.py generate_itinerary() and
+    # services/auto_swap_service.py run_auto_swap().
+    is_fixed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")

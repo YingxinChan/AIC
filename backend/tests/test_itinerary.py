@@ -108,6 +108,76 @@ def test_generate_itinerary_persists_activities(auth_client, monkeypatch):
     assert len(get_response.json()["days"]) == 2
 
 
+def test_generate_itinerary_preserves_fixed_activities_instead_of_deleting_them(auth_client, monkeypatch):
+    trip_id, fixed_activity_id = _generate_one_activity(
+        auth_client, monkeypatch, start="2026-08-01", end="2026-08-02",
+    )
+
+    async def _mark_fixed():
+        async with _TestSessionLocal() as db:
+            result = await db.execute(select(Activity).where(Activity.id == fixed_activity_id))
+            activity = result.scalar_one()
+            activity.is_fixed = True
+            activity.name = "Timed Museum Ticket"
+            await db.commit()
+    asyncio.run(_mark_fixed())
+
+    # A second, fresh generate() call — different fake activities than the
+    # ones already persisted, simulating a real regenerate.
+    _mock_claude(monkeypatch, {
+        "days": [
+            {"activities": [
+                {"name": "Tower of London", "type": "outdoor", "time_slot": "09:00 - 11:00",
+                 "location": "Tower Hill", "description": "Historic castle."},
+            ]},
+            {"activities": [
+                {"name": "Camden Market", "type": "outdoor", "time_slot": "10:00 - 12:00",
+                 "location": "Camden", "description": "Browse the market."},
+            ]},
+        ]
+    })
+
+    response = auth_client.post(f"/api/trips/{trip_id}/itinerary/generate")
+    assert response.status_code == 200
+
+    all_activities = [a for day in response.json()["days"] for a in day["activities"]]
+    activity_ids = {a["id"] for a in all_activities}
+    activity_names = {a["name"] for a in all_activities}
+
+    # The fixed activity survives — same id, same content — alongside the
+    # newly generated ones, not replaced by them.
+    assert fixed_activity_id in activity_ids
+    assert "Timed Museum Ticket" in activity_names
+    assert "Tower of London" in activity_names
+    assert "Camden Market" in activity_names
+
+
+def test_generate_itinerary_tells_claude_about_fixed_activities_in_the_prompt(auth_client, monkeypatch):
+    trip_id, fixed_activity_id = _generate_one_activity(
+        auth_client, monkeypatch, start="2026-08-01", end="2026-08-02",
+    )
+
+    async def _mark_fixed():
+        async with _TestSessionLocal() as db:
+            result = await db.execute(select(Activity).where(Activity.id == fixed_activity_id))
+            activity = result.scalar_one()
+            activity.is_fixed = True
+            activity.name = "Timed Museum Ticket"
+            activity.location = "Great Russell St"
+            activity.time_slot = "09:00 - 11:00"
+            activity.day_date = date(2026, 8, 1)
+            await db.commit()
+    asyncio.run(_mark_fixed())
+
+    mock_client = _mock_claude(monkeypatch)
+    auth_client.post(f"/api/trips/{trip_id}/itinerary/generate")
+
+    prompt = mock_client.messages.create.call_args.kwargs["messages"][0]["content"]
+    assert "Timed Museum Ticket" in prompt
+    assert "already booked" in prompt
+    assert "Day 1" in prompt
+
+
 def test_generate_itinerary_persists_weather_sensitivity_tags(auth_client, monkeypatch):
     fake_days = {
         "days": [
@@ -577,3 +647,163 @@ def test_swap_activity_404_for_missing_trip(auth_client):
         json={"swap_to": "indoor"},
     )
     assert response.status_code == 404
+
+
+def _generate_one_activity(auth_client, monkeypatch, **trip_kwargs):
+    """Generate a real itinerary via the API and return (trip_id, activity_id)
+    for its single activity — a real, owned row to PATCH against."""
+    _mock_claude(monkeypatch)
+    trip_id = _create_trip(auth_client, **trip_kwargs)
+    response = auth_client.post(f"/api/trips/{trip_id}/itinerary/generate")
+    activity_id = response.json()["days"][0]["activities"][0]["id"]
+    return trip_id, activity_id
+
+
+def test_update_activity_requires_auth(client):
+    response = client.patch("/api/trips/1/itinerary/activities/1", json={"name": "New Name"})
+    assert response.status_code == 401
+
+
+def test_update_activity_404_for_missing_trip(auth_client):
+    response = auth_client.patch(
+        "/api/trips/999999/itinerary/activities/1", json={"name": "New Name"},
+    )
+    assert response.status_code == 404
+
+
+def test_update_activity_404_for_missing_activity(auth_client, monkeypatch):
+    _mock_claude(monkeypatch)
+    trip_id = _create_trip(auth_client)
+    response = auth_client.patch(
+        f"/api/trips/{trip_id}/itinerary/activities/999999", json={"name": "New Name"},
+    )
+    assert response.status_code == 404
+
+
+def test_update_activity_edits_day_time_name_location_and_fixed(auth_client, monkeypatch):
+    trip_id, activity_id = _generate_one_activity(
+        auth_client, monkeypatch, start="2026-08-01", end="2026-08-03",
+    )
+
+    response = auth_client.patch(
+        f"/api/trips/{trip_id}/itinerary/activities/{activity_id}",
+        json={
+            "day_date": "2026-08-02",
+            "time_slot": "14:00 - 16:00",
+            "name": "National Gallery",
+            "location": "Trafalgar Square",
+            "lat": 51.5089,
+            "lng": -0.1283,
+            "is_fixed": True,
+        },
+    )
+    assert response.status_code == 200
+
+    days = response.json()["days"]
+    day = next(d for d in days if d["date"] == "2026-08-02")
+    activity = next(a for a in day["activities"] if a["id"] == activity_id)
+    assert activity["name"] == "National Gallery"
+    assert activity["time_slot"] == "14:00 - 16:00"
+    assert activity["location"] == "Trafalgar Square"
+    assert activity["lat"] == 51.5089
+    assert activity["lng"] == -0.1283
+    assert activity["is_fixed"] is True
+
+
+def test_update_activity_partial_patch_leaves_other_fields_untouched(auth_client, monkeypatch):
+    trip_id, activity_id = _generate_one_activity(auth_client, monkeypatch)
+
+    response = auth_client.patch(
+        f"/api/trips/{trip_id}/itinerary/activities/{activity_id}",
+        json={"is_fixed": True},
+    )
+    assert response.status_code == 200
+
+    activity = next(
+        a for day in response.json()["days"] for a in day["activities"] if a["id"] == activity_id
+    )
+    assert activity["is_fixed"] is True
+    assert activity["name"] == "British Museum"  # untouched
+    assert activity["location"] == "Great Russell St"  # untouched
+
+
+def test_update_activity_rejects_location_without_matching_lat_lng(auth_client, monkeypatch):
+    trip_id, activity_id = _generate_one_activity(auth_client, monkeypatch)
+
+    response = auth_client.patch(
+        f"/api/trips/{trip_id}/itinerary/activities/{activity_id}",
+        json={"location": "Trafalgar Square"},  # no lat/lng
+    )
+    assert response.status_code == 400
+
+
+def test_update_activity_rejects_day_outside_trip_range(auth_client, monkeypatch):
+    trip_id, activity_id = _generate_one_activity(
+        auth_client, monkeypatch, start="2026-08-01", end="2026-08-02",
+    )
+
+    response = auth_client.patch(
+        f"/api/trips/{trip_id}/itinerary/activities/{activity_id}",
+        json={"day_date": "2026-08-10"},
+    )
+    assert response.status_code == 400
+
+
+def test_update_activity_resets_swap_state_when_name_changes(auth_client, monkeypatch):
+    trip_id, activity_id = _generate_one_activity(auth_client, monkeypatch)
+
+    async def _mark_swapped():
+        async with _TestSessionLocal() as db:
+            result = await db.execute(select(Activity).where(Activity.id == activity_id))
+            activity = result.scalar_one()
+            activity.is_swapped = True
+            activity.alternate_name = "Science Museum"
+            activity.alternate_location = "Exhibition Road"
+            activity.swap_reason = "Heavy rain expected (80% chance)"
+            await db.commit()
+    asyncio.run(_mark_swapped())
+
+    response = auth_client.patch(
+        f"/api/trips/{trip_id}/itinerary/activities/{activity_id}",
+        json={"name": "Natural History Museum"},
+    )
+    assert response.status_code == 200
+
+    activity = next(
+        a for day in response.json()["days"] for a in day["activities"] if a["id"] == activity_id
+    )
+    assert activity["name"] == "Natural History Museum"
+    assert activity["is_swapped"] is False
+    assert activity["alternate_name"] == ""
+    assert activity["alternate_location"] == ""
+    assert activity["swap_reason"] == ""
+
+
+def test_update_activity_does_not_reset_swap_state_when_unrelated_fields_change(auth_client, monkeypatch):
+    """Editing the day/time/fixed-state of an already-swapped activity
+    shouldn't silently un-swap it — only a name/location edit replaces
+    "the current plan" enough to warrant that."""
+    trip_id, activity_id = _generate_one_activity(auth_client, monkeypatch)
+
+    async def _mark_swapped():
+        async with _TestSessionLocal() as db:
+            result = await db.execute(select(Activity).where(Activity.id == activity_id))
+            activity = result.scalar_one()
+            activity.is_swapped = True
+            activity.alternate_name = "Science Museum"
+            activity.alternate_location = "Exhibition Road"
+            activity.swap_reason = "Heavy rain expected (80% chance)"
+            await db.commit()
+    asyncio.run(_mark_swapped())
+
+    response = auth_client.patch(
+        f"/api/trips/{trip_id}/itinerary/activities/{activity_id}",
+        json={"is_fixed": True},
+    )
+    assert response.status_code == 200
+
+    activity = next(
+        a for day in response.json()["days"] for a in day["activities"] if a["id"] == activity_id
+    )
+    assert activity["is_swapped"] is True
+    assert activity["alternate_name"] == "Science Museum"

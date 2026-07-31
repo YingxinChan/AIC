@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.config import settings
 from models.activity import Activity
 from models.trip import Trip
+from schemas.itinerary import UpdateActivityRequest
 from services import geocoding_service
 from services.auto_swap_service import FORECAST_HORIZON_DAYS
 from services.weather_rules import ACTIVE_RULES, RainRule
@@ -154,6 +155,7 @@ async def get_itinerary(trip_id: int, db: AsyncSession, user_id: int) -> dict:
     for a in activities:
         days.setdefault(a.day_date.isoformat(), []).append({
             "id": a.id,
+            "day_date": a.day_date,
             "name": a.name,
             "type": a.type,
             "time_slot": a.time_slot,
@@ -165,6 +167,8 @@ async def get_itinerary(trip_id: int, db: AsyncSession, user_id: int) -> dict:
             "alternate_name": a.alternate_name,
             "alternate_location": a.alternate_location,
             "swap_reason": a.swap_reason,
+            "weather_sensitivity": a.weather_sensitivity,
+            "is_fixed": a.is_fixed,
         })
 
     return {"days": [{"date": d, "activities": acts} for d, acts in sorted(days.items())]}
@@ -256,6 +260,22 @@ async def generate_itinerary(trip_id: int, db: AsyncSession, user_id: int) -> di
             f'reasonable rather than ignoring them: "{trip.original_plan}"'
         )
 
+    fixed_result = await db.execute(
+        select(Activity).where(Activity.trip_id == trip_id, Activity.is_fixed.is_(True))
+    )
+    fixed_activities = fixed_result.scalars().all()
+    if fixed_activities:
+        fixed_lines = [
+            f'Day {(a.day_date - trip.start_date).days + 1}, {a.time_slot}: '
+            f'"{a.name}" at "{a.location}" (already booked, fixed)'
+            for a in fixed_activities
+        ]
+        content += (
+            f' The traveler already has these fixed commitments booked — do not schedule '
+            f'anything else during these same days/time slots, and build the rest of each '
+            f"affected day's plan around them: " + "; ".join(fixed_lines) + "."
+        )
+
     try:
         response = await client.messages.create(
             model=MODEL,
@@ -317,7 +337,12 @@ async def generate_itinerary(trip_id: int, db: AsyncSession, user_id: int) -> di
             ),
         }
 
-    await db.execute(delete(Activity).where(Activity.trip_id == trip_id))
+    # Fixed activities (already fetched above, and told to Claude in the
+    # prompt) are never deleted or re-inserted — they survive a regenerate
+    # untouched, which is the entire point of marking something fixed.
+    await db.execute(
+        delete(Activity).where(Activity.trip_id == trip_id, Activity.is_fixed.is_(False))
+    )
     for offset, day in enumerate(data["days"][:num_days]):
         day_date = trip.start_date + timedelta(days=offset)
         for activity in day["activities"]:
@@ -329,6 +354,55 @@ async def generate_itinerary(trip_id: int, db: AsyncSession, user_id: int) -> di
             ))
     await db.commit()
 
+    return await get_itinerary(trip_id, db, user_id)
+
+
+async def update_activity(
+    trip_id: int, activity_id: int, patch: UpdateActivityRequest, db: AsyncSession, user_id: int,
+) -> dict:
+    """Direct edit of a single activity's day/time/name/location/fixed-state.
+
+    Unlike generate_itinerary(), this never touches any other activity —
+    it's a narrow, explicit edit with no auto-regenerate side effect (same
+    philosophy as trips_service.update_trip_details: the user decides
+    separately whether anything else needs revisiting afterward).
+    """
+    trip = await _get_owned_trip(db, trip_id, user_id)
+    activity = await _get_owned_activity(db, trip_id, activity_id)
+
+    data = patch.model_dump(exclude_unset=True)
+
+    # location without matching coordinates would silently reintroduce the
+    # address/map-pin drift bug this endpoint's contract is built to avoid —
+    # the frontend's location search always produces both together, so
+    # their absence here means a caller bypassing that contract.
+    if "location" in data and ("lat" not in data or "lng" not in data):
+        raise HTTPException(
+            status_code=400,
+            detail="lat and lng must be provided together with location.",
+        )
+
+    if "day_date" in data and data["day_date"] is not None:
+        if not (trip.start_date <= data["day_date"] <= trip.end_date):
+            raise HTTPException(
+                status_code=400,
+                detail="day_date must fall within the trip's date range.",
+            )
+
+    # Editing name/location replaces "the current plan" — a stale swap
+    # record layered on top of a freshly-edited activity would show a
+    # strikethrough/alternate for something the user just deliberately set.
+    identity_changed = "name" in data or "location" in data
+    if identity_changed and activity.is_swapped:
+        activity.is_swapped = False
+        activity.alternate_name = ""
+        activity.alternate_location = ""
+        activity.swap_reason = ""
+
+    for field, value in data.items():
+        setattr(activity, field, value)
+
+    await db.commit()
     return await get_itinerary(trip_id, db, user_id)
 
 
@@ -344,3 +418,13 @@ async def _get_owned_trip(db: AsyncSession, trip_id: int, user_id: int) -> Trip:
     if trip is None:
         raise HTTPException(status_code=404, detail="Trip not found")
     return trip
+
+
+async def _get_owned_activity(db: AsyncSession, trip_id: int, activity_id: int) -> Activity:
+    result = await db.execute(
+        select(Activity).where(Activity.id == activity_id, Activity.trip_id == trip_id)
+    )
+    activity = result.scalar_one_or_none()
+    if activity is None:
+        raise HTTPException(status_code=404, detail="Activity not found")
+    return activity
