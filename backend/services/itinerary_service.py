@@ -77,6 +77,32 @@ TAG_SCHEMA = {
     "additionalProperties": False,
 }
 
+# Shared between generate_itinerary()'s per-trip prompt and
+# _tag_weather_sensitivity()'s single-activity call, so a manually-added
+# activity is judged by the exact same bar as an AI-generated one — without
+# this, the narrower/looser wording of two independently-written prompts
+# would drift apart (e.g. a generic "the point is a view" phrasing reads
+# landmarks like Big Ben or Tower Bridge as view_dependent just because
+# they're sightseeing stops, when the original intent was specifically
+# distant vistas/viewpoints that fog would ruin, not any looked-at landmark).
+WEATHER_SENSITIVITY_GUIDANCE = (
+    'Use "view_dependent" only when the activity\'s main point is a distant '
+    "view or vista that bad visibility would ruin (e.g. a mountain "
+    "viewpoint, a rooftop observation deck, a scenic clifftop) — not just "
+    "any outdoor sightseeing, and not a landmark that's simply looked at or "
+    'photographed up close (e.g. Big Ben, Tower Bridge). Use "wind_exposed" '
+    'only for activities on open water or suspended/exposed transport '
+    "transport (e.g. a boat cruise, a cable car, a hot air balloon) — not a "
+    'regular outdoor walk. Use "strenuous_outdoor" only for genuinely '
+    "physically demanding activities done mostly outdoors (e.g. a "
+    "multi-hour hiking trail, a steep uphill walking tour) — not a short "
+    'stroll. Use "beach" only for literal beach or open-water swimming '
+    "activities. An activity can have multiple tags (a coastal hike could "
+    'be both "strenuous_outdoor" and "view_dependent") or none — a museum '
+    "visit, an indoor market, or a flat city walking tour touching none of "
+    "these should get an empty list, not a defensive guess."
+)
+
 
 async def _trip_rule_day_numbers(trip: Trip, db: AsyncSession) -> tuple[dict[str, list[int]], dict[int, str]]:
     """For each ACTIVE_RULES rule, which day numbers (1-indexed) within the
@@ -323,19 +349,7 @@ async def generate_itinerary(trip_id: int, db: AsyncSession, user_id: int) -> di
                 f"days rather than a fixed order — rearrange which activities fall on which "
                 f"day if that produces a better overall fit. "
                 f"For every activity, also tag weather_sensitivity as a list — empty if none "
-                f"apply. Use \"view_dependent\" only when the activity's main point is a view "
-                f"or vista that bad visibility would ruin (e.g. a mountain viewpoint, a "
-                f"rooftop observation deck) — not just any outdoor activity. Use "
-                f"\"wind_exposed\" only for activities on open water or suspended/exposed "
-                f"transport (e.g. a boat cruise, a cable car, a hot air balloon) — not a "
-                f"regular outdoor walk. Use \"strenuous_outdoor\" only for genuinely "
-                f"physically demanding activities done mostly outdoors (e.g. a multi-hour "
-                f"hiking trail, a steep uphill walking tour) — not a short stroll. Use "
-                f"\"beach\" only for literal beach or open-water swimming activities. An "
-                f"activity can have multiple tags (a coastal hike could be both "
-                f"\"strenuous_outdoor\" and \"view_dependent\") or none — a museum visit, an "
-                f"indoor market, or a flat city walking tour touching none of these should "
-                f"get an empty list, not a defensive guess."
+                f"apply. {WEATHER_SENSITIVITY_GUIDANCE}"
             ),
             messages=[{"role": "user", "content": content}],
             output_config={"format": {"type": "json_schema", "schema": ITINERARY_SCHEMA}},
@@ -451,13 +465,9 @@ async def _tag_weather_sensitivity(name: str, location: str, activity_type: str,
             max_tokens=128,
             system=(
                 "You tag travel activities for weather sensitivity. Given an "
-                "activity's name, location, and indoor/outdoor type, return which "
-                "of these apply (empty list if none): view_dependent (the point is "
-                "a view/vista that fog or low visibility would ruin), wind_exposed "
-                "(elevated, open, or exposed enough that strong wind is a specific "
-                "concern beyond ordinary discomfort), strenuous_outdoor (physically "
-                "demanding enough that extreme heat/cold is a specific safety "
-                "concern), beach (a beach or open-water swimming activity)."
+                "activity's name, location, and indoor/outdoor type, decide which of "
+                "view_dependent, wind_exposed, strenuous_outdoor, and beach apply — "
+                f"empty list if none. {WEATHER_SENSITIVITY_GUIDANCE}"
             ),
             messages=[{
                 "role": "user",
