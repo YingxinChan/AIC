@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 from sqlalchemy import select
 
 from models.activity import Activity
+from services.weather_rules import RainRule, WeatherRiskRule
 from tests.conftest import _TestSessionLocal
 
 LONDON_COORDS = (51.5074, -0.1278)
@@ -208,6 +209,57 @@ def test_generate_itinerary_prompt_includes_multiple_rule_sentences_independentl
     prompt = mock_client.messages.create.call_args.kwargs["messages"][0]["content"]
     assert "Heavy rain is already forecast for day 1" in prompt
     assert "Day 1 may not be suitable for boat tours, cable cars, or other wind-exposed activities" in prompt
+
+
+class _FakeBlanketRule(WeatherRiskRule):
+    """A stand-in for a hypothetical future blanket rule (avoid_phrase is
+    None, same as RainRule) that ISN'T rain — used to prove the windowed-day
+    dispatch keys off rule.id == "rain" specifically, not off avoid_phrase
+    being None. Before the fix, this rule's day 1 would have incorrectly
+    picked up rain's rain_windows sentence just because avoid_phrase is None
+    on both rules and their day numbers happen to coincide."""
+    id = "fake_blanket"
+
+    def day_triggers(self, forecast_day):
+        return True
+
+    def reason(self, forecast_day):
+        return "Fake blanket condition expected"
+
+
+def test_a_future_non_rain_blanket_rule_does_not_pick_up_rains_windowed_sentence(auth_client, monkeypatch):
+    mock_client = _mock_claude(monkeypatch)
+    monkeypatch.setattr("services.trips_service.geocoding_service.geocode", lambda destination: LONDON_COORDS)
+    monkeypatch.setattr(
+        "services.itinerary_service.ACTIVE_RULES",
+        [RainRule(), _FakeBlanketRule()],
+    )
+    trip_id = _create_trip(auth_client, start=TODAY.isoformat(), end=TODAY.isoformat())
+
+    monkeypatch.setattr(
+        "services.itinerary_service.get_weather_prediction",
+        lambda lat, lon, start, end: [
+            {"date": TODAY.isoformat(), "heavy_rain_warning": True, "heavy_rain_probability": 80.0},
+        ],
+    )
+    # Real hourly data so rain gets a specific window (not the blanket
+    # sentence) — this is exactly the case that could leak into the fake
+    # rule's day 1 if the dispatch were keyed off avoid_phrase instead of id.
+    monkeypatch.setattr(
+        "services.itinerary_service.get_hourly_weather",
+        lambda lat, lon, start, end: [
+            {"time": f"{TODAY.isoformat()}T09:00", "rain_probability": 85},
+            {"time": f"{TODAY.isoformat()}T10:00", "rain_probability": 90},
+        ],
+    )
+
+    auth_client.post(f"/api/trips/{trip_id}/itinerary/generate")
+
+    prompt = mock_client.messages.create.call_args.kwargs["messages"][0]["content"]
+    assert "Day 1 has rain expected roughly between 09:00 and 11:00" in prompt
+    # The fake rule shares day 1 with rain but must get its own generic
+    # wording, never rain's window text.
+    assert prompt.count("rain expected roughly") == 1
 
 
 def test_generate_itinerary_system_prompt_mentions_weather_sensitivity_tagging(auth_client, monkeypatch):

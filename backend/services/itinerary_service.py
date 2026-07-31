@@ -200,13 +200,23 @@ async def generate_itinerary(trip_id: int, db: AsyncSession, user_id: int) -> di
         if not day_numbers:
             continue
 
-        if rule.avoid_phrase is None:
-            # Blanket rule (rain/thunderstorm). Days with a known specific
-            # rainy-hour window (rain_windows) get their own sentence so
-            # Claude can schedule around it directly; the rest (thunderstorm
-            # days, or heavy-rain days where hourly data wasn't available)
-            # keep the original whole-day wording, unchanged from before
-            # targeted rules or hourly refinement existed.
+        if rule.id == "rain":
+            # Rain specifically (not just "any blanket rule" — rain_windows
+            # only ever holds rain's hourly windows, so this must key off
+            # the rule's actual identity, not the incidental fact that its
+            # avoid_phrase happens to be None. Coupling this to
+            # `avoid_phrase is None` instead would silently misattribute a
+            # "rain expected roughly <window>" sentence to a future
+            # non-rain blanket rule whose day numbers happened to collide
+            # with rain's, since rain_windows knows nothing about any other
+            # rule).
+            #
+            # Days with a known specific rainy-hour window (rain_windows)
+            # get their own sentence so Claude can schedule around it
+            # directly; the rest (thunderstorm days, or heavy-rain days
+            # where hourly data wasn't available) keep the original
+            # whole-day wording, unchanged from before targeted rules or
+            # hourly refinement existed.
             windowed_days = [d for d in day_numbers if d in rain_windows]
             blanket_days = [d for d in day_numbers if d not in rain_windows]
 
