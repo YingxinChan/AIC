@@ -13,7 +13,7 @@ import HotelSearchInput from '../../components/HotelSearchInput'
 import { getTrip, updateTrip } from './tripsApi'
 import { getItinerary, generateItinerary } from './itineraryApi'
 import { tripStatus, STATUS_STYLES } from './tripStatus'
-import { geocodeCity } from '../../lib/geocode'
+import { geocodeCity, geocodeAddress } from '../../lib/geocode'
 import { capitalize } from '../../lib/format'
 import { getForecast, getHourlyForecast } from '../weather/weatherApi'
 import { getPendingReview, clearPendingReview } from '../../lib/pendingReview'
@@ -97,6 +97,7 @@ export default function ItineraryPage() {
   const [itineraryNotice, setItineraryNotice] = useState('')
   const [generating, setGenerating] = useState(false)
   const [selectedDate, setSelectedDate] = useState(null)
+  const [hotelLocation, setHotelLocation] = useState(null)
 
   const [mapCenter, setMapCenter] = useState(null)
   const [forecast, setForecast] = useState(null)
@@ -230,6 +231,21 @@ export default function ItineraryPage() {
 
     return () => { cancelled = true };
   }, [trip?.destination, trip?.start_date, trip?.end_date]);
+  useEffect(() => {
+    if (!trip?.hotel_address) {
+      setHotelLocation(null)
+      return
+    }
+    let cancelled = false
+    geocodeAddress(trip.hotel_address).then(coords => {
+      if (!cancelled) {
+        setHotelLocation(coords)
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [trip?.hotel_address])
 
   // --- SECTION 4: ACTIONS ---
   const handleGenerate = async () => {
@@ -332,6 +348,28 @@ export default function ItineraryPage() {
   const forecastDay = forecast?.find(d => d.date === selectedDate)
   const itineraryDay = itinerary?.days?.find(d => d.date === selectedDate)
   const selectedDayNumber = tripDates.indexOf(selectedDate) + 1
+
+  // Build map stops for selected day's itinerary
+  const stops = itineraryDay?.activities
+    ?.filter(activity => activity.lat !== 0 && activity.lng !== 0)
+    .map(activity => ({
+      position: [activity.lat, activity.lng],
+      label: activity.is_swapped ? activity.alternate_name : activity.name,
+    })) || []
+
+  const routeStops = hotelLocation
+  ? [
+      {
+        position: hotelLocation,
+        label: trip.hotel_address,
+      },
+      ...stops,
+      {
+        position: hotelLocation,
+        label: trip.hotel_address,
+      },
+    ]
+  : stops
 
   // --- SECTION 5: UI RENDERING ---
   return (
@@ -680,9 +718,20 @@ export default function ItineraryPage() {
         )}
       </div>
 
+      {/* Map */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-800 mb-4"><MapPin size={18} className="text-indigo-600" /> {capitalize(destination || 'Trip')} Map</h2>
-        <MapView height="h-80" center={mapCenter} />
+        <MapView height="h-80" 
+                 center={mapCenter} 
+                 stops={stops}
+                 hotel={
+                  hotelLocation && trip?.hotel_address
+                    ? {
+                        position: hotelLocation,
+                        label: trip.hotel_address,
+                      }
+                    : null
+                }/>
       </div>
 
       <div className="flex justify-center">
