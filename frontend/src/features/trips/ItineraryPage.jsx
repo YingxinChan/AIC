@@ -683,6 +683,7 @@ export default function ItineraryPage() {
                   setActivityLatLngDraft({ lat, lon })
                 }}
                 cityContext={trip?.destination}
+                cityCenter={mapCenter}
                 placeholder="Search for a place"
               />
             </div>
@@ -765,6 +766,7 @@ export default function ItineraryPage() {
                 setNewActivityLatLngDraft({ lat, lon })
               }}
               cityContext={trip?.destination}
+              cityCenter={mapCenter}
               placeholder="Search for a place"
             />
           </div>

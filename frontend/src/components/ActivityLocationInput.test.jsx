@@ -93,7 +93,47 @@ test('typing 3+ characters still calls searchPlaces after the debounce delay', a
   act(() => { vi.advanceTimersByTime(400) })
   vi.useRealTimers()
 
-  await waitFor(() => expect(searchPlaces).toHaveBeenCalledWith('Eif, Paris'))
+  // The query text itself is just the draft — no city name baked in
+  // (see the viewbox test below for how city context is actually applied).
+  await waitFor(() => expect(searchPlaces).toHaveBeenCalledWith('Eif', null))
+})
+
+test('passes a viewbox around cityCenter as a soft bias, not baked into the query text', async () => {
+  vi.useFakeTimers()
+  render(
+    <ActivityLocationInput
+      id="activity-location"
+      value=""
+      onChange={() => {}}
+      cityContext="London"
+      cityCenter={[51.5074, -0.1278]}
+      placeholder="Search for a place"
+    />
+  )
+
+  fireEvent.change(getInput(), { target: { value: 'Seven Sisters' } })
+  act(() => { vi.advanceTimersByTime(400) })
+  vi.useRealTimers()
+
+  // A day-trip destination outside the city (e.g. the real Seven Sisters,
+  // ~90 miles from London) must still be searchable by its own name — the
+  // bug this fix addresses was the query text forcing "Seven Sisters,
+  // London", which could only ever match something literally in London.
+  await waitFor(() => expect(searchPlaces).toHaveBeenCalledWith(
+    'Seven Sisters',
+    [-0.6278, 52.0074, 0.3722, 51.0074],
+  ))
+})
+
+test('does not pass a viewbox when cityCenter is unavailable (e.g. destination geocode failed)', async () => {
+  vi.useFakeTimers()
+  render(<ControlledActivityLocationInput cityContext="Paris" />)
+
+  fireEvent.change(getInput(), { target: { value: 'Eiffel' } })
+  act(() => { vi.advanceTimersByTime(400) })
+  vi.useRealTimers()
+
+  await waitFor(() => expect(searchPlaces).toHaveBeenCalledWith('Eiffel', null))
 })
 
 test('does not search when cityContext is empty, and shows the "enter a destination" hint', () => {
