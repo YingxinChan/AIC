@@ -933,6 +933,24 @@ test('shows a Fixed pill on activities marked is_fixed, and not on others', asyn
   expect(screen.getAllByText('Fixed')).toHaveLength(1)
 })
 
+test('shows a badge per weather_sensitivity tag, and none for an untagged activity', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  getItinerary.mockResolvedValue({
+    days: [{ date: '2026-08-01', activities: [
+      mockGeneratedActivity({ id: 1, name: 'Seven Sisters', weather_sensitivity: 'view_dependent,wind_exposed' }),
+      mockGeneratedActivity({ id: 2, name: 'Brighton Beach', weather_sensitivity: 'beach' }),
+      mockGeneratedActivity({ id: 3, name: 'Hyde Park', weather_sensitivity: '' }),
+    ] }],
+  })
+  renderAt(1)
+
+  await screen.findByText('Seven Sisters')
+  expect(screen.getByText('Scenic View')).toBeInTheDocument()
+  expect(screen.getByText('Wind Exposed')).toBeInTheDocument()
+  expect(screen.getByText('Beach')).toBeInTheDocument()
+  expect(screen.queryByText('Strenuous')).not.toBeInTheDocument()
+})
+
 test('clicking the edit icon opens the modal pre-filled with the activity\'s current values', async () => {
   getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
   getItinerary.mockResolvedValue({
