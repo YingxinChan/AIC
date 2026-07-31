@@ -20,3 +20,17 @@ class Activity(Base):
     alternate_name: Mapped[str] = mapped_column(String(255), default="", server_default="")
     alternate_location: Mapped[str] = mapped_column(String(255), default="", server_default="")
     swap_reason: Mapped[str] = mapped_column(String(255), default="", server_default="")
+
+    # Comma-separated subset of {"view_dependent", "wind_exposed",
+    # "strenuous_outdoor", "beach"} — tagged by Claude at generation time,
+    # read by services/weather_rules.py's targeted rules to decide which
+    # activities a given weather condition actually affects. Empty string
+    # (not one of the tags) means "not specifically weather-sensitive".
+    weather_sensitivity: Mapped[str] = mapped_column(String(255), default="", server_default="")
+
+    # User-set: marks this activity as already booked/committed (e.g. a
+    # timed museum ticket) — excluded from weather auto-swap entirely, and
+    # preserved (not deleted) across a full itinerary regeneration. See
+    # services/itinerary_service.py generate_itinerary() and
+    # services/auto_swap_service.py run_auto_swap().
+    is_fixed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")

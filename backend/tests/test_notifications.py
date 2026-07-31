@@ -167,14 +167,10 @@ def _create_trip(
     return response.json()["id"], start_date
 
 
-def _run_digest(swapped):
+def _run_digest(swapped, tips=None):
     async def _inner():
         async with _TestSessionLocal() as db:
-            return await send_swap_digest_emails(
-                db,
-                swapped,
-            )
-
+            return await send_swap_digest_emails(db, swapped, tips)
     return asyncio.run(_inner())
 
 
@@ -371,3 +367,70 @@ def test_send_swap_digest_emails_filters_by_rain_threshold(
 
     assert results == []
     mock_send.assert_not_called()
+
+
+def _tip(trip_id, activity_id, day_date="2026-08-01", name="Beach Day", location="Bondi Beach"):
+    return {
+        "trip_id": trip_id, "activity_id": activity_id,
+        "reason": "Poor beach safety conditions expected",
+        "tip": "Beach conditions may be unsafe for swimming — check local flags/lifeguard signage.",
+        "day_date": day_date, "name": name, "location": location,
+    }
+
+
+def test_send_tip_only_digest_sends_an_email(auth_client, monkeypatch):
+    trip_id = _create_trip(auth_client, monkeypatch)
+    mock_send = MagicMock(return_value={"status": "sent"})
+    monkeypatch.setattr("services.notifications_service.email_service.send_email", mock_send)
+
+    results = _run_digest([], tips=[_tip(trip_id, 1)])
+
+    assert len(results) == 1
+    assert results[0]["status"] == "sent"
+    subject = mock_send.call_args.args[1]
+    assert "tips" in subject.lower()
+    body = mock_send.call_args.args[2]
+    assert "Beach Day" in body
+    assert "Bondi Beach" in body
+    assert "check local flags" in body
+
+
+def test_tips_bypass_the_rain_threshold_filter(auth_client, monkeypatch):
+    """Tips are informational, not a plan change — they shouldn't be gated
+    by the same threshold that controls silent swap notifications."""
+    trip_id = _create_trip(auth_client, monkeypatch)
+    auth_client.put("/api/notifications/preferences", json={"email_enabled": True, "rain_threshold_mm": 100.0})
+    mock_send = MagicMock(return_value={"status": "sent"})
+    monkeypatch.setattr("services.notifications_service.email_service.send_email", mock_send)
+
+    results = _run_digest([], tips=[_tip(trip_id, 1)])
+
+    assert len(results) == 1
+    mock_send.assert_called_once()
+
+
+def test_tips_still_respect_email_enabled(auth_client, monkeypatch):
+    trip_id = _create_trip(auth_client, monkeypatch)
+    auth_client.put("/api/notifications/preferences", json={"email_enabled": False, "rain_threshold_mm": 0.0})
+    mock_send = MagicMock(return_value={"status": "sent"})
+    monkeypatch.setattr("services.notifications_service.email_service.send_email", mock_send)
+
+    results = _run_digest([], tips=[_tip(trip_id, 1)])
+
+    assert results == []
+    mock_send.assert_not_called()
+
+
+def test_combined_swap_and_tip_digest_sends_one_email(auth_client, monkeypatch):
+    trip_id = _create_trip(auth_client, monkeypatch)
+    mock_send = MagicMock(return_value={"status": "sent"})
+    monkeypatch.setattr("services.notifications_service.email_service.send_email", mock_send)
+
+    results = _run_digest([_swap(trip_id, 1)], tips=[_tip(trip_id, 2)])
+
+    assert len(results) == 1
+    mock_send.assert_called_once()
+    body = mock_send.call_args.args[2]
+    assert "British Museum" in body  # from the swap
+    assert "Beach Day" in body  # from the tip
+>>>>>>> origin/main

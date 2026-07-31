@@ -89,15 +89,70 @@ def _swap_row_text(s: dict) -> str:
     )
 
 
-def swap_digest_email(swaps: list[dict]) -> tuple[str, str]:
-    rows = "".join(_swap_row_html(s) for s in swaps)
-    body_html = f"""
-      <p style="margin:0 0 16px; font-size:14px; color:#374151; line-height:1.6; font-family:{FONT_STACK};">
-        Rain is in the forecast, so we've swapped the affected outdoor plans for indoor alternatives:
-      </p>
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">{rows}</table>
-    """
-    text = "Your itinerary was automatically updated due to weather:\n\n" + "\n".join(
-        _swap_row_text(s) for s in swaps
-    )
-    return _wrap("Your itinerary was updated for weather", body_html), text
+def _tip_row_html(t: dict) -> str:
+    day = _format_day(t["day_date"])
+    trip_name = escape(t["trip_name"], quote=False)
+    name = escape(t["name"], quote=False)
+    location = escape(t["location"], quote=False)
+    reason = escape(t["reason"], quote=False)
+    tip = escape(t["tip"], quote=False)
+    return f'''<tr>
+      <td style="padding:16px 0; border-bottom:1px solid #f3f4f6;">
+        <p style="margin:0 0 8px; font-size:12px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.03em; font-family:{FONT_STACK};">{trip_name} &middot; {day}</p>
+        <p style="margin:0; font-size:14px; font-weight:600; color:#111827; font-family:{FONT_STACK};">{name}</p>
+        <p style="margin:2px 0 0; font-size:12px; color:#6b7280; font-family:{FONT_STACK};">{location}</p>
+        <p style="margin:8px 0 0; font-size:12px; color:#b45309; font-family:{FONT_STACK};">☔ {reason}</p>
+        <p style="margin:4px 0 0; font-size:13px; color:#374151; font-family:{FONT_STACK};">💡 {tip}</p>
+      </td>
+    </tr>'''
+
+
+def _tip_row_text(t: dict) -> str:
+    day = _format_day(t["day_date"])
+    return f"- {t['trip_name']} ({day}): {t['name']} at {t['location']} — {t['reason']} — Tip: {t['tip']}"
+
+
+def swap_digest_email(swaps: list[dict], tips: list[dict] | None = None) -> tuple[str, str]:
+    """Combines this run's swaps and fixed-activity tips into one digest
+    email per user — never two emails for the same run. `tips` is optional
+    (defaults to none) so existing callers passing just `swaps` still work."""
+    tips = tips or []
+
+    sections_html = []
+    sections_text = []
+
+    if swaps:
+        rows = "".join(_swap_row_html(s) for s in swaps)
+        sections_html.append(f"""
+          <p style="margin:0 0 16px; font-size:14px; color:#374151; line-height:1.6; font-family:{FONT_STACK};">
+            Rain is in the forecast, so we've swapped the affected outdoor plans for indoor alternatives:
+          </p>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">{rows}</table>
+        """)
+        sections_text.append(
+            "Your itinerary was automatically updated due to weather:\n\n"
+            + "\n".join(_swap_row_text(s) for s in swaps)
+        )
+
+    if tips:
+        rows = "".join(_tip_row_html(t) for t in tips)
+        sections_html.append(f"""
+          <p style="margin:24px 0 16px; font-size:14px; color:#374151; line-height:1.6; font-family:{FONT_STACK};">
+            These fixed plans can't be swapped, but here's what to know before you go:
+          </p>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">{rows}</table>
+        """)
+        sections_text.append(
+            "Weather tips for your fixed plans:\n\n" + "\n".join(_tip_row_text(t) for t in tips)
+        )
+
+    if swaps and tips:
+        heading = "Your itinerary was updated for weather"
+    elif swaps:
+        heading = "Your itinerary was updated for weather"
+    else:
+        heading = "Weather tips for your upcoming trip"
+
+    body_html = "".join(sections_html)
+    text = "\n\n".join(sections_text)
+    return _wrap(heading, body_html), text

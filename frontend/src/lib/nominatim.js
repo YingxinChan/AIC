@@ -7,6 +7,8 @@ export async function searchPlaces(query) {
     const results = await response.json()
     return results.map((r) => ({
       label: r.display_name,
+      lat: parseFloat(r.lat),
+      lon: parseFloat(r.lon),
       isLodging: r.type === 'hotel' || r.type === 'hostel' || r.type === 'guest_house' || r.type === 'motel',
     }))
   } catch {
