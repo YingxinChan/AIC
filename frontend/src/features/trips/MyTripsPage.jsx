@@ -16,29 +16,30 @@ import { capitalize } from '../../lib/format'
 export default function MyTripsPage() {
   const { trips, loading, error, removeTrip } = useTrips()
   const [deletingId, setDeletingId] = useState(null)
+  const [deleteError, setDeleteError] = useState('')
 
   const handleDelete = async (event, trip) => {
     event.preventDefault()
     event.stopPropagation()
 
     const confirmed = window.confirm(
-      `Delete "${trip.name}"? This cannot be undone.`,
+      `Delete "${trip.name}"? This cannot be undone.`
     )
 
     if (!confirmed) return
 
+    setDeleteError('')
     setDeletingId(trip.id)
 
     try {
       await deleteTrip(trip.id)
       removeTrip(trip.id)
     } catch {
-      // Leave the card visible if deletion fails.
+      setDeleteError(`Couldn't delete "${trip.name}" — try again.`)
     } finally {
       setDeletingId(null)
     }
   }
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
