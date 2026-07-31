@@ -36,3 +36,13 @@ class UpdateActivityRequest(BaseModel):
     lat: float | None = None
     lng: float | None = None
     is_fixed: bool | None = None
+
+class CreateActivityRequest(BaseModel):
+    day_date: date
+    time_slot: str
+    name: str
+    location: str
+    lat: float
+    lng: float
+    type: str  # "indoor" | "outdoor"
+    is_fixed: bool = False

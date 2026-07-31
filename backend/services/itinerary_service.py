@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.config import settings
 from models.activity import Activity
 from models.trip import Trip
-from schemas.itinerary import UpdateActivityRequest
+from schemas.itinerary import CreateActivityRequest, UpdateActivityRequest
 from services import geocoding_service
 from services.auto_swap_service import FORECAST_HORIZON_DAYS
 from services.weather_rules import ACTIVE_RULES, RainRule
@@ -59,6 +59,21 @@ ITINERARY_SCHEMA = {
         },
     },
     "required": ["days"],
+    "additionalProperties": False,
+}
+
+TAG_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "weather_sensitivity": {
+            "type": "array",
+            "items": {
+                "type": "string",
+                "enum": ["view_dependent", "wind_exposed", "strenuous_outdoor", "beach"],
+            },
+        },
+    },
+    "required": ["weather_sensitivity"],
     "additionalProperties": False,
 }
 
@@ -412,6 +427,94 @@ async def update_activity(
     for field, value in data.items():
         setattr(activity, field, value)
 
+    await db.commit()
+    return await get_itinerary(trip_id, db, user_id)
+
+
+async def _tag_weather_sensitivity(name: str, location: str, activity_type: str, destination: str) -> list[str]:
+    """Classify a single user-added activity's weather-sensitivity tags via
+    Claude, mirroring the tagging generate_itinerary() already does for
+    Claude-authored activities — so an activity a user adds manually is
+    still correctly considered by auto_swap_service's targeted rules (e.g.
+    a manually-added viewpoint still counts as view_dependent for FogRule).
+
+    Best-effort: a tagging failure shouldn't block adding the activity, it
+    just leaves it untagged (same as any activity with no matching tag
+    today — it still gets the blanket rules, just not the targeted ones).
+    """
+    if not settings.anthropic_api_key:
+        return []
+    try:
+        client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+        response = await client.messages.create(
+            model=MODEL,
+            max_tokens=128,
+            system=(
+                "You tag travel activities for weather sensitivity. Given an "
+                "activity's name, location, and indoor/outdoor type, return which "
+                "of these apply (empty list if none): view_dependent (the point is "
+                "a view/vista that fog or low visibility would ruin), wind_exposed "
+                "(elevated, open, or exposed enough that strong wind is a specific "
+                "concern beyond ordinary discomfort), strenuous_outdoor (physically "
+                "demanding enough that extreme heat/cold is a specific safety "
+                "concern), beach (a beach or open-water swimming activity)."
+            ),
+            messages=[{
+                "role": "user",
+                "content": f'Activity: "{name}" at "{location}" in {destination}. Type: {activity_type}.',
+            }],
+            output_config={"format": {"type": "json_schema", "schema": TAG_SCHEMA}},
+        )
+        text = next(block.text for block in response.content if block.type == "text")
+        return json.loads(text)["weather_sensitivity"]
+    except Exception:
+        return []
+
+
+async def create_activity(
+    trip_id: int, body: CreateActivityRequest, db: AsyncSession, user_id: int,
+) -> dict:
+    """Direct manual add of a single activity — the counterpart to
+    update_activity(): a narrow, explicit insert with no auto-regenerate
+    side effect. Unlike Claude-generated activities, a user-added one has no
+    weather_sensitivity tag from the generation prompt, so it's classified
+    here via its own small Claude call before insert (see
+    _tag_weather_sensitivity) — otherwise it would silently never qualify
+    for the targeted weather rules (fog/wind/heat/cold/beach), only the
+    blanket ones.
+    """
+    trip = await _get_owned_trip(db, trip_id, user_id)
+
+    if not (trip.start_date <= body.day_date <= trip.end_date):
+        raise HTTPException(
+            status_code=400,
+            detail="day_date must fall within the trip's date range.",
+        )
+
+    weather_sensitivity = await _tag_weather_sensitivity(
+        body.name, body.location, body.type, trip.destination
+    )
+
+    db.add(Activity(
+        trip_id=trip_id,
+        day_date=body.day_date,
+        time_slot=body.time_slot,
+        name=body.name,
+        type=body.type,
+        location=body.location,
+        lat=body.lat,
+        lng=body.lng,
+        is_fixed=body.is_fixed,
+        weather_sensitivity=",".join(weather_sensitivity),
+    ))
+    await db.commit()
+    return await get_itinerary(trip_id, db, user_id)
+
+
+async def delete_activity(trip_id: int, activity_id: int, db: AsyncSession, user_id: int) -> dict:
+    await _get_owned_trip(db, trip_id, user_id)
+    activity = await _get_owned_activity(db, trip_id, activity_id)
+    await db.delete(activity)
     await db.commit()
     return await get_itinerary(trip_id, db, user_id)
 
