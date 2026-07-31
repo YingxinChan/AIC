@@ -7,14 +7,15 @@ from models.activity import Activity
 from models.trip import Trip
 from services import geocoding_service, swap_service
 from services.weather_rules import ACTIVE_RULES
-from services.weather_service import get_weather_prediction
+from services.weather_service import get_hourly_weather, get_weather_prediction
 
 FORECAST_HORIZON_DAYS = 15  # Open-Meteo only reliably forecasts ~16 days out
 
 
 async def run_auto_swap(db: AsyncSession) -> list[dict]:
-    """Re-check weather for upcoming/active trips and auto-swap rained-out
-    outdoor activities to an indoor alternative.
+    """Re-check weather for upcoming/active trips and auto-swap outdoor
+    activities affected by any ACTIVE_RULES condition (rain, fog, wind,
+    extreme heat/cold/UV, poor beach safety) for a suitable alternative.
 
     Safe to call repeatedly (e.g. on a Celery Beat schedule, or manually for
     testing) — Activity.is_swapped is the idempotency guard, so an
@@ -54,6 +55,24 @@ async def run_auto_swap(db: AsyncSession) -> list[dict]:
         except Exception:
             continue  # transient forecast failure — retried on the next scheduled run
 
+        # Hourly rain data, used by RainRule to refine which activities on a
+        # rainy day are actually affected (their time_slot overlaps a rainy
+        # hour) rather than swapping every outdoor activity that day. A
+        # failed fetch degrades to an empty dict — RainRule's own fallback
+        # then reproduces the original whole-day blanket behavior, so this
+        # can only narrow swaps relative to before, never miss a rainy day.
+        try:
+            hourly_days = get_hourly_weather(
+                trip.lat, trip.lng,
+                window_start.isoformat(), window_end.isoformat(),
+            )
+        except Exception:
+            hourly_days = []
+
+        hourly_by_date: dict[str, list[dict]] = {}
+        for entry in hourly_days:
+            hourly_by_date.setdefault(entry["time"][:10], []).append(entry)
+
         activities_result = await db.execute(
             select(Activity).where(
                 Activity.trip_id == trip.id,
@@ -69,7 +88,7 @@ async def run_auto_swap(db: AsyncSession) -> list[dict]:
 
         # Everything actually happening elsewhere on this trip right now — the
         # current plan for a day is its alternate_name once swapped, not the
-        # original name. Passed to find_indoor_alternative so it doesn't
+        # original name. Passed to find_alternative_activity so it doesn't
         # suggest something already scheduled on another day, and grown as
         # swaps happen below so two swaps in the same run don't collide either.
         all_activities_result = await db.execute(select(Activity).where(Activity.trip_id == trip.id))
@@ -84,23 +103,28 @@ async def run_auto_swap(db: AsyncSession) -> list[dict]:
             if not day_activities:
                 continue
 
-            reason = None
-            for rule in ACTIVE_RULES:
-                reason = rule.evaluate(forecast_day)
-                if reason:
-                    break
-            if not reason:
-                continue
-
+            # Evaluated per activity, not once per day — blanket rules (rain)
+            # fire the same for every activity regardless, but targeted rules
+            # (fog, wind, heat, beach...) only fire for activities carrying
+            # the matching weather_sensitivity tag, so two activities on the
+            # same day can get different verdicts.
             for activity in day_activities:
+                reason = None
+                for rule in ACTIVE_RULES:
+                    reason = rule.evaluate(forecast_day, activity, hourly=hourly_by_date.get(forecast_day["date"]))
+                    if reason:
+                        break
+                if not reason:
+                    continue
+
                 try:
                     # Captured before apply_swap mutates the row, so the
                     # digest email can show what the plan used to be.
                     original_name = activity.name
                     original_location = activity.location
 
-                    alternate = await swap_service.find_indoor_alternative(
-                        activity, trip, exclude_names=list(planned_names)
+                    alternate = await swap_service.find_alternative_activity(
+                        activity, trip, reason, exclude_names=list(planned_names)
                     )
                     await swap_service.apply_swap(db, activity, alternate, reason)
                     planned_names.add(alternate["name"])

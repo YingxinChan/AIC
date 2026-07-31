@@ -11,8 +11,8 @@ from models.activity import Activity
 from models.trip import Trip
 from services import geocoding_service
 from services.auto_swap_service import FORECAST_HORIZON_DAYS
-from services.weather_rules import ACTIVE_RULES
-from services.weather_service import get_weather_prediction
+from services.weather_rules import ACTIVE_RULES, RainRule
+from services.weather_service import get_hourly_weather, get_weather_prediction
 
 MODEL = "claude-haiku-4-5"
 
@@ -36,8 +36,18 @@ ITINERARY_SCHEMA = {
                                 "description": {"type": "string"},
                                 "lat": {"type": "number"},
                                 "lng": {"type": "number"},
+                                "weather_sensitivity": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string",
+                                        "enum": ["view_dependent", "wind_exposed", "strenuous_outdoor", "beach"],
+                                    },
+                                },
                             },
-                            "required": ["name", "type", "time_slot", "location", "description", "lat", "lng"],
+                            "required": [
+                                "name", "type", "time_slot", "location", "description",
+                                "lat", "lng", "weather_sensitivity",
+                            ],
                             "additionalProperties": False,
                         },
                     },
@@ -52,18 +62,31 @@ ITINERARY_SCHEMA = {
 }
 
 
-async def _forecast_rainy_day_numbers(trip: Trip, db: AsyncSession) -> list[int]:
-    """Day numbers (1-indexed) within the forecast horizon that are already
-    known to trigger a weather rule — so generation can plan indoor
-    activities for them directly, instead of planning an outdoor activity
-    the auto-swap job would immediately have to correct. Days beyond the
-    ~16-day forecast horizon return nothing here; those are exactly what the
-    auto-swap job still handles once they enter range (or if the forecast
-    changes after generation)."""
+async def _trip_rule_day_numbers(trip: Trip, db: AsyncSession) -> tuple[dict[str, list[int]], dict[int, str]]:
+    """For each ACTIVE_RULES rule, which day numbers (1-indexed) within the
+    forecast horizon already trigger it — so generation can steer away from
+    planning a mismatched activity for those days directly, instead of
+    relying entirely on the auto-swap job to fix it afterward. Days beyond
+    the ~16-day forecast horizon return nothing here; those are exactly what
+    the auto-swap job still handles once they enter range (or if the
+    forecast changes after generation).
+
+    Also returns a day_number -> human-readable rainy-hour-window mapping
+    (e.g. "between 08:00 and 11:00"), populated only for heavy-rain (not
+    thunderstorm) days where hourly data was available to identify a
+    specific window. Days in this second dict get a targeted sentence
+    telling Claude which hours to avoid instead of the blanket "plan only
+    indoor activities" wording — letting it schedule around the rain
+    directly when it first builds the itinerary, the same hourly data the
+    swap job separately uses later to decide which already-scheduled
+    activities are actually affected. Thunderstorm-triggered days, and
+    heavy-rain days where hourly data wasn't available, are absent from
+    this dict and keep the existing blanket wording via rule_day_numbers.
+    """
     if trip.lat == 0.0 and trip.lng == 0.0:
         coords = geocoding_service.geocode(trip.destination)
         if not coords:
-            return []
+            return {}, {}
         trip.lat, trip.lng = coords
         await db.commit()
 
@@ -72,22 +95,47 @@ async def _forecast_rainy_day_numbers(trip: Trip, db: AsyncSession) -> list[int]
     window_start = max(today, trip.start_date)
     window_end = min(trip.end_date, horizon)
     if window_start > window_end:
-        return []
+        return {}, {}
 
     try:
         forecast_days = get_weather_prediction(
             trip.lat, trip.lng, window_start.isoformat(), window_end.isoformat()
         )
     except Exception:
-        return []  # a weather fetch failure shouldn't block itinerary generation
+        return {}, {}  # a weather fetch failure shouldn't block itinerary generation
 
-    rainy_day_numbers = []
+    try:
+        hourly_days = get_hourly_weather(
+            trip.lat, trip.lng, window_start.isoformat(), window_end.isoformat()
+        )
+    except Exception:
+        hourly_days = []  # no hourly data -> rain days fall back to the blanket sentence
+
+    hourly_by_date: dict[str, list[dict]] = {}
+    for entry in hourly_days:
+        hourly_by_date.setdefault(entry["time"][:10], []).append(entry)
+
+    rain_rule = RainRule()
+    rule_day_numbers: dict[str, list[int]] = {rule.id: [] for rule in ACTIVE_RULES}
+    rain_windows: dict[int, str] = {}
     for forecast_day in forecast_days:
-        if any(rule.evaluate(forecast_day) for rule in ACTIVE_RULES):
-            day_number = (date.fromisoformat(forecast_day["date"]) - trip.start_date).days + 1
-            rainy_day_numbers.append(day_number)
+        day_number = (date.fromisoformat(forecast_day["date"]) - trip.start_date).days + 1
+        for rule in ACTIVE_RULES:
+            if rule.day_triggers(forecast_day):
+                rule_day_numbers[rule.id].append(day_number)
 
-    return sorted(rainy_day_numbers)
+        is_heavy_rain_day = (
+            forecast_day.get("heavy_rain_warning")
+            and forecast_day.get("weather_code") not in RainRule.THUNDERSTORM_CODES
+        )
+        if is_heavy_rain_day:
+            hourly_day = hourly_by_date.get(forecast_day["date"])
+            if hourly_day:
+                window = rain_rule.describe_rainy_window(hourly_day)
+                if window:
+                    rain_windows[day_number] = window
+
+    return {rid: sorted(days) for rid, days in rule_day_numbers.items()}, rain_windows
 
 
 async def get_itinerary(trip_id: int, db: AsyncSession, user_id: int) -> dict:
@@ -146,15 +194,55 @@ async def generate_itinerary(trip_id: int, db: AsyncSession, user_id: int) -> di
 
     content = f'Plan a {num_days}-day {destination} itinerary for the trip "{trip.name}".'
 
-    rainy_day_numbers = await _forecast_rainy_day_numbers(trip, db)
-    if rainy_day_numbers:
-        day_list = ", ".join(str(n) for n in rainy_day_numbers)
-        day_word = "day" if len(rainy_day_numbers) == 1 else "days"
-        content += (
-            f' Heavy rain is already forecast for {day_word} {day_list} of this trip — '
-            f'plan only indoor activities for {"that day" if len(rainy_day_numbers) == 1 else "those days"}, '
-            f'not outdoor ones.'
-        )
+    rule_day_numbers, rain_windows = await _trip_rule_day_numbers(trip, db)
+    for rule in ACTIVE_RULES:
+        day_numbers = rule_day_numbers.get(rule.id, [])
+        if not day_numbers:
+            continue
+
+        if rule.id == "rain":
+            # Rain specifically (not just "any blanket rule" — rain_windows
+            # only ever holds rain's hourly windows, so this must key off
+            # the rule's actual identity, not the incidental fact that its
+            # avoid_phrase happens to be None. Coupling this to
+            # `avoid_phrase is None` instead would silently misattribute a
+            # "rain expected roughly <window>" sentence to a future
+            # non-rain blanket rule whose day numbers happened to collide
+            # with rain's, since rain_windows knows nothing about any other
+            # rule).
+            #
+            # Days with a known specific rainy-hour window (rain_windows)
+            # get their own sentence so Claude can schedule around it
+            # directly; the rest (thunderstorm days, or heavy-rain days
+            # where hourly data wasn't available) keep the original
+            # whole-day wording, unchanged from before targeted rules or
+            # hourly refinement existed.
+            windowed_days = [d for d in day_numbers if d in rain_windows]
+            blanket_days = [d for d in day_numbers if d not in rain_windows]
+
+            for day_number in windowed_days:
+                content += (
+                    f' Day {day_number} has rain expected roughly {rain_windows[day_number]} — '
+                    f'schedule outdoor activities outside that window where possible, or plan '
+                    f'something indoor for it.'
+                )
+
+            if blanket_days:
+                day_list = ", ".join(str(n) for n in blanket_days)
+                day_word = "day" if len(blanket_days) == 1 else "days"
+                that_day = "that day" if len(blanket_days) == 1 else "those days"
+                content += (
+                    f' Heavy rain is already forecast for {day_word} {day_list} of this trip — '
+                    f'plan only indoor activities for {that_day}, not outdoor ones.'
+                )
+        else:
+            day_list = ", ".join(str(n) for n in day_numbers)
+            day_word = "day" if len(day_numbers) == 1 else "days"
+            that_day = "that day" if len(day_numbers) == 1 else "those days"
+            content += (
+                f' {day_word.capitalize()} {day_list} may not be suitable for '
+                f'{rule.avoid_phrase} — avoid planning those for {that_day} if possible.'
+            )
 
     if trip.arrival_time:
         content += (
@@ -194,7 +282,25 @@ async def generate_itinerary(trip_id: int, db: AsyncSession, user_id: int) -> di
                 f"For every activity, also give its real approximate latitude and longitude "
                 f"(as decimal degrees, e.g. lat 51.5194, lng -0.1270 for the British Museum) "
                 f"— use your knowledge of the actual location, not a placeholder or the "
-                f"city's center point."
+                f"city's center point. "
+                f"When weather conditions vary across the trip's days, prefer scheduling "
+                f"weather-sensitive activities (beach, viewpoints, hikes) on the best-suited "
+                f"days rather than a fixed order — rearrange which activities fall on which "
+                f"day if that produces a better overall fit. "
+                f"For every activity, also tag weather_sensitivity as a list — empty if none "
+                f"apply. Use \"view_dependent\" only when the activity's main point is a view "
+                f"or vista that bad visibility would ruin (e.g. a mountain viewpoint, a "
+                f"rooftop observation deck) — not just any outdoor activity. Use "
+                f"\"wind_exposed\" only for activities on open water or suspended/exposed "
+                f"transport (e.g. a boat cruise, a cable car, a hot air balloon) — not a "
+                f"regular outdoor walk. Use \"strenuous_outdoor\" only for genuinely "
+                f"physically demanding activities done mostly outdoors (e.g. a multi-hour "
+                f"hiking trail, a steep uphill walking tour) — not a short stroll. Use "
+                f"\"beach\" only for literal beach or open-water swimming activities. An "
+                f"activity can have multiple tags (a coastal hike could be both "
+                f"\"strenuous_outdoor\" and \"view_dependent\") or none — a museum visit, an "
+                f"indoor market, or a flat city walking tour touching none of these should "
+                f"get an empty list, not a defensive guess."
             ),
             messages=[{"role": "user", "content": content}],
             output_config={"format": {"type": "json_schema", "schema": ITINERARY_SCHEMA}},
@@ -225,7 +331,12 @@ async def generate_itinerary(trip_id: int, db: AsyncSession, user_id: int) -> di
     for offset, day in enumerate(data["days"][:num_days]):
         day_date = trip.start_date + timedelta(days=offset)
         for activity in day["activities"]:
-            db.add(Activity(trip_id=trip_id, day_date=day_date, **activity))
+            weather_sensitivity = activity.pop("weather_sensitivity", [])
+            db.add(Activity(
+                trip_id=trip_id, day_date=day_date,
+                weather_sensitivity=",".join(weather_sensitivity),
+                **activity,
+            ))
     await db.commit()
 
     return await get_itinerary(trip_id, db, user_id)

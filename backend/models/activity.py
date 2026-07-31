@@ -20,3 +20,10 @@ class Activity(Base):
     alternate_name: Mapped[str] = mapped_column(String(255), default="", server_default="")
     alternate_location: Mapped[str] = mapped_column(String(255), default="", server_default="")
     swap_reason: Mapped[str] = mapped_column(String(255), default="", server_default="")
+
+    # Comma-separated subset of {"view_dependent", "wind_exposed",
+    # "strenuous_outdoor", "beach"} — tagged by Claude at generation time,
+    # read by services/weather_rules.py's targeted rules to decide which
+    # activities a given weather condition actually affects. Empty string
+    # (not one of the tags) means "not specifically weather-sensitive".
+    weather_sensitivity: Mapped[str] = mapped_column(String(255), default="", server_default="")
