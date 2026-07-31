@@ -47,7 +47,35 @@ def test_prediction_beyond_horizon_falls_back_to_climatology(
     assert all(day["weather_code"] is None for day in data)
     assert all(day["condition"] == "Unknown" for day in data)
 
+def test_prediction_beyond_horizon_falls_back_to_climatology(
+    auth_client,
+):
+    far_start = (
+        date.today()
+        + timedelta(days=FORECAST_HORIZON_DAYS + 5)
+    ).isoformat()
 
+    far_end = (
+        date.today()
+        + timedelta(days=FORECAST_HORIZON_DAYS + 6)
+    ).isoformat()
+
+    response = auth_client.get(
+        "/api/weather/prediction"
+        f"?lat=51.5074"
+        f"&lon=-0.1278"
+        f"&start_date={far_start}"
+        f"&end_date={far_end}"
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert len(data) == 2
+    assert all(day["is_climatology"] is True for day in data)
+    assert all("weather_code" in day for day in data)
+    
 def test_prediction_requires_auth(client):
     response = client.get(
         "/api/weather/prediction?lat=51.5074&lon=-0.1278"
