@@ -5,7 +5,7 @@ import {
   Briefcase, Thermometer, Sparkles, Sun, Moon, Cloud,
   CloudSun, CloudMoon, CloudFog, CloudRain, CloudSnow,
   CloudLightning, AlertTriangle, Waves, Umbrella, Snowflake,
-  Pencil, Lock, Trash2, Plus
+  Pencil, Lock, Trash2, Plus, Eye, Wind, Mountain
 } from 'lucide-react'
 import Placeholder from '../../components/Placeholder'
 import MapView from '../../components/MapView'
@@ -25,6 +25,22 @@ import { getPendingReview, clearPendingReview } from '../../lib/pendingReview'
 
 function airlineCode(flightNumber) {
   return (flightNumber || '').split(' ')[0]
+}
+
+// weather_sensitivity is stored as a comma-separated string (see
+// backend/models/activity.py) and otherwise never surfaced in the UI —
+// these badges are the only visible sign an activity is specifically
+// vulnerable to fog/wind/heat-or-cold/beach conditions, beyond the
+// blanket indoor/outdoor type.
+const WEATHER_TAG_STYLES = {
+  view_dependent: { label: 'Scenic View', icon: Eye, className: 'bg-sky-100 text-sky-800' },
+  wind_exposed: { label: 'Wind Exposed', icon: Wind, className: 'bg-teal-100 text-teal-800' },
+  strenuous_outdoor: { label: 'Strenuous', icon: Mountain, className: 'bg-orange-100 text-orange-800' },
+  beach: { label: 'Beach', icon: Waves, className: 'bg-cyan-100 text-cyan-800' },
+}
+
+function weatherTags(weatherSensitivity) {
+  return (weatherSensitivity || '').split(',').map(t => t.trim()).filter(t => WEATHER_TAG_STYLES[t])
 }
 
 const formatHour = (timeStr) => {
@@ -994,6 +1010,14 @@ export default function ItineraryPage() {
                             <Lock size={12} /> Fixed
                           </span>
                         )}
+                        {weatherTags(activity.weather_sensitivity).map((tag) => {
+                          const { label, icon: Icon, className } = WEATHER_TAG_STYLES[tag]
+                          return (
+                            <span key={tag} className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${className}`}>
+                              <Icon size={12} /> {label}
+                            </span>
+                          )
+                        })}
                         <div className="ml-auto flex items-center gap-2 shrink-0">
                           <button
                             type="button"
