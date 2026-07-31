@@ -370,6 +370,7 @@ test('editing dates in-place re-fetches weather for the new range instead of lea
     date: '2026-08-05', temp_max: 22, temp_min: 14, condition: 'Clear',
     heavy_rain_probability: 0, heavy_rain_warning: false, flood_score: 0, flood_risk: 'Low',
     beach_safety_score: 90, beach_safety_level: 'Good', snow_probability: 0,
+    wind_speed: 5, wind_level: 'Calm', uv_index: 2, uv_level: 'Low', visibility_m: 10000,
   }])
   getHourlyForecast.mockResolvedValue([])
   getItinerary.mockResolvedValue({ status: 'not_generated' })

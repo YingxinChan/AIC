@@ -5,7 +5,7 @@ import {
   Briefcase, Thermometer, Sparkles, Sun, Moon, Cloud,
   CloudSun, CloudMoon, CloudFog, CloudRain, CloudSnow,
   CloudLightning, AlertTriangle, Waves, Umbrella, Snowflake,
-  SunDim, Wind, Eye, Sunrise, Sunset, Palmtree
+  SunDim, Wind, Eye, Sunrise, Sunset, Palmtree, Clock
 } from 'lucide-react'
 import Placeholder from '../../components/Placeholder'
 import MapView from '../../components/MapView'
@@ -636,6 +636,10 @@ export default function ItineraryPage() {
         {weatherStatus === 'loaded' && forecastDay && (
             <div className="border border-gray-100 p-4 rounded-lg bg-gray-50/50 space-y-4">
 
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-800">
+                    <Thermometer size={16} className="text-indigo-600" /> Weather
+                </h3>
+
                 {/* Daily Summary Header */}
                 <div className="flex justify-between items-center gap-4 flex-wrap">
                     {/* Fixed width so the condition text's length (e.g. "Overcast" vs
@@ -665,7 +669,7 @@ export default function ItineraryPage() {
                             )}
                         </div>
                     </div>
-                    {/* Sits in the middle space, away from the Wind/UV/Visibility group */}
+                    {/* Sits in the remaining space next to the temp/condition block */}
                     <div className="flex-1 flex items-center justify-center min-w-[160px]">
                         <div className="bg-white p-3 rounded-lg border flex items-center gap-4 min-w-[180px]">
                             {forecastDay.sunrise && forecastDay.sunset ? (
@@ -696,41 +700,28 @@ export default function ItineraryPage() {
                             )}
                         </div>
                     </div>
-                    <div className="flex items-center gap-3 flex-wrap">
-                        <div className={`p-3 rounded-lg border text-center min-w-[130px] ${CARD_IDENTITY_BG.wind}`}>
-                            <Wind size={22} className="text-indigo-400 mx-auto mb-1" />
-                            <div className="text-xs text-gray-500 uppercase tracking-wide">Wind</div>
-                            <div className="font-bold text-lg my-1">{Math.round(forecastDay.wind_speed)} km/h</div>
-                            <span className={`text-xs px-2 rounded-full ${levelColorClass(forecastDay.wind_level)}`}>{forecastDay.wind_level}</span>
-                        </div>
-                        <div className={`p-3 rounded-lg border text-center min-w-[130px] ${CARD_IDENTITY_BG.uv}`}>
-                            <SunDim size={22} className="text-indigo-400 mx-auto mb-1" />
-                            <div className="text-xs text-gray-500 uppercase tracking-wide">UV Index</div>
-                            <div className="font-bold text-lg my-1">{Math.round(forecastDay.uv_index)}</div>
-                            <span className={`text-xs px-2 rounded-full ${levelColorClass(forecastDay.uv_level)}`}>{forecastDay.uv_level}</span>
-                        </div>
-                        <div className={`p-3 rounded-lg border text-center min-w-[130px] ${CARD_IDENTITY_BG.visibility}`}>
-                            <Eye size={22} className="text-indigo-400 mx-auto mb-1" />
-                            <div className="text-xs text-gray-500 uppercase tracking-wide">Visibility</div>
-                            <div className="font-bold text-lg my-1">{(forecastDay.visibility_m / 1000).toFixed(1)} km</div>
-                            <span className={`text-xs px-2 rounded-full ${levelColorClass(visibilityLevel(forecastDay.visibility_m))}`}>{visibilityLevel(forecastDay.visibility_m)}</span>
-                        </div>
-                    </div>
                 </div>
 
-                <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-800 pt-2 border-t">
-                    <Thermometer size={16} className="text-indigo-600" /> Weather
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-800 pt-5 border-t">
+                    <AlertTriangle size={16} className="text-indigo-600" /> Conditions & Risks
                 </h3>
 
-                {/* Risk Cards Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {/* Risk Cards + Wind/UV/Visibility — a horizontally scrollable
+                    strip like the hourly forecast below, rather than a grid,
+                    since 7 cards don't fit one row on most screens. Each
+                    card's basis is 1/6 of the row (minus its share of the
+                    gaps) so exactly 6 show before scrolling reveals the 7th. */}
+                <div className="flex overflow-x-auto gap-3 pb-2 cursor-grab active:cursor-grabbing">
                   {[
                     { l: 'Heavy Rain', v: forecastDay.heavy_rain_probability + '%', s: forecastDay.heavy_rain_warning ? 'High' : 'Low', i: Umbrella, bg: CARD_IDENTITY_BG.heavyRain },
                     { l: 'Flood', v: Math.round(forecastDay.flood_score) + '%', s: forecastDay.flood_risk, i: Waves, bg: CARD_IDENTITY_BG.flood },
                     { l: 'Beach Safety', v: Math.round(forecastDay.beach_safety_score) + '%', s: forecastDay.beach_safety_level, i: Palmtree, bg: CARD_IDENTITY_BG.beachSafety },
-                    { l: 'Snow', v: forecastDay.snow_probability + '%', s: snowLevel(forecastDay.snow_probability), i: Snowflake, bg: CARD_IDENTITY_BG.snow }
+                    { l: 'Snow', v: forecastDay.snow_probability + '%', s: snowLevel(forecastDay.snow_probability), i: Snowflake, bg: CARD_IDENTITY_BG.snow },
+                    { l: 'Wind', v: Math.round(forecastDay.wind_speed) + ' km/h', s: forecastDay.wind_level, i: Wind, bg: CARD_IDENTITY_BG.wind },
+                    { l: 'UV Index', v: Math.round(forecastDay.uv_index), s: forecastDay.uv_level, i: SunDim, bg: CARD_IDENTITY_BG.uv },
+                    { l: 'Visibility', v: (forecastDay.visibility_m / 1000).toFixed(1) + ' km', s: visibilityLevel(forecastDay.visibility_m), i: Eye, bg: CARD_IDENTITY_BG.visibility },
                   ].map((c, i) => (
-                      <div key={i} className={`p-3 rounded border text-center ${c.bg}`}>
+                      <div key={i} className={`shrink-0 basis-[calc((100%-3.75rem)/6)] p-3 rounded border text-center ${c.bg}`}>
                           <div className="text-xs text-gray-500 uppercase flex items-center justify-center gap-2"><c.i size={22} className="text-indigo-400" /> {c.l}</div>
                           <div className="font-bold my-1 text-lg">{c.v}</div>
                           <span className={`text-xs px-2 rounded-full ${levelColorClass(c.s)}`}>
@@ -740,8 +731,13 @@ export default function ItineraryPage() {
                   ))}
                 </div>
 
-                {/* Hourly Forecast */}
-                <div className="flex overflow-x-auto gap-4 pt-2 pb-2 cursor-grab active:cursor-grabbing">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-800 pt-5 border-t">
+                    <Clock size={16} className="text-indigo-600" /> Hourly Forecast
+                </h3>
+
+                {/* Hourly Forecast — pt-1 keeps the "Now" card's ring from
+                    getting clipped by this container's own overflow edge. */}
+                <div className="flex overflow-x-auto gap-4 pt-1 pb-2 cursor-grab active:cursor-grabbing">
                   {hourlyForecast
                       .filter(h => h.time.startsWith(forecastDay.date))
                       .map((h, i) => {
