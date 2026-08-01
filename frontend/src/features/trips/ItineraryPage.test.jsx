@@ -61,7 +61,6 @@ function renderAt(tripId) {
   )
 }
 
-<<<<<<< HEAD
 beforeEach(() => {
   updateTrip.mockReset()
   generateItinerary.mockReset()
@@ -70,8 +69,6 @@ beforeEach(() => {
   getItinerary.mockResolvedValue({ status: 'not_generated' })
 })
 
-=======
->>>>>>> 8e9f5b3 (Add hotel marker and custom map pins)
 test('renders itinerary sections', async () => {
   renderAt(1)
 
