@@ -23,7 +23,7 @@ CITIES = {
     "Barcelona": (41.3851, 2.1734),
     "Madrid": (40.4168, -3.7038),
     "Istanbul": (41.0082, 28.9784),
-    "Berlin": (52.5200, 13.4050),
+    "Berl in": (52.5200, 13.4050),
     "Munich": (48.1351, 11.5820),
     "Prague": (50.0755, 14.4378),
     "Edinburgh": (55.9533, -3.1883),
@@ -67,7 +67,7 @@ def fetch_city(city: str, lat: float, lon: float, start_year: int=2015, end_year
             f"&start_date={start}"
             f"&end_date={end}"
             f"&hourly={hourly}"
-            f"&timezone=GMT"
+            f"&timezone=auto"
         )
 
         response = requests.get(url)

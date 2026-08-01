@@ -119,7 +119,7 @@ def train(processed_path: Path, model_output_path: Path):
     # print(f"Validation F1: {best_f1:.3f}")
 
     # Fixed threshold selected after empirical threshold sweep
-    # (approximately optimal validation F1 ≈ 0.502)
+    # (approximately optimal validation F1 ≈ 0.498)
     best_threshold = 0.50
 
     # Save best threshold
