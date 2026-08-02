@@ -29,3 +29,8 @@ class Trip(Base):
 
     original_plan: Mapped[str] = mapped_column(String(2000), default="", server_default="")
     hotel_address: Mapped[str] = mapped_column(String(500), default="", server_default="")
+    # Nullable (unlike the trip's own lat/lng above) — a hotel picked from the
+    # Nominatim dropdown has exact coordinates, but a freehand-typed address
+    # or a trip saved before this field existed does not.
+    hotel_lat: Mapped[float | None] = mapped_column(Float, nullable=True)
+    hotel_lng: Mapped[float | None] = mapped_column(Float, nullable=True)

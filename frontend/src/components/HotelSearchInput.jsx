@@ -73,7 +73,10 @@ export default function HotelSearchInput({ id, value, onChange, cityContext, pla
 
   const handleSelect = (result) => {
     lastSelectedRef.current = result.label
-    onChange(result.label)
+    // Second arg carries the exact coordinates Nominatim returned for this
+    // specific result — omitted (undefined) by handleChange above for
+    // freehand typing, since there's no coordinate for arbitrary text.
+    onChange(result.label, { lat: result.lat, lon: result.lon })
     setIsOpen(false)
   }
 

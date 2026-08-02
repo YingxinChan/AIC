@@ -438,9 +438,52 @@ test('confirming the hotel save calls updateTrip and the page reflects the new v
   fireEvent.change(screen.getByPlaceholderText(/ritz paris/i), { target: { value: 'Hotel Plaza Athenee' } })
   fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
 
-  await waitFor(() => expect(updateTrip).toHaveBeenCalledWith('1', { hotel_address: 'Hotel Plaza Athenee' }))
+  // Freehand typing (no dropdown pick) has no coordinates to save.
+  await waitFor(() => expect(updateTrip).toHaveBeenCalledWith('1', {
+    hotel_address: 'Hotel Plaza Athenee', hotel_lat: null, hotel_lng: null,
+  }))
   expect(await screen.findByText('Hotel Plaza Athenee')).toBeInTheDocument()
   expect(screen.queryByRole('heading', { name: /add hotel/i })).not.toBeInTheDocument()
+})
+
+test('picking a hotel from the search dropdown saves its exact coordinates, not just the address', async () => {
+  getTrip.mockResolvedValue({ destination: 'Paris', hotel_address: '' })
+  updateTrip.mockResolvedValue({ destination: 'Paris', hotel_address: 'Hotel Plaza Athenee, Paris' })
+  searchPlaces.mockResolvedValueOnce([
+    { label: 'Hotel Plaza Athenee, Paris', lat: 48.8661, lon: 2.3033, isLodging: true },
+  ])
+  renderAt(1)
+
+  fireEvent.click(await screen.findByRole('button', { name: /add hotel/i }))
+  fireEvent.change(screen.getByPlaceholderText(/ritz paris/i), { target: { value: 'Hotel Plaza Athenee' } })
+
+  fireEvent.click(await screen.findByRole('button', { name: /hotel plaza athenee, paris/i }))
+  fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
+
+  await waitFor(() => expect(updateTrip).toHaveBeenCalledWith('1', {
+    hotel_address: 'Hotel Plaza Athenee, Paris', hotel_lat: 48.8661, hotel_lng: 2.3033,
+  }))
+})
+
+test('editing a hotel address after picking it from the dropdown drops the now-stale coordinates', async () => {
+  getTrip.mockResolvedValue({ destination: 'Paris', hotel_address: '' })
+  updateTrip.mockResolvedValue({ destination: 'Paris', hotel_address: 'Hotel Plaza Athenee X' })
+  searchPlaces.mockResolvedValueOnce([
+    { label: 'Hotel Plaza Athenee, Paris', lat: 48.8661, lon: 2.3033, isLodging: true },
+  ])
+  renderAt(1)
+
+  fireEvent.click(await screen.findByRole('button', { name: /add hotel/i }))
+  fireEvent.change(screen.getByPlaceholderText(/ritz paris/i), { target: { value: 'Hotel Plaza Athenee' } })
+  fireEvent.click(await screen.findByRole('button', { name: /hotel plaza athenee, paris/i }))
+
+  // Now edit the picked text by hand — no longer guaranteed to match those coordinates.
+  fireEvent.change(screen.getByPlaceholderText(/ritz paris/i), { target: { value: 'Hotel Plaza Athenee X' } })
+  fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
+
+  await waitFor(() => expect(updateTrip).toHaveBeenCalledWith('1', {
+    hotel_address: 'Hotel Plaza Athenee X', hotel_lat: null, hotel_lng: null,
+  }))
 })
 
 test('saving the hotel does not regenerate immediately — it opens the review prompt instead', async () => {

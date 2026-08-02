@@ -125,6 +125,12 @@ export default function ItineraryPage() {
 
   const [hotelModalOpen, setHotelModalOpen] = useState(false)
   const [hotelDraft, setHotelDraft] = useState('')
+  // {lat, lon} from an explicit dropdown pick, or null — set alongside
+  // hotelDraft by handleHotelChange below, and dropped back to null the
+  // moment the user types (HotelSearchInput's onChange omits the second
+  // argument for freehand keystrokes), so a stale selection's coordinates
+  // never get saved against a since-edited address string.
+  const [hotelDraftCoords, setHotelDraftCoords] = useState(null)
   const [datesModalOpen, setDatesModalOpen] = useState(false)
   const [startDraft, setStartDraft] = useState('')
   const [endDraft, setEndDraft] = useState('')
@@ -283,6 +289,16 @@ export default function ItineraryPage() {
       setHotelLocation(null)
       return
     }
+    // Prefer the coordinates saved at selection time (see handleSaveHotel) —
+    // re-geocoding the address string here isn't guaranteed to resolve back
+    // to the exact building the user picked (chain hotels, reused street
+    // names, Nominatim ranking differently on a second query). Only fall
+    // back to re-geocoding for trips saved before this field existed, or a
+    // freehand-typed address that was never geocoded at selection time.
+    if (trip.hotel_lat != null && trip.hotel_lng != null) {
+      setHotelLocation([trip.hotel_lat, trip.hotel_lng])
+      return
+    }
     let cancelled = false
     geocodeAddress(trip.hotel_address).then(coords => {
       if (!cancelled) {
@@ -292,7 +308,7 @@ export default function ItineraryPage() {
     return () => {
       cancelled = true
     }
-  }, [trip?.hotel_address])
+  }, [trip?.hotel_address, trip?.hotel_lat, trip?.hotel_lng])
 
   // --- SECTION 4: ACTIONS ---
   const handleGenerate = async () => {
@@ -321,7 +337,24 @@ export default function ItineraryPage() {
   // reopening this same prompt on return.
   const openHotelModal = () => {
     setHotelDraft(trip.hotel_address || '')
+    // Seed with the trip's existing coordinates (if any) so re-opening the
+    // modal and saving without touching the input doesn't wipe out a
+    // previously-good selection — the first real keystroke (handleChange,
+    // via handleHotelChange below) still drops these back to null.
+    setHotelDraftCoords(
+      trip.hotel_lat != null && trip.hotel_lng != null
+        ? { lat: trip.hotel_lat, lon: trip.hotel_lng }
+        : null
+    )
     setHotelModalOpen(true)
+  }
+
+  // HotelSearchInput's onChange(value, coords?) — coords is only present on
+  // an explicit dropdown pick; every other call (freehand typing) omits it,
+  // which correctly clears any stale coordinates from a prior selection.
+  const handleHotelChange = (value, coords) => {
+    setHotelDraft(value)
+    setHotelDraftCoords(coords || null)
   }
 
   const openDatesModal = () => {
@@ -347,7 +380,11 @@ export default function ItineraryPage() {
   }
 
   const handleSaveHotel = () => saveTripDetails(
-    { hotel_address: hotelDraft },
+    {
+      hotel_address: hotelDraft,
+      hotel_lat: hotelDraftCoords?.lat ?? null,
+      hotel_lng: hotelDraftCoords?.lon ?? null,
+    },
     { closeModal: () => setHotelModalOpen(false), source: 'hotel' }
   )
 
@@ -594,7 +631,7 @@ export default function ItineraryPage() {
         <HotelSearchInput
           id="hotel-edit"
           value={hotelDraft}
-          onChange={setHotelDraft}
+          onChange={handleHotelChange}
           cityContext={trip?.destination}
           placeholder="e.g. The Ritz Paris"
         />
