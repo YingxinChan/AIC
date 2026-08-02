@@ -20,6 +20,7 @@ class ForecastDayOut(BaseModel):
     wind_level: str
     
     visibility_km: float
+    visibility_m: float
 
     sunrise: str
     sunset: str

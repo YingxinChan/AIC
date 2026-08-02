@@ -115,13 +115,19 @@ test('renders an already-generated itinerary on load without needing to click ge
 })
 
 test('shows a day tab per generated day, and clicking a different day switches the shown activities', async () => {
-  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-02' })
+  // Dates fixed safely in the future (not just "next week") — the default
+  // selected day is "today if it's in this range, else start_date" (see
+  // ItineraryPage's date-clamping effect), so a near-term range risks the
+  // real wall-clock date silently drifting into it as this project goes on,
+  // flipping which day/activity is selected by default out from under this
+  // test with no code change involved.
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2099-01-01', end_date: '2099-01-02' })
   getItinerary.mockResolvedValue({
     days: [
-      { date: '2026-08-01', activities: [
+      { date: '2099-01-01', activities: [
         { id: 1, name: 'British Museum', type: 'indoor', time_slot: '09:00 - 11:00', location: 'Great Russell St', description: 'x', is_swapped: false },
       ] },
-      { date: '2026-08-02', activities: [
+      { date: '2099-01-02', activities: [
         { id: 2, name: 'Hyde Park', type: 'outdoor', time_slot: '10:00 - 12:00', location: 'West London', description: 'Walk.', is_swapped: false },
       ] },
     ],
@@ -131,7 +137,7 @@ test('shows a day tab per generated day, and clicking a different day switches t
   await screen.findByText('British Museum')
   expect(screen.queryByText('Hyde Park')).not.toBeInTheDocument()
 
-  fireEvent.click(screen.getByRole('button', { name: /day 2.*2026-08-02/i }))
+  fireEvent.click(screen.getByRole('button', { name: /day 2.*2099-01-02/i }))
 
   expect(await screen.findByText('Hyde Park')).toBeInTheDocument()
   expect(screen.queryByText('British Museum')).not.toBeInTheDocument()
@@ -148,13 +154,16 @@ test('shows day tabs from the trip dates even before an itinerary is generated',
 })
 
 test('day tabs render and remain clickable even when weather fails to load', async () => {
-  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-02' })
+  // See the dates comment on the "shows a day tab per generated day" test
+  // above — fixed safely in the future so the default-selected day/activity
+  // can't silently flip as real time passes.
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2099-01-01', end_date: '2099-01-02' })
   getItinerary.mockResolvedValue({
     days: [
-      { date: '2026-08-01', activities: [
+      { date: '2099-01-01', activities: [
         { id: 1, name: 'British Museum', type: 'indoor', time_slot: '09:00 - 11:00', location: 'Great Russell St', description: 'x', is_swapped: false },
       ] },
-      { date: '2026-08-02', activities: [
+      { date: '2099-01-02', activities: [
         { id: 2, name: 'Hyde Park', type: 'outdoor', time_slot: '10:00 - 12:00', location: 'West London', description: 'Walk.', is_swapped: false },
       ] },
     ],
@@ -165,21 +174,22 @@ test('day tabs render and remain clickable even when weather fails to load', asy
   expect(await screen.findByText(/weather unavailable for this destination/i)).toBeInTheDocument()
   expect(await screen.findByText('British Museum')).toBeInTheDocument()
 
-  fireEvent.click(screen.getByRole('button', { name: /day 2.*2026-08-02/i }))
+  fireEvent.click(screen.getByRole('button', { name: /day 2.*2099-01-02/i }))
   expect(await screen.findByText('Hyde Park')).toBeInTheDocument()
 })
 
 test('shows a per-day placeholder when the itinerary has no activities for the selected day', async () => {
-  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-02' })
+  // See the dates comment above — fixed safely in the future.
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2099-01-01', end_date: '2099-01-02' })
   getItinerary.mockResolvedValue({
-    days: [{ date: '2026-08-01', activities: [
+    days: [{ date: '2099-01-01', activities: [
       { id: 1, name: 'British Museum', type: 'indoor', time_slot: '09:00 - 11:00', location: 'Great Russell St', description: 'x', is_swapped: false },
     ] }],
   })
   renderAt(1)
 
   await screen.findByText('British Museum')
-  fireEvent.click(screen.getByRole('button', { name: /day 2.*2026-08-02/i }))
+  fireEvent.click(screen.getByRole('button', { name: /day 2.*2099-01-02/i }))
 
   expect(await screen.findByText(/no activities generated for this day yet/i)).toBeInTheDocument()
 })
@@ -234,10 +244,14 @@ test('renders the real weather summary and hourly strip once forecast data resol
     uv_index: 9,
     uv_level: 'Very High',
     visibility_m: 500, // -> 'Poor' level, distinct from flood_risk's 'Moderate' and beach_safety_level's 'Good' used elsewhere in this test
+    temperature_level: 'High Heat',
+    temperature_advice: 'Limit intense outdoor activities, especially during midday.',
+    hiking_safety_score: 72,
+    hiking_safety_level: 'Caution',
   }])
   getHourlyForecast.mockResolvedValueOnce([
-    { time: '2026-08-01T09:00', temperature: 15, rain_mm: 0, rain_probability: null, condition: 'Partly Cloudy' },
-    { time: '2026-08-01T14:00', temperature: 20, rain_mm: 2.4, rain_probability: 62, condition: 'Rain' },
+    { time: '2026-08-01T09:00', temperature: 15, feels_like_temp: 13, rain_mm: 0, rain_probability: null, condition: 'Partly Cloudy' },
+    { time: '2026-08-01T14:00', temperature: 20, feels_like_temp: 19, rain_mm: 2.4, rain_probability: 62, condition: 'Rain' },
   ])
   getItinerary.mockResolvedValue({ status: 'not_generated' })
 
@@ -256,9 +270,17 @@ test('renders the real weather summary and hourly strip once forecast data resol
   expect(screen.getByText('0.5 km')).toBeInTheDocument()
   expect(screen.getByText('Poor')).toBeInTheDocument()
 
+  // Extreme Temp shows the level + advice text directly, no %/pill.
+  expect(screen.getByText('High Heat')).toBeInTheDocument()
+  expect(screen.getByText('Limit intense outdoor activities, especially during midday.')).toBeInTheDocument()
+
+  // Hiking Safety uses the standard score/level card like the other risks.
+  expect(screen.getByText('72%')).toBeInTheDocument()
+  expect(screen.getByText('Caution')).toBeInTheDocument()
+
   // Backend doesn't provide sunrise/sunset data yet — should say so honestly
   // instead of crashing or showing blank/undefined.
-  expect(screen.getByText('Not available')).toBeInTheDocument()
+  expect(screen.getByText(/sunrise \/ sunset not available/i)).toBeInTheDocument()
 })
 
 test('hourly strip highlights the current GMT hour with "Now"', async () => {
@@ -306,6 +328,94 @@ test('hourly strip highlights the current GMT hour with "Now"', async () => {
   }
 })
 
+test('inserts dedicated sunrise/sunset cards into the hourly forecast at their sorted position', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  geocodeCity.mockResolvedValueOnce([51.5074, -0.1278])
+  getForecast.mockResolvedValueOnce([{
+    date: '2026-08-01',
+    temp_max: 22,
+    temp_min: 14,
+    condition: 'Clear',
+    heavy_rain_probability: 5,
+    heavy_rain_warning: false,
+    flood_score: 5,
+    flood_risk: 'Low',
+    beach_safety_score: 90,
+    beach_safety_level: 'Excellent',
+    snow_probability: 0,
+    wind_speed: 5,
+    wind_level: 'Calm',
+    uv_index: 3,
+    uv_level: 'Moderate',
+    visibility_m: 15000,
+    sunrise: '06:34 AM',
+    sunset: '07:00 PM',
+  }])
+  getHourlyForecast.mockResolvedValueOnce([
+    { time: '2026-08-01T06:00', temperature: 15, rain_mm: 0, rain_probability: null, condition: 'Clear' },
+    { time: '2026-08-01T19:00', temperature: 21, rain_mm: 0, rain_probability: null, condition: 'Clear' },
+    { time: '2026-08-01T12:00', temperature: 22, rain_mm: 0, rain_probability: null, condition: 'Clear' },
+  ])
+  getItinerary.mockResolvedValue({ status: 'not_generated' })
+
+  renderAt(1)
+
+  // Dedicated cards at the exact sunrise/sunset time (leading zero dropped,
+  // matching formatHour's "6 AM" style), inserted alongside the hour cards.
+  expect(await screen.findByText('6:34 AM')).toBeInTheDocument()
+  expect(screen.getByText('sunrise')).toBeInTheDocument()
+  expect(screen.getByText('7:00 PM')).toBeInTheDocument()
+  expect(screen.getByText('sunset')).toBeInTheDocument()
+
+  // Still shows the normal hour cards unaffected.
+  expect(screen.getByText('6 AM')).toBeInTheDocument()
+  expect(screen.getByText('12 PM')).toBeInTheDocument()
+  expect(screen.getByText('7 PM')).toBeInTheDocument()
+})
+
+test('shows the "feels like" temperature in grey next to the actual temp, for today only', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-08-01T14:30:00Z'))
+
+  try {
+    getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+    geocodeCity.mockResolvedValueOnce([51.5074, -0.1278])
+    getForecast.mockResolvedValueOnce([{
+      date: '2026-08-01',
+      temp_max: 22,
+      temp_min: 14,
+      condition: 'Clear',
+      heavy_rain_probability: 5,
+      heavy_rain_warning: false,
+      flood_score: 5,
+      flood_risk: 'Low',
+      beach_safety_score: 90,
+      beach_safety_level: 'Excellent',
+      snow_probability: 0,
+      wind_speed: 5,
+      wind_level: 'Calm',
+      uv_index: 3,
+      uv_level: 'Moderate',
+      visibility_m: 15000,
+    }])
+    getHourlyForecast.mockResolvedValueOnce([
+      { time: '2026-08-01T14:00', temperature: 20, feels_like_temp: 17, rain_mm: 0, rain_probability: null, condition: 'Clear' },
+    ])
+    getItinerary.mockResolvedValue({ status: 'not_generated' })
+
+    renderAt(1)
+
+    // "20°" appears twice by design — once as the big header number, once on
+    // the hourly strip's "Now" card, since both read the same current-hour
+    // entry. "17°" (feels-like) is unique, since the hourly strip doesn't
+    // show a feels-like value at all.
+    expect(await screen.findAllByText('20°')).toHaveLength(2)
+    expect(screen.getByText('Feels like 17°')).toBeInTheDocument()
+  } finally {
+    vi.useRealTimers()
+  }
+})
+
 test('risk cards use red/yellow/green styling based on severity level', async () => {
   getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
   geocodeCity.mockResolvedValueOnce([51.5074, -0.1278])
@@ -326,6 +436,10 @@ test('risk cards use red/yellow/green styling based on severity level', async ()
     uv_index: 2,
     uv_level: 'Low',
     visibility_m: 500, // -> 'Poor', kept distinct from beach_safety_level's 'Good' used in this test
+    temperature_level: 'Safe',
+    temperature_advice: 'Temperature conditions are comfortable for outdoor activities.',
+    hiking_safety_score: 35,
+    hiking_safety_level: 'Unsafe', // -> red
   }])
   getHourlyForecast.mockResolvedValueOnce([])
   getItinerary.mockResolvedValue({ status: 'not_generated' })
@@ -336,6 +450,7 @@ test('risk cards use red/yellow/green styling based on severity level', async ()
   expect(screen.getByText('Moderate')).toHaveClass('bg-yellow-100')
   expect(screen.getByText('Good')).toHaveClass('bg-green-100')
   expect(screen.getByText('None')).toHaveClass('bg-green-100')
+  expect(screen.getByText('Unsafe')).toHaveClass('bg-red-100')
 })
 
 test('heavy rain "Low" (no warning) renders green, not yellow', async () => {
@@ -687,6 +802,262 @@ test('"No, regenerate now" in the review prompt regenerates the itinerary exactl
 
   await waitFor(() => expect(generateItinerary).toHaveBeenCalledTimes(1))
   expect(screen.queryByRole('heading', { name: /update anything else first/i })).not.toBeInTheDocument()
+})
+
+test('clicking the UV card opens its hourly-trend popup with the sparkline and the daily advice sentence', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  geocodeCity.mockResolvedValueOnce([51.5074, -0.1278])
+  getForecast.mockResolvedValueOnce([{
+    date: '2026-08-01',
+    temp_max: 22,
+    temp_min: 14,
+    condition: 'Clear',
+    heavy_rain_probability: 5,
+    heavy_rain_warning: false,
+    flood_score: 5,
+    flood_risk: 'Low',
+    beach_safety_score: 90,
+    beach_safety_level: 'Excellent',
+    snow_probability: 0,
+    wind_speed: 5,
+    wind_level: 'Calm',
+    uv_index: 8,
+    uv_level: 'Very High',
+    uv_advice: 'High UV. Wear sunscreen and sunglasses until 5:00 PM.',
+    visibility_m: 15000,
+  }])
+  getHourlyForecast.mockResolvedValueOnce([
+    { time: '2026-08-01T06:00', temperature: 15, uv_index: 2, wind_speed: 5, visibility_km: 15, rain_mm: 0, rain_probability: null, condition: 'Clear' },
+    { time: '2026-08-01T12:00', temperature: 20, uv_index: 8, wind_speed: 6, visibility_km: 14, rain_mm: 0, rain_probability: null, condition: 'Clear' },
+  ])
+  getItinerary.mockResolvedValue({ status: 'not_generated' })
+
+  renderAt(1)
+
+  fireEvent.click(await screen.findByRole('button', { name: /uv index/i }))
+
+  expect(screen.getByRole('heading', { name: /uv index.*hourly trend/i })).toBeInTheDocument()
+  expect(screen.getByText('High UV. Wear sunscreen and sunglasses until 5:00 PM.')).toBeInTheDocument()
+  // "6 AM"/"12 PM" are the popup's own canonical-clock-time axis labels
+  // (matched to whichever hourly entries land on those hours) — also appear
+  // on the underlying hourly strip's own per-hour cards, hence getAllByText.
+  expect(screen.getAllByText('6 AM').length).toBeGreaterThan(0)
+  expect(screen.getAllByText('12 PM').length).toBeGreaterThan(0)
+
+  // UV uses the WHO severity bands as y-axis labels (Low/Moderate/High/Very
+  // High/Extreme), not bare numbers — and always shows the full scale up to
+  // Extreme, not just whatever the day's actual max happens to be. "Low" and
+  // "Very High" also appear as risk-card level badges elsewhere on the page
+  // (Flood/Heavy Rain and the UV card itself), hence getAllByText.
+  expect(screen.getAllByText('Low').length).toBeGreaterThan(0)
+  expect(screen.getByText('Moderate')).toBeInTheDocument()
+  expect(screen.getByText('High')).toBeInTheDocument()
+  expect(screen.getAllByText('Very High').length).toBeGreaterThan(0)
+  expect(screen.getByText('Extreme')).toBeInTheDocument()
+
+  // The line uses a severity-graded gradient (url(#...)), not one flat
+  // color like Wind/Visibility — and its gradient stops include the actual
+  // severity colors (green for the 6 AM=2/Low reading, red for 12 PM=8/Very
+  // High) so the curve itself visually shows the risk level, not just the
+  // axis.
+  const linePath = document.querySelector('svg.cursor-crosshair path[stroke^="url(#"]')
+  expect(linePath).toBeInTheDocument()
+  expect(document.querySelector('stop[stop-color="#22c55e"]')).toBeInTheDocument()
+  expect(document.querySelector('stop[stop-color="#ef4444"]')).toBeInTheDocument()
+})
+
+test('clicking the Wind card opens its popup without an advice sentence, since the backend has none for wind', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  geocodeCity.mockResolvedValueOnce([51.5074, -0.1278])
+  getForecast.mockResolvedValueOnce([{
+    date: '2026-08-01',
+    temp_max: 22,
+    temp_min: 14,
+    condition: 'Clear',
+    heavy_rain_probability: 5,
+    heavy_rain_warning: false,
+    flood_score: 5,
+    flood_risk: 'Low',
+    beach_safety_score: 90,
+    beach_safety_level: 'Excellent',
+    snow_probability: 0,
+    wind_speed: 5,
+    wind_level: 'Calm',
+    uv_index: 2,
+    uv_level: 'Low',
+    visibility_m: 15000,
+  }])
+  getHourlyForecast.mockResolvedValueOnce([
+    { time: '2026-08-01T09:00', temperature: 15, uv_index: 2, wind_speed: 5, visibility_km: 15, rain_mm: 0, rain_probability: null, condition: 'Clear' },
+  ])
+  getItinerary.mockResolvedValue({ status: 'not_generated' })
+
+  renderAt(1)
+
+  fireEvent.click(await screen.findByRole('button', { name: /^wind\b/i }))
+
+  expect(screen.getByRole('heading', { name: /wind.*hourly trend/i })).toBeInTheDocument()
+  expect(screen.queryByText(/sunscreen|sunglasses/i)).not.toBeInTheDocument()
+  // Unit shown once, on the top axis tick — a data max of 5 rounds up to a
+  // nice axis top of 6.
+  expect(screen.getByText('6 km/h')).toBeInTheDocument()
+  // Each metric's chart line has its own distinct color, not a shared one.
+  expect(document.querySelector('svg.cursor-crosshair path[stroke="#0ea5e9"]')).toBeInTheDocument()
+})
+
+test('clicking the Visibility card opens its popup with the visibility line color, distinct from Wind/UV', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  geocodeCity.mockResolvedValueOnce([51.5074, -0.1278])
+  getForecast.mockResolvedValueOnce([{
+    date: '2026-08-01',
+    temp_max: 22,
+    temp_min: 14,
+    condition: 'Clear',
+    heavy_rain_probability: 5,
+    heavy_rain_warning: false,
+    flood_score: 5,
+    flood_risk: 'Low',
+    beach_safety_score: 90,
+    beach_safety_level: 'Excellent',
+    snow_probability: 0,
+    wind_speed: 5,
+    wind_level: 'Calm',
+    uv_index: 2,
+    uv_level: 'Low',
+    visibility_m: 15000,
+  }])
+  getHourlyForecast.mockResolvedValueOnce([
+    { time: '2026-08-01T09:00', temperature: 15, uv_index: 2, wind_speed: 5, visibility_km: 15, rain_mm: 0, rain_probability: null, condition: 'Clear' },
+  ])
+  getItinerary.mockResolvedValue({ status: 'not_generated' })
+
+  renderAt(1)
+
+  fireEvent.click(await screen.findByRole('button', { name: /^visibility\b/i }))
+
+  expect(screen.getByRole('heading', { name: /visibility.*hourly trend/i })).toBeInTheDocument()
+  expect(document.querySelector('svg.cursor-crosshair path[stroke="#64748b"]')).toBeInTheDocument()
+})
+
+test('the popup marks the current hour as "Now" when viewing today\'s data', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-08-01T14:30:00Z'))
+
+  try {
+    getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+    geocodeCity.mockResolvedValueOnce([51.5074, -0.1278])
+    getForecast.mockResolvedValueOnce([{
+      date: '2026-08-01',
+      temp_max: 22,
+      temp_min: 14,
+      condition: 'Clear',
+      heavy_rain_probability: 5,
+      heavy_rain_warning: false,
+      flood_score: 5,
+      flood_risk: 'Low',
+      beach_safety_score: 90,
+      beach_safety_level: 'Excellent',
+      snow_probability: 0,
+      wind_speed: 5,
+      wind_level: 'Calm',
+      uv_index: 2,
+      uv_level: 'Low',
+      visibility_m: 15000,
+    }])
+    getHourlyForecast.mockResolvedValueOnce([
+      { time: '2026-08-01T13:00', temperature: 15, uv_index: 2, wind_speed: 5, visibility_km: 15, rain_mm: 0, rain_probability: null, condition: 'Clear' },
+      { time: '2026-08-01T14:00', temperature: 20, uv_index: 6, wind_speed: 8, visibility_km: 14, rain_mm: 0, rain_probability: null, condition: 'Clear' },
+    ])
+    getItinerary.mockResolvedValue({ status: 'not_generated' })
+
+    renderAt(1)
+
+    fireEvent.click(await screen.findByRole('button', { name: /^wind\b/i }))
+
+    // 14:00 matches the fixed system time above, so the popup should mark
+    // it "Now" with its own wind_speed (8), not the 13:00 entry's (5).
+    expect(await screen.findByText('Now · 8 km/h')).toBeInTheDocument()
+  } finally {
+    vi.useRealTimers()
+  }
+})
+
+test('moving the pointer over the popup chart follows it and shows that point\'s time and value', async () => {
+  const originalGetBoundingClientRect = Element.prototype.getBoundingClientRect
+  Element.prototype.getBoundingClientRect = vi.fn(() => ({
+    left: 0, top: 0, width: 280, height: 96, right: 280, bottom: 96, x: 0, y: 0, toJSON: () => {},
+  }))
+
+  try {
+    getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+    geocodeCity.mockResolvedValueOnce([51.5074, -0.1278])
+    getForecast.mockResolvedValueOnce([{
+      date: '2026-08-01',
+      temp_max: 22,
+      temp_min: 14,
+      condition: 'Clear',
+      heavy_rain_probability: 5,
+      heavy_rain_warning: false,
+      flood_score: 5,
+      flood_risk: 'Low',
+      beach_safety_score: 90,
+      beach_safety_level: 'Excellent',
+      snow_probability: 0,
+      wind_speed: 5,
+      wind_level: 'Calm',
+      uv_index: 2,
+      uv_level: 'Low',
+      visibility_m: 15000,
+    }])
+    getHourlyForecast.mockResolvedValueOnce([
+      { time: '2026-08-01T06:00', temperature: 15, uv_index: 2, wind_speed: 3, visibility_km: 15, rain_mm: 0, rain_probability: null, condition: 'Clear' },
+      { time: '2026-08-01T18:00', temperature: 20, uv_index: 1, wind_speed: 9, visibility_km: 14, rain_mm: 0, rain_probability: null, condition: 'Clear' },
+    ])
+    getItinerary.mockResolvedValue({ status: 'not_generated' })
+
+    renderAt(1)
+
+    fireEvent.click(await screen.findByRole('button', { name: /^wind\b/i }))
+    await screen.findByRole('heading', { name: /wind.*hourly trend/i })
+
+    const chart = document.querySelector('svg.cursor-crosshair')
+    // Right edge of the chart is nearest the second (18:00) data point.
+    fireEvent.mouseMove(chart, { clientX: 275 })
+
+    expect(await screen.findByText('6 PM · 9 km/h')).toBeInTheDocument()
+  } finally {
+    Element.prototype.getBoundingClientRect = originalGetBoundingClientRect
+  }
+})
+
+test('risk cards (e.g. Heavy Rain) are not clickable — no popup opens', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  geocodeCity.mockResolvedValueOnce([51.5074, -0.1278])
+  getForecast.mockResolvedValueOnce([{
+    date: '2026-08-01',
+    temp_max: 22,
+    temp_min: 14,
+    condition: 'Clear',
+    heavy_rain_probability: 5,
+    heavy_rain_warning: false,
+    flood_score: 5,
+    flood_risk: 'Low',
+    beach_safety_score: 90,
+    beach_safety_level: 'Excellent',
+    snow_probability: 0,
+    wind_speed: 5,
+    wind_level: 'Calm',
+    uv_index: 2,
+    uv_level: 'Low',
+    visibility_m: 15000,
+  }])
+  getHourlyForecast.mockResolvedValueOnce([])
+  getItinerary.mockResolvedValue({ status: 'not_generated' })
+
+  renderAt(1)
+
+  await screen.findByText(/heavy rain/i)
+  expect(screen.queryByRole('button', { name: /heavy rain/i })).not.toBeInTheDocument()
 })
 
 test('the review prompt offers Dates/Outbound/Return but not Hotel again, right after a hotel save', async () => {

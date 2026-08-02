@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   Plane, Building2, MapPin, Calendar, CheckCircle2,
   Briefcase, Thermometer, Sparkles, Sun, Moon, Cloud,
   CloudSun, CloudMoon, CloudFog, CloudRain, CloudSnow,
   CloudLightning, AlertTriangle, Waves, Umbrella, Snowflake,
-  SunDim, Wind, Eye, Sunrise, Sunset, Palmtree, Clock,
+  SunDim, Wind, Eye, Sunrise, Sunset, Palmtree, Clock, Flame, Info,
   Pencil, Lock, Trash2, Plus, Mountain
 } from 'lucide-react'
 import Placeholder from '../../components/Placeholder'
@@ -52,6 +52,25 @@ const formatHour = (timeStr) => {
   return `${hour - 12} PM`;
 };
 
+// Backend formats sunrise/sunset as "%I:%M %p" (e.g. "06:34 AM") — parsed
+// into minutes-since-midnight so a sunrise/sunset marker can be inserted into
+// the hourly forecast strip at its exact sorted position between two
+// on-the-hour cards (Apple Weather-style inline "06:02 · Sunrise" card),
+// rather than just tagging the nearest hour's existing card.
+const parseSunEventMinutes = (timeStr) => {
+  const match = (timeStr || '').match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return null;
+  let hour = parseInt(match[1], 10);
+  const minute = parseInt(match[2], 10);
+  const period = match[3].toUpperCase();
+  if (period === 'AM') {
+    if (hour === 12) hour = 0;
+  } else if (hour !== 12) {
+    hour += 12;
+  }
+  return hour * 60 + minute;
+};
+
 const weatherIcon = (condition, timeStr) => {
   const hour = parseInt(timeStr.split('T')[1].split(':')[0], 10);
   const isNight = hour < 6 || hour >= 20;
@@ -95,8 +114,8 @@ const snowLevel = (pct) => {
 // here (Low, None, Good, Excellent) correctly falls through to green.
 // Covers Wind/UV vocabulary too, since those are also shown as color badges.
 const LEVEL_COLORS = {
-  red: ['High', 'Poor', 'Very High', 'Extreme', 'Strong', 'Very Strong'],
-  yellow: ['Moderate'],
+  red: ['High', 'Poor', 'Very High', 'Extreme', 'Strong', 'Very Strong', 'Unsafe', 'Dangerous'],
+  yellow: ['Moderate', 'Caution'],
 };
 function levelColorClass(level) {
   if (LEVEL_COLORS.red.includes(level)) return 'bg-red-100 text-red-800';
@@ -113,6 +132,8 @@ const CARD_IDENTITY_BG = {
   flood: 'bg-blue-50 border-blue-100',
   beachSafety: 'bg-blue-50 border-blue-100',
   snow: 'bg-blue-50 border-blue-100',
+  extremeTemp: 'bg-blue-50 border-blue-100',
+  hikingSafety: 'bg-blue-50 border-blue-100',
   wind: 'bg-blue-50 border-blue-100',
   uv: 'bg-blue-50 border-blue-100',
   visibility: 'bg-blue-50 border-blue-100',
@@ -125,6 +146,230 @@ const visibilityLevel = (meters) => {
   if (meters >= 10000) return 'Good';
   if (meters >= 1000) return 'Moderate';
   return 'Poor';
+};
+
+// Metadata for the 3 clickable "weather info" cards' hourly-trend popup —
+// hourlyKey is the field name on each HourlyWeatherOut entry, advice pulls
+// the matching daily advice sentence when the backend provides one (only
+// UV does today; wind/visibility have no advice field yet).
+// WHO UV index scale — matches backend/ml/risk_calculator.py's uv_level()
+// bands exactly (Low <3, Moderate <6, High <8, Very High <11, else Extreme),
+// so the chart's colors/labels never disagree with the UV Index card's own
+// level badge for the same day.
+const UV_BANDS = [
+  { min: 0, level: 'Low', color: '#22c55e' },
+  { min: 3, level: 'Moderate', color: '#eab308' },
+  { min: 6, level: 'High', color: '#f97316' },
+  { min: 8, level: 'Very High', color: '#ef4444' },
+  { min: 11, level: 'Extreme', color: '#9333ea' },
+];
+
+const WEATHER_INFO_META = {
+  wind: { label: 'Wind', unit: 'km/h', hourlyKey: 'wind_speed', advice: () => null, color: '#0ea5e9' },
+  uv: { label: 'UV Index', unit: '', hourlyKey: 'uv_index', advice: (fd) => fd?.uv_advice || null, bands: UV_BANDS },
+  visibility: { label: 'Visibility', unit: 'km', hourlyKey: 'visibility_km', advice: () => null, color: '#64748b' },
+};
+
+// Hand-rolled SVG sparkline rather than pulling in a charting library for
+// one simple hourly-trend line — points are normalized into the viewBox,
+// flat-lining at the vertical center if every value is identical (avoids a
+// divide-by-zero when max === min).
+// Catmull-Rom-to-Bezier smoothing — draws a natural curve through every
+// point (rather than the sharp polyline segments a plain <polyline> gives),
+// matching how weather-app hourly graphs typically render. Missing
+// neighbors at the ends just reuse the nearest real point.
+const smoothPath = (points) => {
+  const d = [`M ${points[0][0]},${points[0][1]}`];
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i - 1] || points[i];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[i + 2] || p2;
+    const cp1x = p1[0] + (p2[0] - p0[0]) / 6;
+    const cp1y = p1[1] + (p2[1] - p0[1]) / 6;
+    const cp2x = p2[0] - (p3[0] - p1[0]) / 6;
+    const cp2y = p2[1] - (p3[1] - p1[1]) / 6;
+    d.push(`C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2[0]},${p2[1]}`);
+  }
+  return d.join(' ');
+};
+
+// Standard "nice numbers" tick step (Heckbert's algorithm): picks a step of
+// 1/2/5 × a power of 10 so ticks land on clean values — 1,2,3.../2,4,6...
+// for small ranges, 10,20,30... for larger ones — instead of just dividing
+// the max into equal fractions (which gives ugly numbers like 3.33, 6.67).
+const niceTickStep = (roughStep) => {
+  if (roughStep <= 0) return 1;
+  const magnitude = Math.pow(10, Math.floor(Math.log10(roughStep)));
+  const normalized = roughStep / magnitude;
+  const niceNormalized = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10;
+  return niceNormalized * magnitude;
+};
+
+// Ticks always start at 0 (these metrics are never negative) and climb by
+// the nice step until they cover the data max, e.g. max=8 -> step=2 ->
+// [0,2,4,6,8]; max=35 -> step=10 -> [0,10,20,30,40].
+const niceTicks = (max, targetCount = 4) => {
+  const safeMax = max > 0 ? max : 1;
+  const step = niceTickStep(safeMax / targetCount);
+  const axisMax = Math.ceil(safeMax / step) * step;
+  const ticks = [];
+  for (let t = 0; t <= axisMax + 1e-9; t += step) {
+    ticks.push(Math.round(t * 1000) / 1000); // guards against float drift like 9.999999998
+  }
+  return ticks;
+};
+
+const formatAxisTick = (v) => (Math.round(v * 10) / 10).toString();
+
+// Fixed clock-time labels (not evenly-spaced array positions) — matched to
+// whichever hourly entries actually land on these hours, so the labels read
+// as real times of day like the reference charts, not just "1/3 and 2/3
+// of whatever data happened to be fetched".
+const CANONICAL_HOUR_LABELS = [
+  { hour: 0, label: '12 AM' },
+  { hour: 6, label: '6 AM' },
+  { hour: 12, label: '12 PM' },
+  { hour: 18, label: '6 PM' },
+];
+
+// Looks up which severity band a value falls in (bands sorted ascending by
+// `min`) — used both for the graded line color and the y-axis level labels.
+const bandForValue = (bands, v) => {
+  let match = bands[0];
+  for (const b of bands) { if (v >= b.min) match = b; }
+  return match;
+};
+
+const Sparkline = ({ data, unit = '', currentTime = null, color = '#6366f1', bands = null, width = 280, height = 90 }) => {
+  const areaGradientId = useId();
+  const lineGradientId = useId();
+  const svgRef = useRef(null);
+  const [hoverIndex, setHoverIndex] = useState(null);
+  if (!data.length) return null;
+
+  const values = data.map(d => d.value);
+  // Baseline is always 0, not the data min — these metrics (wind/UV/
+  // visibility) are never negative, and a fixed 0 baseline is what makes
+  // the axis scale/gridlines below meaningful to read at a glance. A banded
+  // metric (UV) uses the WHO scale's own bands as ticks instead of numeric
+  // ones, and always shows up to at least the last band (e.g. "Extreme"),
+  // not just whatever the day's actual max happens to be.
+  const ticks = bands ? bands.map(b => b.min) : niceTicks(Math.max(...values));
+  const axisMax = bands ? Math.max(bands[bands.length - 1].min, ...values) : ticks[ticks.length - 1];
+  const top = 6; // headroom so the curve's peak/stroke never clips the viewBox edge
+  const usableHeight = height - top;
+  const points = data.map((d, i) => {
+    const x = data.length === 1 ? width / 2 : (i / (data.length - 1)) * width;
+    const y = top + usableHeight - (d.value / axisMax) * usableHeight;
+    return [x, y];
+  });
+  const linePath = points.length > 1 ? smoothPath(points) : `M ${points[0][0]},${points[0][1]}`;
+  const areaPath = `${linePath} L ${width},${height} L 0,${height} Z`;
+  const colorForIndex = (i) => bands ? bandForValue(bands, values[i]).color : color;
+
+  const currentIndex = currentTime ? data.findIndex(d => d.time === currentTime) : -1;
+  // While hovering/dragging, the pointer's position wins over the "now"
+  // marker; released, it falls back to marking "now" (if viewing today).
+  const activeIndex = hoverIndex !== null ? hoverIndex : (currentIndex !== -1 ? currentIndex : null);
+
+  const updateHoverFromClientX = (clientX) => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    const relX = ((clientX - rect.left) / rect.width) * width;
+    let nearest = 0;
+    let minDist = Infinity;
+    points.forEach(([x], i) => {
+      const dist = Math.abs(x - relX);
+      if (dist < minDist) { minDist = dist; nearest = i; }
+    });
+    setHoverIndex(nearest);
+  };
+
+  const axisLabels = CANONICAL_HOUR_LABELS
+    .map(({ hour, label }) => {
+      const idx = data.findIndex(d => parseInt(d.time.split('T')[1].split(':')[0], 10) === hour);
+      return idx === -1 ? null : { idx, label };
+    })
+    .filter(Boolean);
+
+  return (
+    <div className="space-y-1">
+      <div className="flex gap-2">
+        <svg
+          ref={svgRef}
+          viewBox={`0 0 ${width} ${height}`}
+          className="flex-1 h-24 touch-none cursor-crosshair"
+          onMouseMove={(e) => updateHoverFromClientX(e.clientX)}
+          onMouseLeave={() => setHoverIndex(null)}
+          onTouchStart={(e) => e.touches[0] && updateHoverFromClientX(e.touches[0].clientX)}
+          onTouchMove={(e) => e.touches[0] && updateHoverFromClientX(e.touches[0].clientX)}
+          onTouchEnd={() => setHoverIndex(null)}
+        >
+          <defs>
+            <linearGradient id={areaGradientId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity="0.35" />
+              <stop offset="100%" stopColor={color} stopOpacity="0" />
+            </linearGradient>
+            {/* Only needed for banded metrics (UV) — a horizontal gradient
+                whose stops are colored by each point's own severity band,
+                giving the line a graded green-to-red look along its length
+                instead of one flat color. */}
+            {bands && (
+              <linearGradient id={lineGradientId} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={width} y2="0">
+                {points.map(([x], i) => (
+                  <stop key={i} offset={`${(x / width) * 100}%`} stopColor={colorForIndex(i)} />
+                ))}
+              </linearGradient>
+            )}
+          </defs>
+          {ticks.map((t) => {
+            const y = top + usableHeight - (t / axisMax) * usableHeight;
+            return <line key={t} x1="0" y1={y} x2={width} y2={y} stroke="currentColor" strokeWidth="1" strokeDasharray="3 3" className="text-gray-200" />;
+          })}
+          {!bands && <path d={areaPath} fill={`url(#${areaGradientId})`} />}
+          <path d={linePath} fill="none" stroke={bands ? `url(#${lineGradientId})` : color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          {activeIndex !== null && (
+            <>
+              <line
+                x1={points[activeIndex][0]} y1={0} x2={points[activeIndex][0]} y2={height}
+                stroke={hoverIndex !== null ? '#9ca3af' : colorForIndex(activeIndex)} strokeWidth="1"
+                strokeDasharray={hoverIndex !== null ? undefined : '3 3'}
+              />
+              <circle
+                cx={points[activeIndex][0]} cy={points[activeIndex][1]} r="4"
+                fill={hoverIndex !== null ? '#374151' : colorForIndex(activeIndex)}
+                stroke="white" strokeWidth="1.5"
+              />
+            </>
+          )}
+        </svg>
+        {/* Banded metrics (UV) show WHO level names here instead of numbers —
+            unit shown once on the top tick otherwise, matching how the
+            reference charts label their y-axis. */}
+        <div className="h-24 flex flex-col justify-between text-[10px] text-gray-400 py-1 text-right">
+          {[...ticks].reverse().map((t, i) => (
+            <span key={t} style={bands ? { color: bandForValue(bands, t).color } : undefined}>
+              {bands ? bandForValue(bands, t).level : `${formatAxisTick(t)}${i === 0 && unit ? ` ${unit}` : ''}`}
+            </span>
+          ))}
+        </div>
+      </div>
+      <div className="relative h-4 text-xs text-gray-400">
+        {axisLabels.map(({ idx, label }) => (
+          <span key={label} className="absolute -translate-x-1/2" style={{ left: `${(points[idx][0] / width) * 100}%` }}>
+            {label}
+          </span>
+        ))}
+      </div>
+      {activeIndex !== null && (
+        <div className="text-xs font-medium" style={{ color: hoverIndex !== null ? '#374151' : colorForIndex(activeIndex) }}>
+          {hoverIndex !== null ? formatHour(data[activeIndex].time) : 'Now'} · {formatAxisTick(data[activeIndex].value)}{unit ? ` ${unit}` : ''}
+        </div>
+      )}
+    </div>
+  );
 };
 
 // There's no separate "hotel name" field — hotel_address is a single string
@@ -186,6 +431,11 @@ export default function ItineraryPage() {
   // editing the thing the user just finished editing.
   const [lastEdited, setLastEdited] = useState(null)
 
+  // Which weather-info card ('wind' | 'uv' | 'visibility') has its hourly
+  // trend popup open, or null if none — only these 3 cards are clickable,
+  // not the risk cards (heavy rain/flood/beach/snow/extreme temp/hiking).
+  const [weatherInfoModalMetric, setWeatherInfoModalMetric] = useState(null)
+
   const [editActivityModalOpen, setEditActivityModalOpen] = useState(false)
   const [editingActivityId, setEditingActivityId] = useState(null)
   const [activityDayDraft, setActivityDayDraft] = useState('')
@@ -221,26 +471,35 @@ export default function ItineraryPage() {
   // The big headline temperature only makes sense for today (a real, current
   // reading) — a future day's "big number" would just be an arbitrarily
   // chosen stat (max? mean?) implying more precision than a forecast has.
+  // Shared by getCurrentTemp/getFeelsLikeTemp below — both read off the same
+  // current-hour entry, so this only does the lookup once.
+  const getCurrentHourData = () => {
+    if (!forecastDay || !hourlyForecast) return null;
+    // Hourly/daily data is fetched with &timezone=auto (see openmeteo.py),
+    // so timestamps are the destination's own local time — convert the
+    // real current instant into that same local time using the offset the
+    // backend returns, rather than the browser's local hour or raw UTC
+    // (neither matches the destination unless it happens to share that
+    // exact offset).
+    const destNow = new Date(Date.now() + (forecastDay.utc_offset_seconds ?? 0) * 1000);
+    const currentHour = destNow.getUTCHours();
+    const timeString = `${selectedDate}T${currentHour.toString().padStart(2, '0')}:00`;
+    return hourlyForecast.find(h => h.time === timeString) ?? null;
+  };
+
   const getCurrentTemp = () => {
     if (!forecastDay) return '';
+    const currentData = getCurrentHourData();
+    return Math.round(currentData ? currentData.temperature : forecastDay.temp_max);
+  };
 
-    if (hourlyForecast) {
-      // Hourly/daily data is fetched with &timezone=auto (see openmeteo.py),
-      // so timestamps are the destination's own local time — convert the
-      // real current instant into that same local time using the offset the
-      // backend returns, rather than the browser's local hour or raw UTC
-      // (neither matches the destination unless it happens to share that
-      // exact offset).
-      const destNow = new Date(Date.now() + (forecastDay.utc_offset_seconds ?? 0) * 1000);
-      const currentHour = destNow.getUTCHours();
-      const timeString = `${selectedDate}T${currentHour.toString().padStart(2, '0')}:00`;
-      const currentData = hourlyForecast.find(h => h.time === timeString);
-      if (currentData) {
-        return Math.round(currentData.temperature);
-      }
-    }
-
-    return Math.round(forecastDay.temp_max);
+  // Only meaningful for today — a "feels like" for a future/past day would
+  // just be re-deriving from the same max/min already shown, not a real
+  // apparent-temperature reading, so callers should only use this when
+  // isToday is true (same convention as getCurrentTemp's big-number display).
+  const getFeelsLikeTemp = () => {
+    const currentData = getCurrentHourData();
+    return currentData ? Math.round(currentData.feels_like_temp) : null;
   };
 
   // --- SECTION 3: DATA FETCHING LOGIC ---
@@ -540,6 +799,13 @@ export default function ItineraryPage() {
   const itineraryDay = itinerary?.days?.find(d => d.date === selectedDate)
   const selectedDayNumber = tripDates.indexOf(selectedDate) + 1
 
+  const weatherInfoMeta = weatherInfoModalMetric ? WEATHER_INFO_META[weatherInfoModalMetric] : null
+  const weatherInfoHourly = weatherInfoMeta && hourlyForecast && forecastDay
+    ? hourlyForecast
+        .filter(h => h.time.startsWith(forecastDay.date))
+        .map(h => ({ time: h.time, value: h[weatherInfoMeta.hourlyKey] }))
+    : []
+
   // Forecast/hourly data is fetched with &timezone=auto (see openmeteo.py),
   // so its date/time fields are the destination's own local time — shift the
   // real current instant by the destination's UTC offset (once known) so
@@ -552,6 +818,12 @@ export default function ItineraryPage() {
   // "YYYY-MM-DDTHH" prefix for the destination's current local hour, used to
   // highlight the matching card in the hourly strip below.
   const currentHourPrefix = destNow.toISOString().slice(0, 13)
+
+  // Only meaningful when the popup is showing today's data — a "now" marker
+  // on a future/past day's chart wouldn't correspond to anything real.
+  const weatherInfoCurrentTime = isToday
+    ? weatherInfoHourly.find(h => h.time.startsWith(currentHourPrefix))?.time ?? null
+    : null
 
   // Map pins for the currently-selected day only, not the whole trip — one
   // marker per activity. activity.lat/lng already reflect the current plan
@@ -943,6 +1215,29 @@ export default function ItineraryPage() {
         </div>
       </Modal>
 
+      <Modal open={Boolean(weatherInfoModalMetric)} onClose={() => setWeatherInfoModalMetric(null)} title={weatherInfoMeta ? `${weatherInfoMeta.label} — Hourly Trend` : ''}>
+        {weatherInfoMeta && (
+          weatherInfoHourly.length > 0 ? (
+            <div className="space-y-3">
+              <Sparkline
+                data={weatherInfoHourly}
+                unit={weatherInfoMeta.unit}
+                currentTime={weatherInfoCurrentTime}
+                color={weatherInfoMeta.color}
+                bands={weatherInfoMeta.bands}
+              />
+              {weatherInfoMeta.advice(forecastDay) && (
+                <p className="text-sm text-gray-700 bg-indigo-50 border border-indigo-100 rounded-md p-3">
+                  {weatherInfoMeta.advice(forecastDay)}
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400 italic">No hourly data available for this day.</p>
+          )
+        )}
+      </Modal>
+
       {/* 5D: Itinerary & Weather Section */}
       <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
         {/* Day Tabs */}
@@ -988,95 +1283,165 @@ export default function ItineraryPage() {
                     <Thermometer size={16} className="text-indigo-600" /> Weather
                 </h3>
 
-                {/* Daily Summary Header */}
-                <div className="flex justify-between items-center gap-4 flex-wrap">
-                    {/* Fixed width so the condition text's length (e.g. "Overcast" vs
-                        "Partly Cloudy") never shifts the sunrise card's centered position */}
-                    <div className="flex items-center gap-3 w-64 shrink-0">
-                        <WeatherIcon condition={forecastDay.condition} timeStr={forecastDay.date + "T12:00:00"} className="w-10 h-10 text-indigo-500 shrink-0" />
+                {/* Daily Summary Header — items-start (not items-center): the
+                    sunrise/sunset block below gets an explicit top margin matching the
+                    date row's height instead, so its icons land exactly level with the
+                    condition icon rather than centered against the left block's overall
+                    (taller, asymmetric) height. */}
+                <div className="flex justify-between items-start gap-4 flex-wrap">
+                    {/* shrink-0 (not a fixed w-64) — this block's content (icon/condition
+                        column + temp/feels-like/H-L block) is wider than 256px once "Feels
+                        like" is showing, and a fixed width smaller than the actual content
+                        let it silently overflow its own box and visually collide with the
+                        sunrise/sunset block sitting right after it at narrow widths. Sizing
+                        to natural content width avoids that; shrink-0 stops the parent flex
+                        row from compressing it instead. */}
+                    <div className="flex items-end gap-8 shrink-0">
+                        {/* Date, icon, and condition all stacked in one left-most column —
+                            date on top with breathing room before the icon below it, not
+                            crammed right against it. */}
+                        <div className="flex flex-col items-center shrink-0">
+                            <div className="text-sm font-semibold text-gray-500 mb-2">{forecastDay.date}</div>
+                            <WeatherIcon condition={forecastDay.condition} timeStr={forecastDay.date + "T12:00:00"} className="w-10 h-10 text-indigo-500" />
+                            <span className="text-sm font-semibold text-gray-700 capitalize whitespace-nowrap mt-1">{forecastDay.condition}</span>
+                        </div>
+
+                        {/* items-end on the row above bottom-aligns this block with the
+                            condition text instead of a guessed mt-4 offset — the temp/
+                            feels-like stack's bottom edge now lines up with "condition". */}
                         <div>
-                            {/* Date sits directly above the big current-temp number */}
-                            <div className="text-sm font-semibold text-gray-500 -mt-3 mb-2">{forecastDay.date}</div>
                             {isToday ? (
                               <>
-                                <div className="flex items-baseline gap-2 my-1">
-                                    <span className="text-4xl font-bold text-gray-900">{getCurrentTemp()}°</span>
-                                    <span className="text-sm font-medium text-gray-500 ml-1">
+                                {/* Temp + "Feels like" form one centered stack — the big number
+                                    sits directly above its own feels-like reading, not offset by
+                                    whatever width H/L (a separate, further-out element) happens
+                                    to take up. */}
+                                {/* No my-1 here — a vertical margin on this row would count
+                                    toward its own bottom edge in the parent's items-end
+                                    alignment, nudging "Feels like" a few px above (not
+                                    level with) "condition". */}
+                                <div className="flex items-center gap-10">
+                                    <div className="flex flex-col items-center">
+                                        <span className="text-4xl font-bold text-gray-900">{getCurrentTemp()}°</span>
+                                        {getFeelsLikeTemp() !== null && (
+                                          <span className="text-sm font-medium text-gray-400 whitespace-nowrap">Feels like {getFeelsLikeTemp()}°</span>
+                                        )}
+                                    </div>
+                                    <span className="text-sm font-medium text-gray-500 whitespace-nowrap">
                                         H: {Math.round(forecastDay.temp_max)}° &nbsp; L: {Math.round(forecastDay.temp_min)}°
                                     </span>
                                 </div>
-                                <div className="text-md font-medium text-gray-700 capitalize">{forecastDay.condition}</div>
                               </>
                             ) : (
-                              <>
-                                <div className="text-2xl font-bold text-gray-900 mt-1 capitalize">{forecastDay.condition}</div>
-                                <div className="text-sm font-medium text-gray-500 mt-1">
-                                    H: {Math.round(forecastDay.temp_max)}° &nbsp; L: {Math.round(forecastDay.temp_min)}°
-                                </div>
-                              </>
-                            )}
-                        </div>
-                    </div>
-                    {/* Sits in the remaining space next to the temp/condition block */}
-                    <div className="flex-1 flex items-center justify-center min-w-[160px]">
-                        <div className="bg-white p-3 rounded-lg border flex items-center gap-4 min-w-[180px]">
-                            {forecastDay.sunrise && forecastDay.sunset ? (
-                              <>
-                                <div className="text-center">
-                                    <Sunrise size={20} className="text-amber-400 mx-auto mb-1" />
-                                    <div className="text-[10px] text-gray-400 uppercase tracking-wide">Sunrise</div>
-                                    <div className="text-sm font-semibold text-gray-800 my-1">{forecastDay.sunrise}</div>
-                                    <div className="h-4" />
-                                </div>
-                                <div className="text-center">
-                                    <Sunset size={20} className="text-orange-400 mx-auto mb-1" />
-                                    <div className="text-[10px] text-gray-400 uppercase tracking-wide">Sunset</div>
-                                    <div className="text-sm font-semibold text-gray-800 my-1">{forecastDay.sunset}</div>
-                                    <div className="h-4" />
-                                </div>
-                              </>
-                            ) : (
-                              <div className="w-full text-center">
-                                  <div className="flex items-center justify-center gap-1 text-gray-400">
-                                      <Sunrise size={18} />
-                                      <Sunset size={18} />
-                                  </div>
-                                  <div className="text-[10px] text-gray-400 uppercase tracking-wide mt-1">Sunrise / Sunset</div>
-                                  <div className="text-sm font-semibold text-gray-400 my-1">Not available</div>
-                                  <div className="h-4" />
+                              <div className="text-2xl font-bold text-gray-900 whitespace-nowrap">
+                                  H: {Math.round(forecastDay.temp_max)}° &nbsp; L: {Math.round(forecastDay.temp_min)}°
                               </div>
                             )}
                         </div>
                     </div>
+                    {/* Pushed to the far right of the remaining space next to the temp/
+                        condition block. mt-[28px] matches the date row's height (its
+                        text-sm line ~20px + mb-2 ~8px) so these 40px-tall icon+time pairs
+                        (same 40px as the condition WeatherIcon) start exactly where that
+                        icon starts, landing them level with it instead of just visually
+                        close. min-w is sized to fit both icon+time pairs with their gap —
+                        below that width flex-wrap drops this onto its own row (using the
+                        parent's gap-4 as row-gap) instead of letting it get squeezed flush
+                        against the H/L text on a shrinking single row. flex-wrap + shrink-0
+                        + nowrap on the pairs themselves is a second line of defense: if
+                        this block's own row is still too narrow (very small viewports),
+                        the sunrise and sunset pairs stack onto their own lines instead of
+                        compressing into each other. */}
+                    <div className="flex-1 flex flex-wrap items-center justify-end gap-x-8 gap-y-2 min-w-[240px] mt-[28px]">
+                        {forecastDay.sunrise && forecastDay.sunset ? (
+                          <>
+                            <div className="flex items-center gap-2 shrink-0">
+                                <Sunrise size={40} className="text-amber-400" />
+                                <span className="text-xl font-semibold text-gray-800 whitespace-nowrap">{forecastDay.sunrise}</span>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                                <Sunset size={40} className="text-orange-400" />
+                                <span className="text-xl font-semibold text-gray-800 whitespace-nowrap">{forecastDay.sunset}</span>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="flex items-center gap-2 text-gray-400">
+                              <Sunrise size={18} />
+                              <Sunset size={18} />
+                              <span className="text-sm">Sunrise / Sunset not available</span>
+                          </div>
+                        )}
+                    </div>
                 </div>
 
-                <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-800 pt-5 border-t">
-                    <AlertTriangle size={16} className="text-indigo-600" /> Conditions & Risks
+                <h3 className="flex items-center justify-between gap-2 text-sm font-semibold text-gray-800 pt-5 border-t">
+                    <span className="flex items-center gap-2"><AlertTriangle size={16} className="text-indigo-600" /> Risks</span>
+                    {/* Deliberately generic, not "Tap Wind, UV, or Visibility" — only those
+                        3 cards open a popup today (see WEATHER_INFO_META), but more risk
+                        cards are expected to gain the same click-for-details behavior later,
+                        and this wording shouldn't need to change when they do. */}
+                    <span className="flex items-center gap-1 text-xs font-normal text-gray-400">
+                        <Info size={12} /> Tap a card for more details
+                    </span>
                 </h3>
 
-                {/* Risk Cards + Wind/UV/Visibility — a horizontally scrollable
-                    strip like the hourly forecast below, rather than a grid,
-                    since 7 cards don't fit one row on most screens. Each
-                    card's basis is 1/6 of the row (minus its share of the
-                    gaps) so exactly 6 show before scrolling reveals the 7th. */}
+                {/* 9 cards total (6 risk + 3 weather-info) in a horizontally
+                    scrollable strip like the hourly forecast below — each
+                    card keeps a natural, comfortable width, so the scrollbar
+                    only appears if they don't all fit, rather than forcing a
+                    fixed visible count. Extreme Temp renders its own layout
+                    (level + advice text, no %/pill) since temperature_level
+                    isn't a probability/score like the others. */}
                 <div className="flex overflow-x-auto gap-3 pb-2 cursor-grab active:cursor-grabbing">
                   {[
                     { l: 'Heavy Rain', v: forecastDay.heavy_rain_probability + '%', s: forecastDay.heavy_rain_warning ? 'High' : 'Low', i: Umbrella, bg: CARD_IDENTITY_BG.heavyRain },
                     { l: 'Flood', v: Math.round(forecastDay.flood_score) + '%', s: forecastDay.flood_risk, i: Waves, bg: CARD_IDENTITY_BG.flood },
                     { l: 'Beach Safety', v: Math.round(forecastDay.beach_safety_score) + '%', s: forecastDay.beach_safety_level, i: Palmtree, bg: CARD_IDENTITY_BG.beachSafety },
                     { l: 'Snow', v: forecastDay.snow_probability + '%', s: snowLevel(forecastDay.snow_probability), i: Snowflake, bg: CARD_IDENTITY_BG.snow },
-                    { l: 'Wind', v: Math.round(forecastDay.wind_speed) + ' km/h', s: forecastDay.wind_level, i: Wind, bg: CARD_IDENTITY_BG.wind },
-                    { l: 'UV Index', v: Math.round(forecastDay.uv_index), s: forecastDay.uv_level, i: SunDim, bg: CARD_IDENTITY_BG.uv },
-                    { l: 'Visibility', v: (forecastDay.visibility_m / 1000).toFixed(1) + ' km', s: visibilityLevel(forecastDay.visibility_m), i: Eye, bg: CARD_IDENTITY_BG.visibility },
                   ].map((c, i) => (
-                      <div key={i} className={`shrink-0 basis-[calc((100%-3.75rem)/6)] p-3 rounded border text-center ${c.bg}`}>
+                      // flex-col justify-center: label/value/badge stay a tight cluster
+                      // (gap-1, not spread out) while justify-center splits whatever
+                      // leftover height the row-stretch adds evenly above and below that
+                      // cluster — so every card gets the same top/bottom breathing room
+                      // regardless of how tall its neighbors are.
+                      <div key={c.l} className={`shrink-0 w-[160px] p-4 rounded border text-center flex flex-col items-center justify-center gap-1 ${c.bg}`}>
                           <div className="text-xs text-gray-500 uppercase flex items-center justify-center gap-2"><c.i size={22} className="text-indigo-400" /> {c.l}</div>
-                          <div className="font-bold my-1 text-lg">{c.v}</div>
+                          <div className="font-bold text-lg">{c.v}</div>
                           <span className={`text-xs px-2 rounded-full ${levelColorClass(c.s)}`}>
                               {c.s}
                           </span>
                       </div>
                   ))}
+
+                  <div className={`shrink-0 w-[160px] p-4 rounded border text-center flex flex-col items-center justify-center gap-1 ${CARD_IDENTITY_BG.extremeTemp}`}>
+                      <div className="text-xs text-gray-500 uppercase flex items-center justify-center gap-2"><Flame size={22} className="text-indigo-400" /> Extreme Temp</div>
+                      <div className="font-bold text-base">{forecastDay.temperature_level}</div>
+                      <div className="text-[11px] text-gray-500 leading-snug">{forecastDay.temperature_advice}</div>
+                  </div>
+
+                  {[
+                    { l: 'Hiking Safety', v: Math.round(forecastDay.hiking_safety_score) + '%', s: forecastDay.hiking_safety_level, i: Mountain, bg: CARD_IDENTITY_BG.hikingSafety },
+                    { l: 'Wind', v: Math.round(forecastDay.wind_speed) + ' km/h', s: forecastDay.wind_level, i: Wind, bg: CARD_IDENTITY_BG.wind, metric: 'wind' },
+                    { l: 'UV Index', v: Math.round(forecastDay.uv_index), s: forecastDay.uv_level, i: SunDim, bg: CARD_IDENTITY_BG.uv, metric: 'uv' },
+                    { l: 'Visibility', v: (forecastDay.visibility_m / 1000).toFixed(1) + ' km', s: visibilityLevel(forecastDay.visibility_m), i: Eye, bg: CARD_IDENTITY_BG.visibility, metric: 'visibility' },
+                  ].map((c, i) => {
+                      // Only the 3 weather-info cards (metric set) open the hourly-trend
+                      // popup on click — the risk cards (heavy rain/flood/etc.) aren't
+                      // clickable, so this renders a <button> only for those three.
+                      const Tag = c.metric ? 'button' : 'div'
+                      return (
+                        <Tag key={c.l}
+                            type={c.metric ? 'button' : undefined}
+                            onClick={c.metric ? () => setWeatherInfoModalMetric(c.metric) : undefined}
+                            className={`shrink-0 w-[160px] p-4 rounded border text-center flex flex-col items-center justify-center gap-1 ${c.bg} ${c.metric ? 'cursor-pointer hover:brightness-95 transition' : ''}`}>
+                            <div className="text-xs text-gray-500 uppercase flex items-center justify-center gap-2"><c.i size={22} className="text-indigo-400" /> {c.l}</div>
+                            <div className="font-bold text-lg">{c.v}</div>
+                            <span className={`text-xs px-2 rounded-full ${levelColorClass(c.s)}`}>
+                                {c.s}
+                            </span>
+                        </Tag>
+                      )
+                  })}
                 </div>
 
                 <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-800 pt-5 border-t">
@@ -1086,9 +1451,52 @@ export default function ItineraryPage() {
                 {/* Hourly Forecast — pt-1 keeps the "Now" card's ring from
                     getting clipped by this container's own overflow edge. */}
                 <div className="flex overflow-x-auto gap-4 pt-1 pb-2 cursor-grab active:cursor-grabbing">
-                  {hourlyForecast
+                  {(() => {
+                    // Sunrise/sunset get their own inserted card at their exact time
+                    // (Apple Weather-style), sorted in alongside the on-the-hour cards,
+                    // rather than just tagging the nearest hour's existing card.
+                    const dayHours = hourlyForecast
                       .filter(h => h.time.startsWith(forecastDay.date))
+                      .map(h => ({
+                          kind: 'hour',
+                          time: h.time,
+                          condition: h.condition,
+                          rain_probability: h.rain_probability,
+                          temperature: h.temperature,
+                          sortMinutes: parseInt(h.time.split('T')[1].split(':')[0], 10) * 60,
+                      }))
+
+                    const sunEvents = [
+                      { kind: 'sunrise', label: forecastDay.sunrise },
+                      { kind: 'sunset', label: forecastDay.sunset },
+                    ]
+                      .map(e => {
+                          const sortMinutes = parseSunEventMinutes(e.label)
+                          if (sortMinutes === null) return null
+                          // Drop the backend's zero-padded hour ("06:34 AM" -> "6:34 AM")
+                          // to match formatHour's un-padded "6 AM" style on other cards.
+                          return { ...e, sortMinutes, label: e.label.replace(/^0/, '') }
+                      })
+                      .filter(Boolean)
+
+                    return [...dayHours, ...sunEvents]
+                      .sort((a, b) => a.sortMinutes - b.sortMinutes)
                       .map((h, i) => {
+                        if (h.kind !== 'hour') {
+                          const Icon = h.kind === 'sunrise' ? Sunrise : Sunset
+                          const color = h.kind === 'sunrise' ? 'text-amber-400' : 'text-orange-400'
+                          return (
+                            <div key={h.kind} className="flex flex-col items-center min-w-[50px] shrink-0 gap-0.5 rounded-lg py-1">
+                                <span className={`text-[10px] font-semibold ${color} whitespace-nowrap`}>{h.label}</span>
+                                <Icon size={20} className={color} />
+                                {/* Empty h-4 slot mirrors the rain-% slot on hour cards, so
+                                    this card's height/rows line up with its neighbors. */}
+                                <div className="h-4" />
+                                <span className="text-[10px] font-bold text-gray-500 leading-none mt-0.5 capitalize">{h.kind}</span>
+                            </div>
+                          )
+                        }
+
                         const isNow = h.time.startsWith(currentHourPrefix)
                         return (
                           <div key={i} className={`flex flex-col items-center min-w-[50px] shrink-0 gap-0.5 rounded-lg py-1 ${isNow ? 'bg-indigo-50 ring-1 ring-indigo-300' : ''}`}>
@@ -1112,7 +1520,8 @@ export default function ItineraryPage() {
                               <span className="font-bold text-sm leading-none mt-0.5">{Math.round(h.temperature)}°</span>
                           </div>
                         )
-                      })}
+                      })
+                  })()}
               </div>
             </div>
         )}
