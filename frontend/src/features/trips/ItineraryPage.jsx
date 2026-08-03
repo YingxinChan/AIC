@@ -1586,8 +1586,13 @@ export default function ItineraryPage() {
                         <span className={`font-medium text-gray-900 ${activity.is_swapped ? 'line-through text-gray-400' : ''}`}>
                           {activity.name}
                         </span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${(activity.is_swapped ? 'indoor' : activity.type) === 'indoor' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
-                          {activity.is_swapped ? 'indoor' : activity.type}
+                        {/* activity.type already reflects the current plan regardless of
+                            is_swapped (apply_swap overwrites it to the alternate's real
+                            indoor/outdoor value, same as lat/lng) — Claude can swap to a
+                            different outdoor spot, not just indoor, so this must read the
+                            real value rather than assuming indoor whenever swapped. */}
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${activity.type === 'indoor' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
+                          {activity.type}
                         </span>
                         {activity.is_swapped && (
                           <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">

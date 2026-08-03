@@ -10,7 +10,7 @@ from services import swap_service
 def _mock_claude(monkeypatch, alternate=None):
     alternate = alternate or {
         "name": "British Museum", "location": "Great Russell St",
-        "lat": 51.5194, "lng": -0.1270,
+        "lat": 51.5194, "lng": -0.1270, "type": "indoor",
     }
     fake_block = MagicMock(type="text", text=json.dumps(alternate))
     fake_response = MagicMock(content=[fake_block])
@@ -120,10 +120,26 @@ def test_alternative_request_asks_for_coordinates(monkeypatch):
     assert "latitude" in system_prompt and "longitude" in system_prompt
 
 
+def test_alternative_request_asks_for_indoor_or_outdoor_matching_its_own_choice(monkeypatch):
+    # Regression test: the system prompt already tells Claude it can pick
+    # indoor OR a different outdoor spot — but never asked it to report back
+    # which one it actually picked, so callers had no way to know without
+    # assuming indoor every time (see the frontend bug this was found from).
+    mock_client = _mock_claude(monkeypatch)
+    activity = _activity()
+    trip = _trip()
+
+    asyncio.run(swap_service.find_alternative_activity(activity, trip, "Strong winds expected"))
+
+    system_prompt = mock_client.messages.create.call_args.kwargs["system"]
+    assert "indoor or outdoor" in system_prompt
+    assert "not always indoor" in system_prompt
+
+
 def test_find_alternative_activity_returns_the_alternates_coordinates(monkeypatch):
     _mock_claude(monkeypatch, alternate={
         "name": "British Museum", "location": "Great Russell St",
-        "lat": 51.5194, "lng": -0.1270,
+        "lat": 51.5194, "lng": -0.1270, "type": "indoor",
     })
     activity = _activity()
     trip = _trip()
@@ -144,9 +160,39 @@ def test_apply_swap_moves_the_map_pin_to_the_alternates_coordinates():
     activity = _activity()  # Hyde Park's real coordinates
     alternate = {
         "name": "British Museum", "location": "Great Russell St",
-        "lat": 51.5194, "lng": -0.1270,
+        "lat": 51.5194, "lng": -0.1270, "type": "indoor",
     }
 
     asyncio.run(swap_service.apply_swap(AsyncMock(), activity, alternate, "Heavy rain expected"))
 
     assert (activity.lat, activity.lng) == (51.5194, -0.1270)
+
+
+def test_apply_swap_updates_the_activity_type_to_match_the_alternative():
+    # Regression test: apply_swap never touched `type` at all, so an
+    # originally-outdoor activity stayed labeled "outdoor" in the database
+    # forever even after being swapped to an indoor venue (or vice versa) —
+    # the frontend then had to (wrongly) assume every swap goes indoor.
+    activity = _activity(type="outdoor")
+    alternate = {
+        "name": "British Museum", "location": "Great Russell St",
+        "lat": 51.5194, "lng": -0.1270, "type": "indoor",
+    }
+
+    asyncio.run(swap_service.apply_swap(AsyncMock(), activity, alternate, "Heavy rain expected"))
+
+    assert activity.type == "indoor"
+
+
+def test_apply_swap_keeps_type_outdoor_when_the_alternative_is_also_outdoor():
+    # A wind/fog/heat/etc. swap can legitimately pick a different outdoor
+    # activity instead of forcing indoor — type must reflect that too.
+    activity = _activity(type="outdoor")
+    alternate = {
+        "name": "Regent's Park Walk", "location": "Regent's Park",
+        "lat": 51.5313, "lng": -0.1570, "type": "outdoor",
+    }
+
+    asyncio.run(swap_service.apply_swap(AsyncMock(), activity, alternate, "Strong winds expected"))
+
+    assert activity.type == "outdoor"

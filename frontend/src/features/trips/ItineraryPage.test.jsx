@@ -1431,6 +1431,47 @@ function mockGeneratedActivity(overrides = {}) {
   }
 }
 
+test('shows the swapped activity\'s real type badge, not hardcoded "indoor"', async () => {
+  // Regression test: the badge used to hardcode 'indoor' for any swapped
+  // activity regardless of what it was actually swapped to (backend now
+  // updates `type` to the alternate's real value on swap — see
+  // swap_service.apply_swap). A wind/fog/heat/etc. swap can legitimately
+  // pick a different outdoor activity instead of forcing indoor, so this
+  // must show 'outdoor' in that case, not 'indoor'.
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  getItinerary.mockResolvedValue({
+    days: [{ date: '2026-08-01', activities: [
+      mockGeneratedActivity({
+        id: 1, name: 'Thames Boat Cruise', type: 'outdoor', is_swapped: true,
+        alternate_name: 'Regent\'s Park Walk', alternate_location: 'Regent\'s Park',
+        swap_reason: 'Strong winds expected',
+      }),
+    ] }],
+  })
+  renderAt(1)
+
+  await screen.findByText('Thames Boat Cruise')
+  expect(screen.getByText('outdoor')).toBeInTheDocument()
+  expect(screen.queryByText('indoor')).not.toBeInTheDocument()
+})
+
+test('shows "indoor" on a swapped activity that really was swapped indoors', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  getItinerary.mockResolvedValue({
+    days: [{ date: '2026-08-01', activities: [
+      mockGeneratedActivity({
+        id: 1, name: 'Hyde Park Walk', type: 'indoor', is_swapped: true,
+        alternate_name: 'British Museum', alternate_location: 'Great Russell St',
+        swap_reason: 'Heavy rain expected (80.0% chance)',
+      }),
+    ] }],
+  })
+  renderAt(1)
+
+  await screen.findByText('Hyde Park Walk')
+  expect(screen.getByText('indoor')).toBeInTheDocument()
+})
+
 test('shows a Fixed pill on activities marked is_fixed, and not on others', async () => {
   getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
   getItinerary.mockResolvedValue({
