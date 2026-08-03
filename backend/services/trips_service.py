@@ -31,6 +31,8 @@ def _trip_dict(trip: Trip) -> dict:
         "departure_other_time": trip.departure_other_time,
         "original_plan": trip.original_plan,
         "hotel_address": trip.hotel_address,
+        "hotel_lat": trip.hotel_lat,
+        "hotel_lng": trip.hotel_lng,
     }
 
 
@@ -50,10 +52,13 @@ async def create_trip(
     origin: str = "",
     original_plan: str = "",
     hotel_address: str = "",
+    hotel_lat: float | None = None,
+    hotel_lng: float | None = None,
 ) -> dict:
     trip = Trip(
         user_id=user_id, name=name, start_date=start_date, end_date=end_date,
         destination=destination, origin=origin, original_plan=original_plan, hotel_address=hotel_address,
+        hotel_lat=hotel_lat, hotel_lng=hotel_lng,
     )
 
     # Geocoded server-side so the weather auto-swap background job can fetch
@@ -111,6 +116,8 @@ async def update_trip_details(
     start_date: date | None = None,
     end_date: date | None = None,
     hotel_address: str | None = None,
+    hotel_lat: float | None = None,
+    hotel_lng: float | None = None,
 ) -> dict:
     trip = await _get_owned_trip(db, trip_id, user_id)
 
@@ -129,6 +136,13 @@ async def update_trip_details(
         trip.end_date = end_date
     if hotel_address is not None:
         trip.hotel_address = hotel_address
+        # Coordinates only ever accompany a hotel_address edit (see
+        # HotelSearchInput/ItineraryPage) — a dropdown pick sends real
+        # numbers, freehand typing sends neither, which correctly clears any
+        # stale coordinates left over from a previous selection that no
+        # longer matches the (now-edited) address string.
+        trip.hotel_lat = hotel_lat
+        trip.hotel_lng = hotel_lng
     await db.commit()
     await db.refresh(trip)
     return _trip_dict(trip)

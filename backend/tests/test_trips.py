@@ -232,6 +232,59 @@ def test_update_trip_persists_hotel_address(auth_client):
     trip = auth_client.get(f"/api/trips/{trip_id}").json()
     assert trip["hotel_address"] == "The Ritz, London"
 
+# Regression tests: Nominatim returns exact coordinates for a hotel picked
+# from the search dropdown, but they used to be thrown away — only the
+# address string got saved, forcing a re-geocode later that isn't
+# guaranteed to resolve back to the same building (chain hotels, reused
+# street names, ambiguous addresses).
+def test_update_trip_persists_hotel_coordinates(auth_client):
+    create = auth_client.post("/api/trips/", json={
+        "name": "Summer Trip", "start_date": "2026-08-01", "end_date": "2026-08-07"
+    })
+    trip_id = create.json()["id"]
+
+    response = auth_client.patch(f"/api/trips/{trip_id}", json={
+        "hotel_address": "The Ritz, London", "hotel_lat": 51.5072, "hotel_lng": -0.1426,
+    })
+    assert response.status_code == 200
+    assert response.json()["hotel_lat"] == 51.5072
+    assert response.json()["hotel_lng"] == -0.1426
+
+    trip = auth_client.get(f"/api/trips/{trip_id}").json()
+    assert trip["hotel_lat"] == 51.5072
+    assert trip["hotel_lng"] == -0.1426
+
+def test_update_trip_hotel_coordinates_default_to_none(auth_client):
+    create = auth_client.post("/api/trips/", json={
+        "name": "Summer Trip", "start_date": "2026-08-01", "end_date": "2026-08-07"
+    })
+    trip_id = create.json()["id"]
+
+    trip = auth_client.get(f"/api/trips/{trip_id}").json()
+    assert trip["hotel_lat"] is None
+    assert trip["hotel_lng"] is None
+
+def test_update_trip_editing_hotel_address_without_coordinates_clears_stale_ones(auth_client):
+    # Simulates freehand-editing a previously-picked hotel address: the
+    # frontend sends no coordinates for the new value, which must overwrite
+    # (not just leave alone) whatever coordinates the earlier pick saved —
+    # otherwise the map would keep pointing at the old, no-longer-matching
+    # building.
+    create = auth_client.post("/api/trips/", json={
+        "name": "Summer Trip", "start_date": "2026-08-01", "end_date": "2026-08-07"
+    })
+    trip_id = create.json()["id"]
+
+    auth_client.patch(f"/api/trips/{trip_id}", json={
+        "hotel_address": "The Ritz, London", "hotel_lat": 51.5072, "hotel_lng": -0.1426,
+    })
+
+    response = auth_client.patch(f"/api/trips/{trip_id}", json={"hotel_address": "The Ritz Hotel"})
+    assert response.status_code == 200
+    assert response.json()["hotel_address"] == "The Ritz Hotel"
+    assert response.json()["hotel_lat"] is None
+    assert response.json()["hotel_lng"] is None
+
 def test_update_trip_persists_dates(auth_client):
     create = auth_client.post("/api/trips/", json={
         "name": "Summer Trip", "start_date": "2026-08-01", "end_date": "2026-08-07"

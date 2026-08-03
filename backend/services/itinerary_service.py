@@ -1,5 +1,5 @@
 import json
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 import anthropic
 from fastapi import HTTPException
@@ -19,6 +19,10 @@ from services.weather_service import (
 )
 
 MODEL = "claude-haiku-4-5"
+
+# How close a trip's daily sunrise/sunset times need to be (in minutes) to be
+# summarized as one representative value instead of an earliest-latest range.
+SUN_TIME_DRIFT_THRESHOLD_MINUTES = 30
 
 ITINERARY_SCHEMA = {
     "type": "object",
@@ -80,8 +84,48 @@ TAG_SCHEMA = {
     "additionalProperties": False,
 }
 
+# Shared between generate_itinerary()'s per-trip prompt and
+# _tag_weather_sensitivity()'s single-activity call, so a manually-added
+# activity is judged by the exact same bar as an AI-generated one — without
+# this, the narrower/looser wording of two independently-written prompts
+# would drift apart (e.g. a generic "the point is a view" phrasing reads
+# landmarks like Big Ben or Tower Bridge as view_dependent just because
+# they're sightseeing stops, when the original intent was specifically
+# distant vistas/viewpoints that fog would ruin, not any looked-at landmark).
+WEATHER_SENSITIVITY_GUIDANCE = (
+    'Use "view_dependent" only when the activity\'s main point is a distant '
+    "view or vista that bad visibility would ruin (e.g. a mountain "
+    "viewpoint, a rooftop observation deck, a scenic clifftop) — not just "
+    "any outdoor sightseeing, and not a landmark that's simply looked at or "
+    'photographed up close (e.g. Big Ben, Tower Bridge). Use "wind_exposed" '
+    'only for activities on open water or suspended/exposed transport '
+    "transport (e.g. a boat cruise, a cable car, a hot air balloon) — not a "
+    'regular outdoor walk. Use "strenuous_outdoor" only for genuinely '
+    "physically demanding activities done mostly outdoors (e.g. a "
+    "multi-hour hiking trail, a steep uphill walking tour) — not a short "
+    'stroll. Use "beach" only for literal beach or open-water swimming '
+    "activities. An activity can have multiple tags (a coastal hike could "
+    'be both "strenuous_outdoor" and "view_dependent") or none — a museum '
+    "visit, an indoor market, or a flat city walking tour touching none of "
+    "these should get an empty list, not a defensive guess."
+)
 
-async def _trip_rule_day_numbers(trip: Trip, db: AsyncSession) -> tuple[dict[str, list[int]], dict[int, str]]:
+
+def _summarize_sun_times(times: list[str], threshold_minutes: int = SUN_TIME_DRIFT_THRESHOLD_MINUTES) -> str:
+    """Collapse a trip's daily sunrise or sunset times (each '%I:%M %p') into
+    one representative value when they're all close together, or an explicit
+    earliest-latest range when they drift apart across a longer trip."""
+    ordered = sorted(times, key=lambda t: datetime.strptime(t, "%I:%M %p"))
+    earliest, latest = ordered[0], ordered[-1]
+    spread = datetime.strptime(latest, "%I:%M %p") - datetime.strptime(earliest, "%I:%M %p")
+    if spread <= timedelta(minutes=threshold_minutes):
+        return f"around {earliest}"
+    return f"between {earliest} and {latest}"
+
+
+async def _trip_rule_day_numbers(
+    trip: Trip, db: AsyncSession
+) -> tuple[dict[str, list[int]], dict[int, str], dict[int, str], dict[int, str]]:
     """For each ACTIVE_RULES rule, which day numbers (1-indexed) within the
     forecast horizon already trigger it — so generation can steer away from
     planning a mismatched activity for those days directly, instead of
@@ -101,11 +145,18 @@ async def _trip_rule_day_numbers(trip: Trip, db: AsyncSession) -> tuple[dict[str
     activities are actually affected. Thunderstorm-triggered days, and
     heavy-rain days where hourly data wasn't available, are absent from
     this dict and keep the existing blanket wording via rule_day_numbers.
+
+    Finally, returns day_number -> sunrise and day_number -> sunset mappings
+    ("%I:%M %p" strings), read straight off the same forecast_days response
+    used above — no extra fetch. `.get()`, not direct indexing: a day
+    missing either field (e.g. a test fixture, or a future climatology-
+    fallback day with no sunrise/sunset) is simply absent from both dicts
+    rather than raising.
     """
     if trip.lat == 0.0 and trip.lng == 0.0:
         coords = geocoding_service.geocode(trip.destination)
         if not coords:
-            return {}, {}
+            return {}, {}, {}, {}
         trip.lat, trip.lng = coords
         await db.commit()
 
@@ -114,14 +165,14 @@ async def _trip_rule_day_numbers(trip: Trip, db: AsyncSession) -> tuple[dict[str
     window_start = max(today, trip.start_date)
     window_end = min(trip.end_date, horizon)
     if window_start > window_end:
-        return {}, {}
+        return {}, {}, {}, {}
 
     try:
         forecast_days = get_weather_prediction(
             trip.lat, trip.lng, window_start.isoformat(), window_end.isoformat()
         )
     except Exception:
-        return {}, {}  # a weather fetch failure shouldn't block itinerary generation
+        return {}, {}, {}, {}  # a weather fetch failure shouldn't block itinerary generation
 
     try:
         hourly_days = get_hourly_weather(
@@ -137,8 +188,17 @@ async def _trip_rule_day_numbers(trip: Trip, db: AsyncSession) -> tuple[dict[str
     rain_rule = RainRule()
     rule_day_numbers: dict[str, list[int]] = {rule.id: [] for rule in ACTIVE_RULES}
     rain_windows: dict[int, str] = {}
+    sunrise_by_day: dict[int, str] = {}
+    sunset_by_day: dict[int, str] = {}
     for forecast_day in forecast_days:
         day_number = (date.fromisoformat(forecast_day["date"]) - trip.start_date).days + 1
+
+        sunrise = forecast_day.get("sunrise")
+        sunset = forecast_day.get("sunset")
+        if sunrise and sunset:
+            sunrise_by_day[day_number] = sunrise
+            sunset_by_day[day_number] = sunset
+
         for rule in ACTIVE_RULES:
             if rule.day_triggers(forecast_day):
                 rule_day_numbers[rule.id].append(day_number)
@@ -154,7 +214,12 @@ async def _trip_rule_day_numbers(trip: Trip, db: AsyncSession) -> tuple[dict[str
                 if window:
                     rain_windows[day_number] = window
 
-    return {rid: sorted(days) for rid, days in rule_day_numbers.items()}, rain_windows
+    return (
+        {rid: sorted(days) for rid, days in rule_day_numbers.items()},
+        rain_windows,
+        sunrise_by_day,
+        sunset_by_day,
+    )
 
 
 async def get_itinerary(trip_id: int, db: AsyncSession, user_id: int) -> dict:
@@ -216,7 +281,7 @@ async def generate_itinerary(trip_id: int, db: AsyncSession, user_id: int) -> di
 
     content = f'Plan a {num_days}-day {destination} itinerary for the trip "{trip.name}".'
 
-    rule_day_numbers, rain_windows = await _trip_rule_day_numbers(trip, db)
+    rule_day_numbers, rain_windows, sunrise_by_day, sunset_by_day = await _trip_rule_day_numbers(trip, db)
     for rule in ACTIVE_RULES:
         day_numbers = rule_day_numbers.get(rule.id, [])
         if not day_numbers:
@@ -266,6 +331,14 @@ async def generate_itinerary(trip_id: int, db: AsyncSession, user_id: int) -> di
                 f'{rule.avoid_phrase} — avoid planning those for {that_day} if possible.'
             )
 
+    if sunset_by_day:
+        sunrise_desc = _summarize_sun_times(list(sunrise_by_day.values()))
+        sunset_desc = _summarize_sun_times(list(sunset_by_day.values()))
+        content += (
+            f' In {destination} during this trip, sunrise is {sunrise_desc} and sunset is '
+            f'{sunset_desc}.'
+        )
+
     if trip.arrival_time:
         content += (
             f' The traveler lands in {destination} at {trip.arrival_time} on day 1 — '
@@ -314,7 +387,21 @@ async def generate_itinerary(trip_id: int, db: AsyncSession, user_id: int) -> di
                 f"to visit — do not skip famous landmarks in favor of only lesser-known "
                 f"spots. Suggest a realistic mix of indoor and outdoor activities, 3-4 "
                 f"activities per day, with specific time slots (e.g. '09:00 - 11:00') and "
-                f"real {destination} locations. Each day's activities must be grouped by "
+                f"real {destination} locations. "
+                f"When the prompt below states this trip's sunrise and sunset times, treat "
+                f"that as the full daylight window for outdoor activities and use it — don't "
+                f"cluster them all in the morning and finish hours before sunset out of habit, "
+                f"whether sunset is early (winter, e.g. 4pm) or late (summer, e.g. 9pm); spread "
+                f"them across the daylight available instead. This isn't only about outdoor "
+                f"activities, though: round out "
+                f"every day with an evening plan (dinner, a show, an evening walk or market) "
+                f"instead of finishing by mid-afternoon just because the day's earlier "
+                f"activities — indoor or outdoor — already wrapped up, including on "
+                f"indoor-heavy or rainy days. Keep a realistic evening cutoff around 8-9pm "
+                f"regardless of how late sunset actually falls (e.g. summer in northern "
+                f"Europe, where it may not set until 9:30-10:30pm) — a day's activities "
+                f"shouldn't run later than that. "
+                f"Each day's activities must be grouped by "
                 f"geographic area and ordered into a sensible one-directional route — never "
                 f"schedule a day that crosses the city, comes back, then crosses it again. "
                 f"For every activity, also give its real approximate latitude and longitude "
@@ -326,19 +413,7 @@ async def generate_itinerary(trip_id: int, db: AsyncSession, user_id: int) -> di
                 f"days rather than a fixed order — rearrange which activities fall on which "
                 f"day if that produces a better overall fit. "
                 f"For every activity, also tag weather_sensitivity as a list — empty if none "
-                f"apply. Use \"view_dependent\" only when the activity's main point is a view "
-                f"or vista that bad visibility would ruin (e.g. a mountain viewpoint, a "
-                f"rooftop observation deck) — not just any outdoor activity. Use "
-                f"\"wind_exposed\" only for activities on open water or suspended/exposed "
-                f"transport (e.g. a boat cruise, a cable car, a hot air balloon) — not a "
-                f"regular outdoor walk. Use \"strenuous_outdoor\" only for genuinely "
-                f"physically demanding activities done mostly outdoors (e.g. a multi-hour "
-                f"hiking trail, a steep uphill walking tour) — not a short stroll. Use "
-                f"\"beach\" only for literal beach or open-water swimming activities. An "
-                f"activity can have multiple tags (a coastal hike could be both "
-                f"\"strenuous_outdoor\" and \"view_dependent\") or none — a museum visit, an "
-                f"indoor market, or a flat city walking tour touching none of these should "
-                f"get an empty list, not a defensive guess."
+                f"apply. {WEATHER_SENSITIVITY_GUIDANCE}"
             ),
             messages=[{"role": "user", "content": content}],
             output_config={"format": {"type": "json_schema", "schema": ITINERARY_SCHEMA}},
@@ -454,13 +529,9 @@ async def _tag_weather_sensitivity(name: str, location: str, activity_type: str,
             max_tokens=128,
             system=(
                 "You tag travel activities for weather sensitivity. Given an "
-                "activity's name, location, and indoor/outdoor type, return which "
-                "of these apply (empty list if none): view_dependent (the point is "
-                "a view/vista that fog or low visibility would ruin), wind_exposed "
-                "(elevated, open, or exposed enough that strong wind is a specific "
-                "concern beyond ordinary discomfort), strenuous_outdoor (physically "
-                "demanding enough that extreme heat/cold is a specific safety "
-                "concern), beach (a beach or open-water swimming activity)."
+                "activity's name, location, and indoor/outdoor type, decide which of "
+                "view_dependent, wind_exposed, strenuous_outdoor, and beach apply — "
+                f"empty list if none. {WEATHER_SENSITIVITY_GUIDANCE}"
             ),
             messages=[{
                 "role": "user",

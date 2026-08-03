@@ -114,6 +114,7 @@ def _get_forecast_days(lat: float, lon: float, start_date: str, end_date: str) -
     features = build_features(forecast)
     predictor = get_predictor()
     predictions = predictor.predict(features)
+    utc_offset_seconds = forecast["utc_offset_seconds"]
 
     hourly = forecast["hourly"]
 
@@ -150,8 +151,9 @@ def _get_forecast_days(lat: float, lon: float, start_date: str, end_date: str) -
             "uv_index": float(features.iloc[i]["uv_index"]),
             "uv_level": uv_level(features.iloc[i]["uv_index"]),
             "uv_advice": advice,
+            "visibility_m": float(features.iloc[i]["visibility"]),
+            "utc_offset_seconds": utc_offset_seconds,
         })
-    
         # Add ML prediction
         day.update(prediction)
 
@@ -233,6 +235,7 @@ def get_hourly_weather(lat: float, lon: float, start_date: str = None, end_date:
 
     forecast = get_forecast(lat, lon, start_date, end_date)
     hourly = forecast["hourly"]
+    utc_offset_seconds = forecast["utc_offset_seconds"]
 
     results = []
     for i in range(len(hourly["time"])):
@@ -249,6 +252,7 @@ def get_hourly_weather(lat: float, lon: float, start_date: str = None, end_date:
             "condition": weather_condition(
                 hourly["weather_code"][i]
             ),
+            "utc_offset_seconds": utc_offset_seconds,
             "wind_speed": hourly["wind_speed_10m"][i],
             "uv_index": hourly["uv_index"][i],
             "visibility_km": round(hourly["visibility"][i] / 1000, 2),

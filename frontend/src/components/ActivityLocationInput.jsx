@@ -14,7 +14,20 @@ const MIN_QUERY_LENGTH = 3
 // the address got typed/edited after the last real geocode). Typing here
 // only updates this component's own internal draft text; the parent only
 // ever hears about a location that came with real, matching coordinates.
-export default function ActivityLocationInput({ id, value, onChange, cityContext, placeholder }) {
+
+// Roughly a 100km-wide box — wide enough to cover a city and its usual
+// day-trip radius (so a place just outside city limits still gets the
+// benefit of the bias) without being so wide it stops disambiguating
+// common names within the city.
+const VIEWBOX_DEGREES = 0.5
+
+function viewboxFor(cityCenter) {
+  if (!cityCenter) return null
+  const [lat, lon] = cityCenter
+  return [lon - VIEWBOX_DEGREES, lat + VIEWBOX_DEGREES, lon + VIEWBOX_DEGREES, lat - VIEWBOX_DEGREES]
+}
+
+export default function ActivityLocationInput({ id, value, onChange, cityContext, cityCenter, placeholder }) {
   const [draft, setDraft] = useState(value || '')
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
@@ -42,7 +55,7 @@ export default function ActivityLocationInput({ id, value, onChange, cityContext
     setSearched(false)
 
     const timeoutId = setTimeout(() => {
-      searchPlaces(`${draft}, ${cityContext}`)
+      searchPlaces(draft, viewboxFor(cityCenter))
         .then((places) => {
           if (cancelled) return
           setResults(places)
@@ -60,7 +73,7 @@ export default function ActivityLocationInput({ id, value, onChange, cityContext
       cancelled = true
       clearTimeout(timeoutId)
     }
-  }, [draft, cityContext])
+  }, [draft, cityContext, cityCenter])
 
   useEffect(() => {
     function handleClickOutside(e) {

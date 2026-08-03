@@ -648,6 +648,129 @@ def test_generate_itinerary_omits_rain_mention_when_forecast_is_clear(auth_clien
     assert "Heavy rain" not in prompt
 
 
+def test_generate_itinerary_prompt_states_sunrise_and_sunset_when_available(auth_client, monkeypatch):
+    mock_client = _mock_claude(monkeypatch)
+    monkeypatch.setattr("services.trips_service.geocoding_service.geocode", lambda destination: LONDON_COORDS)
+    trip_id = _create_trip(auth_client, start=TODAY.isoformat(), end=(TODAY + timedelta(days=1)).isoformat())
+
+    monkeypatch.setattr(
+        "services.itinerary_service.get_weather_prediction",
+        lambda lat, lon, start, end: [
+            {"date": TODAY.isoformat(), "heavy_rain_warning": False, "sunrise": "06:00 AM", "sunset": "08:45 PM"},
+            {"date": (TODAY + timedelta(days=1)).isoformat(), "heavy_rain_warning": False,
+             "sunrise": "06:02 AM", "sunset": "08:50 PM"},
+        ],
+    )
+    monkeypatch.setattr("services.itinerary_service.get_hourly_weather", lambda lat, lon, start, end: [])
+
+    auth_client.post(f"/api/trips/{trip_id}/itinerary/generate")
+
+    prompt = mock_client.messages.create.call_args.kwargs["messages"][0]["content"]
+    assert "sunrise is around 06:00 AM" in prompt
+    assert "sunset is around 08:45 PM" in prompt
+
+
+def test_generate_itinerary_prompt_states_sunset_range_when_it_drifts_across_trip(auth_client, monkeypatch):
+    mock_client = _mock_claude(monkeypatch)
+    monkeypatch.setattr("services.trips_service.geocoding_service.geocode", lambda destination: LONDON_COORDS)
+    trip_id = _create_trip(auth_client, start=TODAY.isoformat(), end=(TODAY + timedelta(days=1)).isoformat())
+
+    monkeypatch.setattr(
+        "services.itinerary_service.get_weather_prediction",
+        lambda lat, lon, start, end: [
+            {"date": TODAY.isoformat(), "heavy_rain_warning": False, "sunrise": "06:00 AM", "sunset": "07:00 PM"},
+            {"date": (TODAY + timedelta(days=1)).isoformat(), "heavy_rain_warning": False,
+             "sunrise": "06:02 AM", "sunset": "08:00 PM"},
+        ],
+    )
+    monkeypatch.setattr("services.itinerary_service.get_hourly_weather", lambda lat, lon, start, end: [])
+
+    auth_client.post(f"/api/trips/{trip_id}/itinerary/generate")
+
+    prompt = mock_client.messages.create.call_args.kwargs["messages"][0]["content"]
+    assert "sunset is between 07:00 PM and 08:00 PM" in prompt
+
+
+def test_generate_itinerary_omits_sunset_mention_when_forecast_lacks_sunrise_sunset_fields(auth_client, monkeypatch):
+    mock_client = _mock_claude(monkeypatch)
+    monkeypatch.setattr("services.trips_service.geocoding_service.geocode", lambda destination: LONDON_COORDS)
+    trip_id = _create_trip(auth_client, start=TODAY.isoformat(), end=(TODAY + timedelta(days=1)).isoformat())
+
+    monkeypatch.setattr(
+        "services.itinerary_service.get_weather_prediction",
+        lambda lat, lon, start, end: [
+            {"date": TODAY.isoformat(), "heavy_rain_warning": False, "heavy_rain_probability": 5.0},
+            {"date": (TODAY + timedelta(days=1)).isoformat(), "heavy_rain_warning": False, "heavy_rain_probability": 2.0},
+        ],
+    )
+    monkeypatch.setattr("services.itinerary_service.get_hourly_weather", lambda lat, lon, start, end: [])
+
+    auth_client.post(f"/api/trips/{trip_id}/itinerary/generate")
+
+    prompt = mock_client.messages.create.call_args.kwargs["messages"][0]["content"]
+    assert "sunrise" not in prompt.lower()
+    assert "sunset" not in prompt.lower()
+
+
+def test_generate_itinerary_skips_sunset_mention_beyond_forecast_horizon(auth_client, monkeypatch):
+    mock_client = _mock_claude(monkeypatch)
+    monkeypatch.setattr("services.trips_service.geocoding_service.geocode", lambda destination: LONDON_COORDS)
+    far_start = (TODAY + timedelta(days=60)).isoformat()
+    far_end = (TODAY + timedelta(days=62)).isoformat()
+    trip_id = _create_trip(auth_client, start=far_start, end=far_end)
+
+    monkeypatch.setattr("services.itinerary_service.get_weather_prediction", MagicMock())
+    monkeypatch.setattr("services.itinerary_service.get_hourly_weather", MagicMock())
+
+    auth_client.post(f"/api/trips/{trip_id}/itinerary/generate")
+
+    prompt = mock_client.messages.create.call_args.kwargs["messages"][0]["content"]
+    assert "sunset" not in prompt.lower()
+
+
+def test_generate_itinerary_omits_sunset_mention_when_weather_fetch_fails(auth_client, monkeypatch):
+    mock_client = _mock_claude(monkeypatch)
+    monkeypatch.setattr("services.trips_service.geocoding_service.geocode", lambda destination: LONDON_COORDS)
+    trip_id = _create_trip(auth_client, start=TODAY.isoformat(), end=(TODAY + timedelta(days=1)).isoformat())
+
+    def _raise(*args, **kwargs):
+        raise RuntimeError("weather API down")
+    monkeypatch.setattr("services.itinerary_service.get_weather_prediction", _raise)
+
+    response = auth_client.post(f"/api/trips/{trip_id}/itinerary/generate")
+
+    assert response.status_code == 200
+    prompt = mock_client.messages.create.call_args.kwargs["messages"][0]["content"]
+    assert "sunset" not in prompt.lower()
+
+
+def test_generate_itinerary_system_prompt_mentions_sunset_for_outdoor_timing(auth_client, monkeypatch):
+    mock_client = _mock_claude(monkeypatch)
+    trip_id = _create_trip(auth_client)
+
+    auth_client.post(f"/api/trips/{trip_id}/itinerary/generate")
+
+    system_prompt = mock_client.messages.create.call_args.kwargs["system"]
+    assert "sunset" in system_prompt
+    assert "8-9pm" in system_prompt
+
+
+def test_generate_itinerary_system_prompt_asks_for_evening_plan_even_on_indoor_heavy_days(auth_client, monkeypatch):
+    # Unlike the sunset-driven sentence in `content` (only present when
+    # weather data is available), this general "don't stop by mid-afternoon"
+    # instruction lives in the system prompt unconditionally — it must still
+    # apply on indoor-heavy or rainy days, where there's no outdoor activity
+    # for the sunset guidance to even attach to.
+    mock_client = _mock_claude(monkeypatch)
+    trip_id = _create_trip(auth_client)
+
+    auth_client.post(f"/api/trips/{trip_id}/itinerary/generate")
+
+    system_prompt = mock_client.messages.create.call_args.kwargs["system"]
+    assert "evening plan" in system_prompt
+    assert "indoor-heavy or rainy days" in system_prompt
+
+
 def test_generate_itinerary_skips_weather_check_beyond_forecast_horizon(auth_client, monkeypatch):
     mock_client = _mock_claude(monkeypatch)
     monkeypatch.setattr("services.trips_service.geocoding_service.geocode", lambda destination: LONDON_COORDS)

@@ -24,12 +24,19 @@ class ForecastDayOut(BaseModel):
     wind_level: str | None = None
 
     visibility_km: float | None = None
+    visibility_m: float | None = None
 
     sunrise: str | None = None
     sunset: str | None = None
 
     temperature_level: str | None = None
     temperature_advice: str | None = None
+
+    # Seconds offset from UTC for the destination's resolved local timezone
+    # (Open-Meteo's &timezone=auto) — `date`/`time` fields above are in this
+    # local timezone, not GMT/UTC. Optional: climatology-fallback days (see
+    # is_climatology) don't have a real Open-Meteo response to read this from.
+    utc_offset_seconds: int | None = None
 
     # Forecast model output
     heavy_rain_probability: float | None = None
@@ -58,6 +65,7 @@ class HourlyWeatherOut(BaseModel):
     rain_mm: float
     rain_probability: float | None = None
     condition: str
+    utc_offset_seconds: int
     uv_index: float
     wind_speed: float
     visibility_km: float

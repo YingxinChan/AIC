@@ -16,8 +16,13 @@ ALTERNATE_ACTIVITY_SCHEMA = {
         "location": {"type": "string"},
         "lat": {"type": "number"},
         "lng": {"type": "number"},
+        # Matches ITINERARY_SCHEMA's per-activity "type" field/enum in
+        # itinerary_service.py — whichever this alternative actually is
+        # (Claude may pick indoor or a different outdoor spot, see the
+        # system prompt below), not assumed to always be indoor.
+        "type": {"type": "string", "enum": ["indoor", "outdoor"]},
     },
-    "required": ["name", "location", "lat", "lng"],
+    "required": ["name", "location", "lat", "lng", "type"],
     "additionalProperties": False,
 }
 
@@ -80,7 +85,9 @@ async def find_alternative_activity(
             f"approximate latitude and longitude (as decimal degrees, e.g. lat "
             f"51.5194, lng -0.1270 for the British Museum) — use your knowledge of "
             f"the actual location, not a placeholder or the original activity's "
-            f"coordinates."
+            f"coordinates. Also state whether the venue you suggested is indoor "
+            f"or outdoor, matching whichever you actually picked above — not "
+            f"always indoor."
         ),
         messages=[{"role": "user", "content": content}],
         output_config={"format": {"type": "json_schema", "schema": ALTERNATE_ACTIVITY_SCHEMA}},
@@ -97,7 +104,11 @@ async def apply_swap(db: AsyncSession, activity: Activity, alternate: dict, reas
     # The map pin (lat/lng) has no separate pre/post-swap field — it always
     # reflects the activity's current plan, so it must move to the
     # alternative's coordinates here or it silently keeps pointing at the
-    # rained-out original instead of the new indoor venue.
+    # rained-out original instead of the new venue.
     activity.lat = alternate["lat"]
     activity.lng = alternate["lng"]
+    # Same reasoning as lat/lng above: `type` reflects the current plan, not
+    # the pre-swap original. Claude can pick indoor OR a different outdoor
+    # spot (see the system prompt above) — it must not be assumed indoor.
+    activity.type = alternate["type"]
     await db.commit()
