@@ -1,6 +1,14 @@
 from datetime import date
 
 from pydantic import BaseModel
+from typing import List, Union
+
+
+class RiskBreakdown(BaseModel):
+    factor: str
+    value: Union[str, float, int]
+    unit: str | None = None
+    impact: float
 
 
 class ForecastDayOut(BaseModel):
@@ -33,14 +41,10 @@ class ForecastDayOut(BaseModel):
     sunrise: str | None = None
     sunset: str | None = None
 
+    # Temperature risk
     temperature_level: str | None = None
     temperature_advice: str | None = None
-
-    # Seconds offset from UTC for the destination's resolved local timezone
-    # (Open-Meteo's &timezone=auto) — `date`/`time` fields above are in this
-    # local timezone, not GMT/UTC. Optional: climatology-fallback days (see
-    # is_climatology) don't have a real Open-Meteo response to read this from.
-    utc_offset_seconds: int | None = None
+    temperature_breakdown: List[RiskBreakdown] = []
 
     # Forecast model output
     heavy_rain_probability: float | None = None
@@ -52,15 +56,22 @@ class ForecastDayOut(BaseModel):
     # Risk scores
     flood_score: float | None = None
     flood_risk: str = "Unknown"
+    flood_breakdown: List[RiskBreakdown] = []
 
     beach_safety_score: float | None = None
     beach_safety_level: str = "Unknown"
+    beach_safety_breakdown: List[RiskBreakdown] = []
 
     snow_probability: float | None = None
+    snow_breakdown: List[RiskBreakdown] = []
 
-    hiking_safety_score: float | None = None
-    hiking_safety_level: str = "Unknown"
+    temperature_level: str
+    temperature_advice: str
+    temperature_breakdown: List[RiskBreakdown]
 
+    hiking_safety_score: float
+    hiking_safety_level: str
+    hiking_safety_breakdown: List[RiskBreakdown]
 
 class HourlyWeatherOut(BaseModel):
     time: str
