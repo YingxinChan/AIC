@@ -1,19 +1,24 @@
 # Run: python services/openmeteo.py
 
 import requests
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
+
+
+def resolve_date_range(start_date: str = None, end_date: str = None) -> tuple[date, date]:
+    """Same defaulting rules get_forecast() has always used (today if no
+    start_date, +6 days if no end_date — inclusive on both ends, so a 7-day
+    range), pulled out as real date objects so callers that need to reason
+    about the range (e.g. splitting it at the forecast horizon) don't have
+    to re-parse strings themselves."""
+    start = date.fromisoformat(start_date) if start_date else date.today()
+    end = date.fromisoformat(end_date) if end_date else start + timedelta(days=6)
+    return start, end
+
 
 def get_forecast(lat: float, lon: float, start_date: str = None, end_date: str = None):
-    # If no start_date is provided, default to today
-    if not start_date:
-        start_date = datetime.now().strftime("%Y-%m-%d")
-
-    # If no end_date is provided, calculate it based on the start date.
-    # start_date/end_date are inclusive on both ends, so +6 days gives a
-    # 7-day range (today plus the next 6 days), not +7 (which gives 8).
-    if not end_date:
-        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
-        end_date = (start_dt + timedelta(days=6)).strftime("%Y-%m-%d")
+    start, end = resolve_date_range(start_date, end_date)
+    start_date = start.isoformat()
+    end_date = end.isoformat()
 
     # Hourly forecasted variables
     hourly = ",".join([
@@ -74,4 +79,39 @@ def get_forecast(lat: float, lon: float, start_date: str = None, end_date: str =
         # timezone — callers need this to know what the "local" timestamps
         # above actually mean in absolute (UTC) terms.
         "utc_offset_seconds": data.get("utc_offset_seconds", 0),
+    }
+
+
+def get_historical_forecast(lat: float, lon: float, start_date: str, end_date: str):
+    """Daily historical observations from Open-Meteo's free Archive API —
+    same provider as get_forecast(), no key needed. Used for climatology
+    (long-run averages) on trip days too far out for a real forecast; unlike
+    get_forecast(), start_date/end_date here are required and must already
+    be in the past, so there's no "default to today" behavior to replicate."""
+    daily = ",".join([
+        "weather_code",
+        "precipitation_sum",
+        "temperature_2m_max",
+        "temperature_2m_min",
+    ])
+
+    url = (
+        "https://archive-api.open-meteo.com/v1/archive"
+        f"?latitude={lat}"
+        f"&longitude={lon}"
+        f"&daily={daily}"
+        f"&start_date={start_date}"
+        f"&end_date={end_date}"
+        f"&timezone=GMT"
+    )
+
+    response = requests.get(url,timeout=10,)
+    if response.status_code != 200:
+        raise Exception(f"Historical request failed with status code {response.status_code}")
+
+    data = response.json()
+    return {
+        "latitude": lat,
+        "longitude": lon,
+        "daily": data["daily"],
     }

@@ -11,9 +11,12 @@ from models.activity import Activity
 from models.trip import Trip
 from schemas.itinerary import CreateActivityRequest, UpdateActivityRequest
 from services import geocoding_service
-from services.auto_swap_service import FORECAST_HORIZON_DAYS
 from services.weather_rules import ACTIVE_RULES, RainRule
-from services.weather_service import get_hourly_weather, get_weather_prediction
+from services.weather_service import (
+    FORECAST_HORIZON_DAYS,
+    get_hourly_weather,
+    get_weather_prediction,
+)
 
 MODEL = "claude-haiku-4-5"
 

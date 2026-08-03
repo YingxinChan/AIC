@@ -118,6 +118,11 @@ const LEVEL_COLORS = {
   yellow: ['Moderate', 'Caution'],
 };
 function levelColorClass(level) {
+  // Climatology-fallback days (see forecastDay.is_climatology) report
+  // 'Unknown' for scores they can't compute — that's a genuinely different
+  // state from "checked and it's fine", so it gets its own neutral gray
+  // rather than falling through to the same green as a real Good/Low result.
+  if (level === 'Unknown') return 'bg-gray-100 text-gray-700';
   if (LEVEL_COLORS.red.includes(level)) return 'bg-red-100 text-red-800';
   if (LEVEL_COLORS.yellow.includes(level)) return 'bg-yellow-100 text-yellow-800';
   return 'bg-green-100 text-green-800';
@@ -1314,7 +1319,7 @@ export default function ItineraryPage() {
         )}
 
         {weatherStatus === 'loaded' && forecastDay && (
-            <div className="border border-gray-100 p-4 rounded-lg bg-gray-50/50 space-y-4">
+  <div className="border border-gray-100 p-4 rounded-lg bg-gray-50/50 space-y-4">
 
                 <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-800">
                     <Thermometer size={16} className="text-indigo-600" /> Weather
@@ -1339,6 +1344,11 @@ export default function ItineraryPage() {
                             crammed right against it. */}
                         <div className="flex flex-col items-center shrink-0">
                             <div className="text-sm font-semibold text-gray-500 mb-2">{forecastDay.date}</div>
+                            {forecastDay.is_climatology && (
+                              <div className="inline-flex mb-2 text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 whitespace-nowrap">
+                                Typical weather (historical average)
+                              </div>
+                            )}
                             <WeatherIcon condition={forecastDay.condition} timeStr={forecastDay.date + "T12:00:00"} className="w-10 h-10 text-indigo-500" />
                             <span className="text-sm font-semibold text-gray-700 capitalize whitespace-nowrap mt-1">{forecastDay.condition}</span>
                         </div>
@@ -1431,10 +1441,30 @@ export default function ItineraryPage() {
                     isn't a probability/score like the others. */}
                 <div className="flex overflow-x-auto gap-3 pb-2 cursor-grab active:cursor-grabbing">
                   {[
-                    { l: 'Heavy Rain', v: forecastDay.heavy_rain_probability + '%', s: forecastDay.heavy_rain_warning ? 'High' : 'Low', i: Umbrella, bg: CARD_IDENTITY_BG.heavyRain },
-                    { l: 'Flood', v: Math.round(forecastDay.flood_score) + '%', s: forecastDay.flood_risk, i: Waves, bg: CARD_IDENTITY_BG.flood },
-                    { l: 'Beach Safety', v: Math.round(forecastDay.beach_safety_score) + '%', s: forecastDay.beach_safety_level, i: Palmtree, bg: CARD_IDENTITY_BG.beachSafety },
-                    { l: 'Snow', v: forecastDay.snow_probability + '%', s: snowLevel(forecastDay.snow_probability), i: Snowflake, bg: CARD_IDENTITY_BG.snow },
+                    {
+                      l: 'Heavy Rain',
+                      v: forecastDay.heavy_rain_probability == null ? '—' : `${forecastDay.heavy_rain_probability}%`,
+                      s: forecastDay.heavy_rain_probability == null ? 'Unknown' : (forecastDay.heavy_rain_warning ? 'High' : 'Low'),
+                      i: Umbrella, bg: CARD_IDENTITY_BG.heavyRain,
+                    },
+                    {
+                      l: 'Flood',
+                      v: forecastDay.flood_score == null ? '—' : `${Math.round(forecastDay.flood_score)}%`,
+                      s: forecastDay.flood_risk || 'Unknown',
+                      i: Waves, bg: CARD_IDENTITY_BG.flood,
+                    },
+                    {
+                      l: 'Beach Safety',
+                      v: forecastDay.beach_safety_score == null ? '—' : `${Math.round(forecastDay.beach_safety_score)}%`,
+                      s: forecastDay.beach_safety_level || 'Unknown',
+                      i: Palmtree, bg: CARD_IDENTITY_BG.beachSafety,
+                    },
+                    {
+                      l: 'Snow',
+                      v: forecastDay.snow_probability == null ? '—' : `${forecastDay.snow_probability}%`,
+                      s: forecastDay.snow_probability == null ? 'Unknown' : snowLevel(forecastDay.snow_probability),
+                      i: Snowflake, bg: CARD_IDENTITY_BG.snow,
+                    },
                   ].map((c, i) => (
                       // flex-col justify-center: label/value/badge stay a tight cluster
                       // (gap-1, not spread out) while justify-center splits whatever
@@ -1452,15 +1482,37 @@ export default function ItineraryPage() {
 
                   <div className={`shrink-0 w-[160px] p-4 rounded border text-center flex flex-col items-center justify-center gap-1 ${CARD_IDENTITY_BG.extremeTemp}`}>
                       <div className="text-xs text-gray-500 uppercase flex items-center justify-center gap-2"><Flame size={22} className="text-indigo-400" /> Extreme Temp</div>
-                      <div className="font-bold text-base">{forecastDay.temperature_level}</div>
-                      <div className="text-[11px] text-gray-500 leading-snug">{forecastDay.temperature_advice}</div>
+                      <div className="font-bold text-base">{forecastDay.temperature_level ?? '—'}</div>
+                      {forecastDay.temperature_advice && (
+                        <div className="text-[11px] text-gray-500 leading-snug">{forecastDay.temperature_advice}</div>
+                      )}
                   </div>
 
                   {[
-                    { l: 'Hiking Safety', v: Math.round(forecastDay.hiking_safety_score) + '%', s: forecastDay.hiking_safety_level, i: Mountain, bg: CARD_IDENTITY_BG.hikingSafety },
-                    { l: 'Wind', v: Math.round(forecastDay.wind_speed) + ' km/h', s: forecastDay.wind_level, i: Wind, bg: CARD_IDENTITY_BG.wind, metric: 'wind' },
-                    { l: 'UV Index', v: Math.round(forecastDay.uv_index), s: forecastDay.uv_level, i: SunDim, bg: CARD_IDENTITY_BG.uv, metric: 'uv' },
-                    { l: 'Visibility', v: (forecastDay.visibility_m / 1000).toFixed(1) + ' km', s: visibilityLevel(forecastDay.visibility_m), i: Eye, bg: CARD_IDENTITY_BG.visibility, metric: 'visibility' },
+                    {
+                      l: 'Hiking Safety',
+                      v: forecastDay.hiking_safety_score == null ? '—' : `${Math.round(forecastDay.hiking_safety_score)}%`,
+                      s: forecastDay.hiking_safety_level || 'Unknown',
+                      i: Mountain, bg: CARD_IDENTITY_BG.hikingSafety,
+                    },
+                    {
+                      l: 'Wind',
+                      v: forecastDay.wind_speed == null ? '—' : `${Math.round(forecastDay.wind_speed)} km/h`,
+                      s: forecastDay.wind_level || 'Unknown',
+                      i: Wind, bg: CARD_IDENTITY_BG.wind, metric: 'wind',
+                    },
+                    {
+                      l: 'UV Index',
+                      v: forecastDay.uv_index == null ? '—' : Math.round(forecastDay.uv_index),
+                      s: forecastDay.uv_level || 'Unknown',
+                      i: SunDim, bg: CARD_IDENTITY_BG.uv, metric: 'uv',
+                    },
+                    {
+                      l: 'Visibility',
+                      v: forecastDay.visibility_m == null ? '—' : `${(forecastDay.visibility_m / 1000).toFixed(1)} km`,
+                      s: forecastDay.visibility_m == null ? 'Unknown' : visibilityLevel(forecastDay.visibility_m),
+                      i: Eye, bg: CARD_IDENTITY_BG.visibility, metric: 'visibility',
+                    },
                   ].map((c, i) => {
                       // Only the 3 weather-info cards (metric set) open the hourly-trend
                       // popup on click — the risk cards (heavy rain/flood/etc.) aren't
@@ -1481,6 +1533,12 @@ export default function ItineraryPage() {
                   })}
                 </div>
 
+                {/* Climatology-fallback days have no hourly data at all (see
+                    forecastDay.is_climatology) — the whole section, sunrise/
+                    sunset markers included, only makes sense for real forecast
+                    days. */}
+                {!forecastDay.is_climatology && (
+                <>
                 <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-800 pt-5 border-t">
                     <Clock size={16} className="text-indigo-600" /> Hourly Forecast
                 </h3>
@@ -1559,7 +1617,9 @@ export default function ItineraryPage() {
                         )
                       })
                   })()}
-              </div>
+                </div>
+                </>
+                )}
             </div>
         )}
 

@@ -7,10 +7,11 @@ from models.activity import Activity
 from models.trip import Trip
 from services import geocoding_service, swap_service
 from services.weather_rules import ACTIVE_RULES
-from services.weather_service import get_hourly_weather, get_weather_prediction
-
-FORECAST_HORIZON_DAYS = 15  # Open-Meteo only reliably forecasts ~16 days out
-
+from services.weather_service import (
+    FORECAST_HORIZON_DAYS,
+    get_hourly_weather,
+    get_weather_prediction,
+)
 
 async def run_auto_swap(db: AsyncSession) -> dict:
     """Re-check weather for upcoming/active trips and auto-swap outdoor
