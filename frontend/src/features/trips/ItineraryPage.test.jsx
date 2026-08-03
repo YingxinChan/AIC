@@ -73,9 +73,48 @@ function renderAt(tripId) {
 test('renders itinerary sections', async () => {
   renderAt(1)
 
-  expect(screen.getAllByText(/map/i).length).toBeGreaterThan(0)
+  // Map (and every other trip-dependent section) only renders once the
+  // trip fetch resolves — see the trip-load loading/error state tests below.
+  await waitFor(() => expect(screen.getAllByText(/map/i).length).toBeGreaterThan(0))
   await waitFor(() => expect(getItinerary).toHaveBeenCalledWith('1'))
   expect(await screen.findByText(/weather unavailable for this destination/i)).toBeInTheDocument()
+})
+
+test('shows a loading message while the trip is still being fetched', async () => {
+  // A promise that never resolves during this test keeps the component in
+  // its genuine loading state, instead of racing a real resolution.
+  getTrip.mockReturnValue(new Promise(() => {}))
+  renderAt(1)
+
+  expect(await screen.findByText(/loading trip/i)).toBeInTheDocument()
+})
+
+test('shows an error message with a way back, instead of a blank page, when the trip fails to load', async () => {
+  const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+  getTrip.mockRejectedValue(new Error('not found'))
+  renderAt(1)
+
+  expect(await screen.findByText(/couldn't load this trip/i)).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: /back to my trips/i })).toHaveAttribute('href', '/dashboard')
+  // None of the {trip && ...}-gated sections should render either.
+  expect(screen.queryByText(/loading trip/i)).not.toBeInTheDocument()
+  // The previously-ungated 5D/Map sections must not render either — otherwise
+  // this is a half-broken page (error banner + stale empty weather/map
+  // content underneath), not the clean error state this PR is meant to give.
+  expect(screen.queryByText(/weather unavailable/i)).not.toBeInTheDocument()
+  expect(screen.queryByRole('heading', { name: /map/i })).not.toBeInTheDocument()
+
+  consoleError.mockRestore()
+})
+
+test('an itinerary-fetch failure (same Promise.all as the trip fetch) also shows the trip-load error state', async () => {
+  const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+  getItinerary.mockRejectedValue(new Error('server error'))
+  renderAt(1)
+
+  expect(await screen.findByText(/couldn't load this trip/i)).toBeInTheDocument()
+
+  consoleError.mockRestore()
 })
 
 test('shows the trip\'s own destination in the map heading, not a hardcoded city', async () => {
