@@ -138,6 +138,7 @@ async def run_auto_swap(db: AsyncSession) -> dict:
                         tips.append({
                             "trip_id": trip.id,
                             "activity_id": activity.id,
+                            "rule_id": rule.id,
                             "reason": reason,
                             "tip": rule.tip(forecast_day),
                             "day_date": activity.day_date.isoformat(),
@@ -178,6 +179,7 @@ async def run_auto_swap(db: AsyncSession) -> dict:
                     swapped.append({
                         "trip_id": trip.id,
                         "activity_id": activity.id,
+                        "rule_id": rule.id,
                         "reason": reason,
                         "rain_mm": forecast_day.get("rain_mm"),
                         "day_date": activity.day_date.isoformat(),
