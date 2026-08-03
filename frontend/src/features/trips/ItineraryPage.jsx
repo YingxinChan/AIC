@@ -413,6 +413,13 @@ export default function ItineraryPage() {
   const { tripId } = useParams()
   const navigate = useNavigate()
   const [trip, setTrip] = useState(null)
+  // Mirrors weatherStatus's loading/failed/loaded pattern elsewhere in this
+  // file — without it, a deleted/mistyped/tampered tripId or a transient
+  // network failure all looked identical to "still loading": trip just
+  // stayed null forever and every section (all gated behind {trip && ...})
+  // silently rendered nothing, with no way to tell the states apart and no
+  // way back to the app short of editing the URL by hand.
+  const [tripLoadError, setTripLoadError] = useState(false)
   const [itinerary, setItinerary] = useState(null)
   const [itineraryNotice, setItineraryNotice] = useState('')
   const [generating, setGenerating] = useState(false)
@@ -516,6 +523,7 @@ export default function ItineraryPage() {
   // --- SECTION 3: DATA FETCHING LOGIC ---
   useEffect(() => {
     let cancelled = false;
+    setTripLoadError(false);
 
     Promise.all([getTrip(tripId), getItinerary(tripId)])
       .then(([tripData, itinData]) => {
@@ -545,6 +553,7 @@ export default function ItineraryPage() {
       })
       .catch((err) => {
         console.error("Failed to load trip:", err);
+        if (!cancelled) setTripLoadError(true);
       });
 
     return () => { cancelled = true };
@@ -884,7 +893,29 @@ export default function ItineraryPage() {
   // --- SECTION 5: UI RENDERING ---
   return (
     <div className="space-y-6">
-      
+
+      {/* Fires independently of every {trip && ...} section below — those
+          stay blank forever if trip never loads, so this is the only thing
+          that renders in the loading/failed cases. Loading and failed are
+          otherwise visually identical (both a blank page), which is exactly
+          the ambiguity this is meant to resolve. */}
+      {!trip && !tripLoadError && (
+        <div className="text-center py-16">
+          <p className="text-gray-500 italic">Loading trip...</p>
+        </div>
+      )}
+
+      {tripLoadError && (
+        <div className="text-center py-16 space-y-3">
+          <p className="text-gray-500">
+            We couldn't load this trip — it may have been deleted, or the link may be incorrect.
+          </p>
+          <Link to="/dashboard" className="text-indigo-600 font-medium hover:text-indigo-700 inline-block">
+            Back to My Trips
+          </Link>
+        </div>
+      )}
+
       {/* 5A: Hero Header */}
       {trip && (
         <div className="relative left-1/2 -translate-x-1/2 w-screen -mt-8">
@@ -1281,6 +1312,7 @@ export default function ItineraryPage() {
       </Modal>
 
       {/* 5D: Itinerary & Weather Section */}
+      {trip && (
       <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
         {/* Day Tabs */}
         <div className="flex items-center justify-between mb-6">
@@ -1718,8 +1750,10 @@ export default function ItineraryPage() {
           <Placeholder label="AI-generated itinerary will appear here once generated." />
         )}
       </div>
+      )}
 
       {/* Map */}
+      {trip && (
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-800 mb-4"><MapPin size={18} className="text-indigo-600" /> {capitalize(destination || 'Trip')} Map</h2>
         <MapView height="h-80"
@@ -1734,10 +1768,13 @@ export default function ItineraryPage() {
                     : null
                 }/>
       </div>
+      )}
 
+      {trip && (
       <div className="flex justify-center">
         <Link to="/dashboard" className="inline-flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-full text-sm font-semibold hover:bg-indigo-700 transition-colors"><Briefcase size={16} /> Back to My Trips</Link>
       </div>
+      )}
     </div>
   )
 }
