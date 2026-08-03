@@ -144,6 +144,11 @@ const CARD_IDENTITY_BG = {
   visibility: 'bg-blue-50 border-blue-100',
 };
 
+// Shared by all 9 Risks-row cards (risk cards map, Extreme Temp, weather-info
+// cards map) — only each card's identity bg/border color varies, appended
+// by the caller.
+const RISK_CARD_CLASSES = 'shrink-0 w-[160px] p-4 rounded border text-center flex flex-col items-center justify-center gap-1'
+
 // Visibility has no backend-supplied level (unlike UV/wind), so it's
 // classified here using the same Good/Moderate/Poor vocabulary Beach Safety
 // already uses — no changes needed to levelColorClass to support it.
@@ -1465,13 +1470,13 @@ export default function ItineraryPage() {
                       s: forecastDay.snow_probability == null ? 'Unknown' : snowLevel(forecastDay.snow_probability),
                       i: Snowflake, bg: CARD_IDENTITY_BG.snow,
                     },
-                  ].map((c, i) => (
+                  ].map((c) => (
                       // flex-col justify-center: label/value/badge stay a tight cluster
                       // (gap-1, not spread out) while justify-center splits whatever
                       // leftover height the row-stretch adds evenly above and below that
                       // cluster — so every card gets the same top/bottom breathing room
                       // regardless of how tall its neighbors are.
-                      <div key={c.l} className={`shrink-0 w-[160px] p-4 rounded border text-center flex flex-col items-center justify-center gap-1 ${c.bg}`}>
+                      <div key={c.l} className={`${RISK_CARD_CLASSES} ${c.bg}`}>
                           <div className="text-xs text-gray-500 uppercase flex items-center justify-center gap-2"><c.i size={22} className="text-indigo-400" /> {c.l}</div>
                           <div className="font-bold text-lg">{c.v}</div>
                           <span className={`text-xs px-2 rounded-full ${levelColorClass(c.s)}`}>
@@ -1480,7 +1485,7 @@ export default function ItineraryPage() {
                       </div>
                   ))}
 
-                  <div className={`shrink-0 w-[160px] p-4 rounded border text-center flex flex-col items-center justify-center gap-1 ${CARD_IDENTITY_BG.extremeTemp}`}>
+                  <div className={`${RISK_CARD_CLASSES} ${CARD_IDENTITY_BG.extremeTemp}`}>
                       <div className="text-xs text-gray-500 uppercase flex items-center justify-center gap-2"><Flame size={22} className="text-indigo-400" /> Extreme Temp</div>
                       <div className="font-bold text-base">{forecastDay.temperature_level ?? '—'}</div>
                       {forecastDay.temperature_advice && (
@@ -1513,7 +1518,7 @@ export default function ItineraryPage() {
                       s: forecastDay.visibility_m == null ? 'Unknown' : visibilityLevel(forecastDay.visibility_m),
                       i: Eye, bg: CARD_IDENTITY_BG.visibility, metric: 'visibility',
                     },
-                  ].map((c, i) => {
+                  ].map((c) => {
                       // Only the 3 weather-info cards (metric set) open the hourly-trend
                       // popup on click — the risk cards (heavy rain/flood/etc.) aren't
                       // clickable, so this renders a <button> only for those three.
@@ -1522,7 +1527,7 @@ export default function ItineraryPage() {
                         <Tag key={c.l}
                             type={c.metric ? 'button' : undefined}
                             onClick={c.metric ? () => setWeatherInfoModalMetric(c.metric) : undefined}
-                            className={`shrink-0 w-[160px] p-4 rounded border text-center flex flex-col items-center justify-center gap-1 ${c.bg} ${c.metric ? 'cursor-pointer hover:brightness-95 transition' : ''}`}>
+                            className={`${RISK_CARD_CLASSES} ${c.bg} ${c.metric ? 'cursor-pointer hover:brightness-95 transition' : ''}`}>
                             <div className="text-xs text-gray-500 uppercase flex items-center justify-center gap-2"><c.i size={22} className="text-indigo-400" /> {c.l}</div>
                             <div className="font-bold text-lg">{c.v}</div>
                             <span className={`text-xs px-2 rounded-full ${levelColorClass(c.s)}`}>

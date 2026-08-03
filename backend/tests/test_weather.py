@@ -148,4 +148,9 @@ def test_hourly_returns_forecast(auth_client):
     assert "uv_index" in first_hour
     assert "visibility_km" in first_hour
     assert "condition" in first_hour
+    # Regression test: get_hourly_weather sets utc_offset_seconds per entry
+    # (services/weather_service.py) but this test wasn't updated to check for
+    # it, so a future schema change silently dropping it (same failure mode
+    # as the visibility_m bug above) would go unnoticed.
+    assert "utc_offset_seconds" in first_hour
 
