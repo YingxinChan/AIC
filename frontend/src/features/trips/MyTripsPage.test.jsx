@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { vi } from 'vitest'
 import MyTripsPage from './MyTripsPage'
 import { getTrips, deleteTrip } from './tripsApi'
@@ -9,6 +9,10 @@ vi.mock('./tripsApi', () => ({
   getTrips: vi.fn(),
   deleteTrip: vi.fn(),
 }))
+
+beforeEach(() => {
+  vi.clearAllMocks()
+})
 
 function renderPage() {
   return render(<MemoryRouter><MyTripsPage /></MemoryRouter>)
@@ -89,4 +93,123 @@ test('shows an error and keeps the trip visible when deletion fails', async () =
   ).toBeInTheDocument()
 
   expect(screen.getByText('Summer Trip')).toBeInTheDocument()
+})
+
+test('deletes a trip and removes it from the page', async () => {
+  const user = userEvent.setup()
+
+  getTrips.mockResolvedValue([
+    {
+      id: 1,
+      name: 'Summer Trip',
+      destination: 'Tokyo',
+      start_date: '2099-01-01',
+      end_date: '2099-01-07',
+    },
+  ])
+
+  deleteTrip.mockResolvedValueOnce({})
+  vi.spyOn(window, 'confirm').mockReturnValueOnce(true)
+
+  renderPage()
+
+  expect(await screen.findByText('Summer Trip')).toBeInTheDocument()
+
+  await user.click(
+    screen.getByRole('button', { name: /delete summer trip/i })
+  )
+
+  expect(deleteTrip).toHaveBeenCalledWith(1)
+
+  await waitFor(() => {
+    expect(screen.queryByText('Summer Trip')).not.toBeInTheDocument()
+  })
+})
+
+test('does not delete when confirmation is cancelled', async () => {
+  const user = userEvent.setup()
+
+  getTrips.mockResolvedValue([
+    {
+      id: 1,
+      name: 'Summer Trip',
+      destination: 'Tokyo',
+      start_date: '2099-01-01',
+      end_date: '2099-01-07',
+    },
+  ])
+
+  vi.spyOn(window, 'confirm').mockReturnValueOnce(false)
+
+  renderPage()
+
+  expect(await screen.findByText('Summer Trip')).toBeInTheDocument()
+
+  await user.click(
+    screen.getByRole('button', { name: /delete summer trip/i })
+  )
+
+  expect(deleteTrip).not.toHaveBeenCalled()
+  expect(screen.getByText('Summer Trip')).toBeInTheDocument()
+})
+
+test('does not navigate when the delete button is clicked', async () => {
+  const user = userEvent.setup()
+
+  getTrips.mockResolvedValue([
+    {
+      id: 1,
+      name: 'Summer Trip',
+      destination: 'Tokyo',
+      start_date: '2099-01-01',
+      end_date: '2099-01-07',
+    },
+  ])
+
+  deleteTrip.mockResolvedValueOnce({})
+  vi.spyOn(window, 'confirm').mockReturnValueOnce(true)
+
+  render(
+    <MemoryRouter initialEntries={['/trips']}>
+      <Routes>
+        <Route path="/trips" element={<MyTripsPage />} />
+        <Route path="/trips/:id" element={<div>Trip Detail Page</div>} />
+      </Routes>
+    </MemoryRouter>
+  )
+
+  expect(await screen.findByText('Summer Trip')).toBeInTheDocument()
+
+  await user.click(
+    screen.getByRole('button', { name: /delete summer trip/i })
+  )
+
+  expect(screen.queryByText('Trip Detail Page')).not.toBeInTheDocument()
+})
+
+test('disables the delete button while a delete request is in flight', async () => {
+  const user = userEvent.setup()
+
+  getTrips.mockResolvedValue([
+    {
+      id: 1,
+      name: 'Summer Trip',
+      destination: 'Tokyo',
+      start_date: '2099-01-01',
+      end_date: '2099-01-07',
+    },
+  ])
+
+  deleteTrip.mockReturnValue(new Promise(() => {}))
+  vi.spyOn(window, 'confirm').mockReturnValueOnce(true)
+
+  renderPage()
+
+  expect(await screen.findByText('Summer Trip')).toBeInTheDocument()
+
+  const deleteButton = screen.getByRole('button', { name: /delete summer trip/i })
+  await user.click(deleteButton)
+
+  expect(deleteButton).toBeDisabled()
+  expect(deleteTrip).toHaveBeenCalledTimes(1)
 })
