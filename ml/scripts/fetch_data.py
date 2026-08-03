@@ -67,7 +67,7 @@ def fetch_city(city: str, lat: float, lon: float, start_year: int=2015, end_year
             f"&start_date={start}"
             f"&end_date={end}"
             f"&hourly={hourly}"
-            f"&timezone=GMT"
+            f"&timezone=auto"
         )
 
         response = requests.get(url)
