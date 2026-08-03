@@ -81,59 +81,63 @@ export default function MyTripsPage() {
       )}
 
       {!loading && !error && trips.length > 0 && (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {trips.map((trip) => {
-            const status = tripStatus(trip)
-            const isDeleting = deletingId === trip.id
+  <>
+    {deleteError && <ErrorMessage message={deleteError} />}
 
-            return (
-              <div
-                key={trip.id}
-                className="relative"
-              >
-                <Link
-                  to={`/trips/${trip.id}`}
-                  className="block overflow-hidden rounded-xl border border-gray-200 bg-white transition-colors hover:border-indigo-300"
+    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {trips.map((trip) => {
+        const status = tripStatus(trip)
+        const isDeleting = deletingId === trip.id
+
+        return (
+          <div
+            key={trip.id}
+            className="relative"
+          >
+            <Link
+              to={`/trips/${trip.id}`}
+              className="block overflow-hidden rounded-xl border border-gray-200 bg-white transition-colors hover:border-indigo-300"
+            >
+              <div className="h-36 bg-gradient-to-br from-indigo-400 to-purple-400" />
+
+              <div className="p-4">
+                <p className="font-semibold text-gray-900">
+                  {capitalize(trip.name)}
+                </p>
+
+                <p className="mt-1 flex items-center gap-1.5 text-sm text-gray-500">
+                  <Calendar size={14} />
+                  {trip.start_date} &rarr; {trip.end_date}
+                </p>
+
+                <span
+                  className={`mt-2 inline-block rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_STYLES[status]}`}
                 >
-                  <div className="h-36 bg-gradient-to-br from-indigo-400 to-purple-400" />
+                  {status}
+                </span>
 
-                  <div className="p-4">
-                    <p className="font-semibold text-gray-900">
-                      {capitalize(trip.name)}
-                    </p>
-
-                    <p className="mt-1 flex items-center gap-1.5 text-sm text-gray-500">
-                      <Calendar size={14} />
-                      {trip.start_date} &rarr; {trip.end_date}
-                    </p>
-
-                    <span
-                      className={`mt-2 inline-block rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_STYLES[status]}`}
-                    >
-                      {status}
-                    </span>
-
-                    <p className="mt-3 flex items-center gap-1 text-sm font-medium text-indigo-600">
-                      View Details
-                      <ChevronRight size={14} />
-                    </p>
-                  </div>
-                </Link>
-
-                <button
-                  type="button"
-                  aria-label={`Delete ${trip.name}`}
-                  disabled={isDeleting}
-                  onClick={(event) => handleDelete(event, trip)}
-                  className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 bg-white text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <Trash2 size={16} />
-                </button>
+                <p className="mt-3 flex items-center gap-1 text-sm font-medium text-indigo-600">
+                  View Details
+                  <ChevronRight size={14} />
+                </p>
               </div>
-            )
-          })}
-        </div>
-      )}
+            </Link>
+
+            <button
+              type="button"
+              aria-label={`Delete ${trip.name}`}
+              disabled={isDeleting}
+              onClick={(event) => handleDelete(event, trip)}
+              className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 bg-white text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Trash2 size={16} />
+            </button>
+          </div>
+        )
+      })}
+    </div>
+  </>
+)}
     </div>
   )
 }

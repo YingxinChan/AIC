@@ -144,7 +144,7 @@ it('does not delete when confirmation is cancelled', async () => {
   ).toBeInTheDocument()
 })
 
-it('keeps the trip visible when deletion fails', async () => {
+it('keeps the trip visible and shows an error when deletion fails', async () => {
   const user = userEvent.setup()
 
   window.confirm = vi.fn(() => true)
@@ -176,9 +176,11 @@ it('keeps the trip visible when deletion fails', async () => {
     }),
   )
 
-  await waitFor(() => {
-    expect(deleteTrip).toHaveBeenCalledWith(1)
-  })
+  expect(deleteTrip).toHaveBeenCalledWith(1)
+
+  expect(
+    await screen.findByText(/couldn't delete "edinburgh trip"/i),
+  ).toBeInTheDocument()
 
   expect(
     screen.getByText('Edinburgh Trip'),
