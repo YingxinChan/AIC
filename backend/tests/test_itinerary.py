@@ -648,6 +648,102 @@ def test_generate_itinerary_omits_rain_mention_when_forecast_is_clear(auth_clien
     assert "Heavy rain" not in prompt
 
 
+def test_generate_itinerary_prompt_includes_temp_when_forecast_has_it(auth_client, monkeypatch):
+    mock_client = _mock_claude(monkeypatch)
+    monkeypatch.setattr("services.trips_service.geocoding_service.geocode", lambda destination: LONDON_COORDS)
+    trip_id = _create_trip(auth_client, start=TODAY.isoformat(), end=(TODAY + timedelta(days=1)).isoformat())
+
+    monkeypatch.setattr(
+        "services.itinerary_service.get_weather_prediction",
+        lambda lat, lon, start, end: [
+            {"date": TODAY.isoformat(), "is_climatology": False, "heavy_rain_warning": False,
+             "temp_max": 10.0, "temp_min": 4.0},
+            {"date": (TODAY + timedelta(days=1)).isoformat(), "is_climatology": False, "heavy_rain_warning": False,
+             "temp_max": 12.0, "temp_min": 6.0},
+        ],
+    )
+    monkeypatch.setattr("services.itinerary_service.get_hourly_weather", lambda lat, lon, start, end: [])
+
+    auth_client.post(f"/api/trips/{trip_id}/itinerary/generate")
+
+    prompt = mock_client.messages.create.call_args.kwargs["messages"][0]["content"]
+    # mean of 10.0, 4.0, 12.0, 6.0 = 8.0
+    assert "average around 8.0°C" in prompt
+
+
+def test_generate_itinerary_prompt_omits_temp_sentence_when_no_temp_data(auth_client, monkeypatch):
+    mock_client = _mock_claude(monkeypatch)
+    monkeypatch.setattr("services.trips_service.geocoding_service.geocode", lambda destination: LONDON_COORDS)
+    trip_id = _create_trip(auth_client, start=TODAY.isoformat(), end=(TODAY + timedelta(days=1)).isoformat())
+
+    monkeypatch.setattr(
+        "services.itinerary_service.get_weather_prediction",
+        lambda lat, lon, start, end: [
+            {"date": TODAY.isoformat(), "is_climatology": False, "heavy_rain_warning": False},
+        ],
+    )
+    monkeypatch.setattr("services.itinerary_service.get_hourly_weather", lambda lat, lon, start, end: [])
+
+    auth_client.post(f"/api/trips/{trip_id}/itinerary/generate")
+
+    prompt = mock_client.messages.create.call_args.kwargs["messages"][0]["content"]
+    assert "average around" not in prompt
+
+
+def test_generate_itinerary_prompt_temp_guidance_never_restricts_iconic_landmarks(auth_client, monkeypatch):
+    mock_client = _mock_claude(monkeypatch)
+    monkeypatch.setattr("services.trips_service.geocoding_service.geocode", lambda destination: LONDON_COORDS)
+    trip_id = _create_trip(auth_client, start=TODAY.isoformat(), end=(TODAY + timedelta(days=1)).isoformat())
+
+    monkeypatch.setattr(
+        "services.itinerary_service.get_weather_prediction",
+        lambda lat, lon, start, end: [
+            {"date": TODAY.isoformat(), "is_climatology": False, "heavy_rain_warning": False,
+             "temp_max": 2.0, "temp_min": -2.0},
+        ],
+    )
+    monkeypatch.setattr("services.itinerary_service.get_hourly_weather", lambda lat, lon, start, end: [])
+
+    auth_client.post(f"/api/trips/{trip_id}/itinerary/generate")
+
+    prompt = mock_client.messages.create.call_args.kwargs["messages"][0]["content"]
+    assert "regardless of weather" in prompt
+    assert "iconic must-see landmarks" in prompt
+
+
+def test_generate_itinerary_climatology_days_mixed_with_real_days_dont_crash_rain_check(auth_client, monkeypatch):
+    """A trip straddling the forecast horizon gets both real forecast days
+    (with heavy_rain_warning) and climatology placeholder days (without real
+    data) in the same result — the rule-steering loop must skip the
+    climatology ones via is_climatology instead of misfiring on their
+    None/absent fields, while their real temps (when present) still count
+    toward the average."""
+    mock_client = _mock_claude(monkeypatch)
+    monkeypatch.setattr("services.trips_service.geocoding_service.geocode", lambda destination: LONDON_COORDS)
+    trip_id = _create_trip(
+        auth_client, start=TODAY.isoformat(), end=(TODAY + timedelta(days=16)).isoformat(),
+    )
+
+    monkeypatch.setattr(
+        "services.itinerary_service.get_weather_prediction",
+        lambda lat, lon, start, end: [
+            {"date": TODAY.isoformat(), "is_climatology": False, "heavy_rain_warning": True,
+             "heavy_rain_probability": 90.0, "temp_max": 10.0, "temp_min": 4.0},
+            {"date": (TODAY + timedelta(days=16)).isoformat(), "is_climatology": True,
+             "temp_max": None, "temp_min": None},
+        ],
+    )
+    monkeypatch.setattr("services.itinerary_service.get_hourly_weather", lambda lat, lon, start, end: [])
+
+    response = auth_client.post(f"/api/trips/{trip_id}/itinerary/generate")
+
+    assert response.status_code == 200
+    prompt = mock_client.messages.create.call_args.kwargs["messages"][0]["content"]
+    assert "Heavy rain is already forecast for day 1" in prompt
+    assert "average around 7.0°C" in prompt  # mean of 10.0, 4.0 — climatology's Nones excluded
+    assert prompt.index("Heavy rain") < prompt.index("average around")
+
+
 def test_generate_itinerary_prompt_states_sunrise_and_sunset_when_available(auth_client, monkeypatch):
     mock_client = _mock_claude(monkeypatch)
     monkeypatch.setattr("services.trips_service.geocoding_service.geocode", lambda destination: LONDON_COORDS)
@@ -719,7 +815,17 @@ def test_generate_itinerary_skips_sunset_mention_beyond_forecast_horizon(auth_cl
     far_end = (TODAY + timedelta(days=62)).isoformat()
     trip_id = _create_trip(auth_client, start=far_start, end=far_end)
 
-    monkeypatch.setattr("services.itinerary_service.get_weather_prediction", MagicMock())
+    # Climatology placeholder days (real behavior beyond the horizon since
+    # get_weather_prediction() now always covers the full trip range) — no
+    # sunrise/sunset field on any of them, so still no sunset mention.
+    monkeypatch.setattr(
+        "services.itinerary_service.get_weather_prediction",
+        lambda lat, lon, start, end: [
+            {"date": (TODAY + timedelta(days=d)).isoformat(), "is_climatology": True,
+             "temp_max": None, "temp_min": None}
+            for d in (60, 61, 62)
+        ],
+    )
     monkeypatch.setattr("services.itinerary_service.get_hourly_weather", MagicMock())
 
     auth_client.post(f"/api/trips/{trip_id}/itinerary/generate")
@@ -771,24 +877,36 @@ def test_generate_itinerary_system_prompt_asks_for_evening_plan_even_on_indoor_h
     assert "indoor-heavy or rainy days" in system_prompt
 
 
-def test_generate_itinerary_skips_weather_check_beyond_forecast_horizon(auth_client, monkeypatch):
+def test_generate_itinerary_fetches_weather_for_far_future_trips_too(auth_client, monkeypatch):
+    """Unlike the old horizon-clamped behavior, far-future trips now do get
+    a weather fetch — that's what lets climatology days feed the average-
+    temperature sentence (see _trip_rule_day_numbers). Today these days come
+    back as climatology placeholders (no heavy_rain_warning, temp fields
+    None), so this specific trip should neither crash nor add a rain/temp
+    sentence — hourly is still skipped, since it has no climatology
+    equivalent and the whole range here is beyond the horizon."""
     mock_client = _mock_claude(monkeypatch)
     monkeypatch.setattr("services.trips_service.geocoding_service.geocode", lambda destination: LONDON_COORDS)
     far_start = (TODAY + timedelta(days=60)).isoformat()
     far_end = (TODAY + timedelta(days=62)).isoformat()
     trip_id = _create_trip(auth_client, start=far_start, end=far_end)
 
-    mock_weather = MagicMock()
+    mock_weather = MagicMock(return_value=[
+        {"date": (TODAY + timedelta(days=d)).isoformat(), "is_climatology": True,
+         "temp_max": None, "temp_min": None}
+        for d in (60, 61, 62)
+    ])
     monkeypatch.setattr("services.itinerary_service.get_weather_prediction", mock_weather)
     mock_hourly = MagicMock()
     monkeypatch.setattr("services.itinerary_service.get_hourly_weather", mock_hourly)
 
     auth_client.post(f"/api/trips/{trip_id}/itinerary/generate")
 
-    mock_weather.assert_not_called()
+    mock_weather.assert_called_once()
     mock_hourly.assert_not_called()
     prompt = mock_client.messages.create.call_args.kwargs["messages"][0]["content"]
     assert "Heavy rain" not in prompt
+    assert "average around" not in prompt
 
 
 def test_generate_itinerary_succeeds_even_when_weather_fetch_fails(auth_client, monkeypatch):

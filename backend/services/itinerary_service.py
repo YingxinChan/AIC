@@ -1,4 +1,5 @@
 import json
+import statistics
 from datetime import date, datetime, timedelta
 
 import anthropic
@@ -125,14 +126,14 @@ def _summarize_sun_times(times: list[str], threshold_minutes: int = SUN_TIME_DRI
 
 async def _trip_rule_day_numbers(
     trip: Trip, db: AsyncSession
-) -> tuple[dict[str, list[int]], dict[int, str], dict[int, str], dict[int, str]]:
+) -> tuple[dict[str, list[int]], dict[int, str], dict[int, str], dict[int, str], float | None]:
     """For each ACTIVE_RULES rule, which day numbers (1-indexed) within the
     forecast horizon already trigger it — so generation can steer away from
     planning a mismatched activity for those days directly, instead of
     relying entirely on the auto-swap job to fix it afterward. Days beyond
-    the ~16-day forecast horizon return nothing here; those are exactly what
-    the auto-swap job still handles once they enter range (or if the
-    forecast changes after generation).
+    the ~16-day forecast horizon never trigger a rule here (see is_climatology
+    handling below); those are exactly what the auto-swap job still handles
+    once they enter range (or if the forecast changes after generation).
 
     Also returns a day_number -> human-readable rainy-hour-window mapping
     (e.g. "between 08:00 and 11:00"), populated only for heavy-rain (not
@@ -146,40 +147,65 @@ async def _trip_rule_day_numbers(
     heavy-rain days where hourly data wasn't available, are absent from
     this dict and keep the existing blanket wording via rule_day_numbers.
 
-    Finally, returns day_number -> sunrise and day_number -> sunset mappings
+    Also returns day_number -> sunrise and day_number -> sunset mappings
     ("%I:%M %p" strings), read straight off the same forecast_days response
     used above — no extra fetch. `.get()`, not direct indexing: a day
-    missing either field (e.g. a test fixture, or a future climatology-
-    fallback day with no sunrise/sunset) is simply absent from both dicts
-    rather than raising.
+    missing either field (e.g. a test fixture, or a climatology-fallback day
+    with no sunrise/sunset) is simply absent from both dicts rather than
+    raising.
+
+    Finally, returns the trip's average expected temperature (mean of every
+    known temp_max/temp_min across the *entire* trip range, not just the
+    forecast horizon) — get_weather_prediction() already blends real forecast
+    days with historical-climatology days for anything beyond the horizon
+    (see weather_service.py), so a far-future trip planned entirely beyond
+    real forecast range still gets a historically-informed "expect ~X°C"
+    signal instead of no seasonal context at all. Climatology days are
+    excluded from rule_day_numbers/rain_windows above (`is_climatology`
+    guard) — a historical average isn't a live prediction, and e.g. a hot
+    destination's historical mean could otherwise spuriously trigger
+    ExtremeHeatRule the same way a real forecast would — but their real
+    computed temps still count toward the average.
     """
     if trip.lat == 0.0 and trip.lng == 0.0:
         coords = geocoding_service.geocode(trip.destination)
         if not coords:
-            return {}, {}, {}, {}
+            return {}, {}, {}, {}, None
         trip.lat, trip.lng = coords
         await db.commit()
 
     today = date.today()
     horizon = today + timedelta(days=FORECAST_HORIZON_DAYS)
     window_start = max(today, trip.start_date)
-    window_end = min(trip.end_date, horizon)
+    # Not capped to the forecast horizon — get_weather_prediction() already
+    # falls back to climatology beyond it, and the average-temperature signal
+    # below wants every day of the trip, not just the in-horizon portion.
+    window_end = trip.end_date
     if window_start > window_end:
-        return {}, {}, {}, {}
+        return {}, {}, {}, {}, None
 
     try:
         forecast_days = get_weather_prediction(
             trip.lat, trip.lng, window_start.isoformat(), window_end.isoformat()
         )
     except Exception:
-        return {}, {}, {}, {}  # a weather fetch failure shouldn't block itinerary generation
+        return {}, {}, {}, {}, None  # a weather fetch failure shouldn't block itinerary generation
 
-    try:
-        hourly_days = get_hourly_weather(
-            trip.lat, trip.lng, window_start.isoformat(), window_end.isoformat()
-        )
-    except Exception:
-        hourly_days = []  # no hourly data -> rain days fall back to the blanket sentence
+    # Hourly data has no climatology equivalent (Open-Meteo doesn't offer
+    # historical hourly detail here) and is only used for rain-window
+    # precision below, which only makes sense for a real near-term forecast
+    # anyway — capped to the horizon regardless of how far window_end goes,
+    # and skipped entirely once the whole requested range is beyond it.
+    hourly_window_end = min(window_end, horizon)
+    if window_start > hourly_window_end:
+        hourly_days = []
+    else:
+        try:
+            hourly_days = get_hourly_weather(
+                trip.lat, trip.lng, window_start.isoformat(), hourly_window_end.isoformat()
+            )
+        except Exception:
+            hourly_days = []  # no hourly data -> rain days fall back to the blanket sentence
 
     hourly_by_date: dict[str, list[dict]] = {}
     for entry in hourly_days:
@@ -190,6 +216,7 @@ async def _trip_rule_day_numbers(
     rain_windows: dict[int, str] = {}
     sunrise_by_day: dict[int, str] = {}
     sunset_by_day: dict[int, str] = {}
+    known_temps: list[float] = []
     for forecast_day in forecast_days:
         day_number = (date.fromisoformat(forecast_day["date"]) - trip.start_date).days + 1
 
@@ -199,26 +226,34 @@ async def _trip_rule_day_numbers(
             sunrise_by_day[day_number] = sunrise
             sunset_by_day[day_number] = sunset
 
-        for rule in ACTIVE_RULES:
-            if rule.day_triggers(forecast_day):
-                rule_day_numbers[rule.id].append(day_number)
+        if not forecast_day.get("is_climatology"):
+            for rule in ACTIVE_RULES:
+                if rule.day_triggers(forecast_day):
+                    rule_day_numbers[rule.id].append(day_number)
 
-        is_heavy_rain_day = (
-            forecast_day.get("heavy_rain_warning")
-            and forecast_day.get("weather_code") not in RainRule.THUNDERSTORM_CODES
-        )
-        if is_heavy_rain_day:
-            hourly_day = hourly_by_date.get(forecast_day["date"])
-            if hourly_day:
-                window = rain_rule.describe_rainy_window(hourly_day)
-                if window:
-                    rain_windows[day_number] = window
+            is_heavy_rain_day = (
+                forecast_day.get("heavy_rain_warning")
+                and forecast_day.get("weather_code") not in RainRule.THUNDERSTORM_CODES
+            )
+            if is_heavy_rain_day:
+                hourly_day = hourly_by_date.get(forecast_day["date"])
+                if hourly_day:
+                    window = rain_rule.describe_rainy_window(hourly_day)
+                    if window:
+                        rain_windows[day_number] = window
+
+        for temp in (forecast_day.get("temp_max"), forecast_day.get("temp_min")):
+            if temp is not None:
+                known_temps.append(temp)
+
+    avg_temp = round(statistics.mean(known_temps), 1) if known_temps else None
 
     return (
         {rid: sorted(days) for rid, days in rule_day_numbers.items()},
         rain_windows,
         sunrise_by_day,
         sunset_by_day,
+        avg_temp,
     )
 
 
@@ -281,7 +316,7 @@ async def generate_itinerary(trip_id: int, db: AsyncSession, user_id: int) -> di
 
     content = f'Plan a {num_days}-day {destination} itinerary for the trip "{trip.name}".'
 
-    rule_day_numbers, rain_windows, sunrise_by_day, sunset_by_day = await _trip_rule_day_numbers(trip, db)
+    rule_day_numbers, rain_windows, sunrise_by_day, sunset_by_day, avg_temp = await _trip_rule_day_numbers(trip, db)
     for rule in ACTIVE_RULES:
         day_numbers = rule_day_numbers.get(rule.id, [])
         if not day_numbers:
@@ -337,6 +372,13 @@ async def generate_itinerary(trip_id: int, db: AsyncSession, user_id: int) -> di
         content += (
             f' In {destination} during this trip, sunrise is {sunrise_desc} and sunset is '
             f'{sunset_desc}.'
+        )
+
+    if avg_temp is not None:
+        content += (
+            f" This trip's weather is expected to average around {avg_temp}°C — plan "
+            f"activities appropriate for that temperature, while still including the "
+            f"destination's iconic must-see landmarks regardless of weather."
         )
 
     if trip.arrival_time:
