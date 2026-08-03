@@ -84,7 +84,7 @@ def _mock_hourly_weather(monkeypatch, hourly=None):
 def _mock_find_alternative(monkeypatch, alternate=None):
     alternate = alternate or {
         "name": "British Museum", "location": "Great Russell St",
-        "lat": 51.5194, "lng": -0.1270,
+        "lat": 51.5194, "lng": -0.1270, "type": "indoor",
     }
     mock = AsyncMock(return_value=alternate)
     monkeypatch.setattr("services.auto_swap_service.swap_service.find_alternative_activity", mock)
@@ -120,6 +120,9 @@ def test_auto_swap_swaps_outdoor_activity_on_rainy_day(auth_client, monkeypatch)
     # rained-out original's — otherwise it silently shows the wrong location
     # under the new activity's name.
     assert (activity.lat, activity.lng) == (51.5194, -0.1270)
+    # type must reflect the alternate's real indoor/outdoor value, not stay
+    # "outdoor" (the original) or get assumed "indoor" by a caller instead.
+    assert activity.type == "indoor"
 
 
 def test_auto_swap_is_idempotent(auth_client, monkeypatch):
