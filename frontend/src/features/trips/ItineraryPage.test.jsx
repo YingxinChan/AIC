@@ -98,6 +98,11 @@ test('shows an error message with a way back, instead of a blank page, when the 
   expect(screen.getByRole('link', { name: /back to my trips/i })).toHaveAttribute('href', '/dashboard')
   // None of the {trip && ...}-gated sections should render either.
   expect(screen.queryByText(/loading trip/i)).not.toBeInTheDocument()
+  // The previously-ungated 5D/Map sections must not render either — otherwise
+  // this is a half-broken page (error banner + stale empty weather/map
+  // content underneath), not the clean error state this PR is meant to give.
+  expect(screen.queryByText(/weather unavailable/i)).not.toBeInTheDocument()
+  expect(screen.queryByRole('heading', { name: /map/i })).not.toBeInTheDocument()
 
   consoleError.mockRestore()
 })
