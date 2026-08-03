@@ -448,7 +448,7 @@ def hiking_safety(
 
     breakdown.append({
         "factor": "Extreme Temperature",
-        "value": temp_risk["temperature_level"],
+        "value": temp_risk,
         "impact": impact,
     })
 

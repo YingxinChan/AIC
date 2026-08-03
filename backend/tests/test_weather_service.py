@@ -99,3 +99,4 @@ def test_climatology_failure_does_not_take_out_the_forecast_portion():
     # the climatology portion blew up.
     assert len(result) == 2
     assert all(not d["is_climatology"] for d in result)
+    

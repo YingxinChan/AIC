@@ -213,7 +213,7 @@ def _get_forecast_days(lat: float, lon: float, start_date: str, end_date: str) -
             heavy_rain_probability=prediction["heavy_rain_probability"],
             wind=wind,
             visibility=visibility,
-            temp_risk=temperature_level,
+            temp_risk=temperature_level["temperature_level"],
             snow_probability=snow["snow_probability"],
         )
 

@@ -377,32 +377,37 @@ def test_wind_level_unknown():
 # Temp risk 
 def test_extreme_heat():
     result = temp_level(40)
-    assert result == "Extreme Heat"
+    assert result["temperature_level"] == "Extreme Heat"
+
 
 def test_high_heat():
     result = temp_level(32)
-    assert result == "High Heat"
+    assert result["temperature_level"] == "High Heat"
+
 
 def test_safe_temperature():
     result = temp_level(22)
-    assert result == "Safe"
+    assert result["temperature_level"] == "Safe"
+
 
 def test_cold_conditions():
     result = temp_level(-2)
-    assert result == "Cold Conditions"
+    assert result["temperature_level"] == "Cold Conditions"
+
 
 def test_extreme_cold():
     result = temp_level(-15)
-    assert result == "Extreme Cold"
+    assert result["temperature_level"] == "Extreme Cold"
+
 
 def test_heat_boundary():
-    assert temp_level(35) == "Extreme Heat"
-    assert temp_level(34.9) == "High Heat"
+    assert temp_level(35)["temperature_level"] == "Extreme Heat"
+    assert temp_level(34.9)["temperature_level"] == "High Heat"
 
 
 def test_cold_boundary():
-    assert temp_level(0) == "Cold Conditions"
-    assert temp_level(0.1) == "Safe"
+    assert temp_level(0)["temperature_level"] == "Cold Conditions"
+    assert temp_level(0.1)["temperature_level"] == "Safe"
 
 # Temp advice
 def test_extreme_heat_advice():
@@ -489,6 +494,21 @@ def test_dangerous_hiking_conditions():
     assert result["hiking_safety_level"] == "Dangerous"
     assert result["hiking_safety_score"] < 40
 
+def test_hiking_safety_extreme_temperature_affects_score():
+    result = hiking_safety(
+        heavy_rain_probability=0,
+        wind=5,
+        visibility=10000,
+        temp_risk="Extreme Heat",
+        snow_probability=0,
+    )
+
+    assert result["hiking_safety_score"] < 100
+
+    assert any(
+        item["factor"] == "Extreme Temperature"
+        for item in result["hiking_safety_breakdown"]
+    )
 
 def test_extreme_temperature_affects_score():
     safe_weather = hiking_safety(

@@ -65,13 +65,9 @@ class ForecastDayOut(BaseModel):
     snow_probability: float | None = None
     snow_breakdown: List[RiskBreakdown] = []
 
-    temperature_level: str
-    temperature_advice: str
-    temperature_breakdown: List[RiskBreakdown]
-
-    hiking_safety_score: float
-    hiking_safety_level: str
-    hiking_safety_breakdown: List[RiskBreakdown]
+    hiking_safety_score: float | None = None
+    hiking_safety_level: str = "Unknown"
+    hiking_safety_breakdown: List[RiskBreakdown] = []
 
 class HourlyWeatherOut(BaseModel):
     time: str

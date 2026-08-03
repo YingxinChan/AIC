@@ -1557,7 +1557,7 @@ export default function ItineraryPage() {
         )}
 
         {weatherStatus === 'loaded' && forecastDay && (
-  <div className="border border-gray-100 p-4 rounded-lg bg-gray-50/50 space-y-4">
+          <div className="border border-gray-100 p-4 rounded-lg bg-gray-50/50 space-y-4">
 
                 <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-800">
                     <Thermometer size={16} className="text-indigo-600" /> Weather
@@ -1750,7 +1750,6 @@ export default function ItineraryPage() {
                         )}
                       </div>
                   ))}
-
                   <div className={`${RISK_CARD_CLASSES} ${CARD_IDENTITY_BG.extremeTemp}`}>
                       <div className="text-xs text-gray-500 uppercase flex items-center justify-center gap-2"><Flame size={22} className="text-indigo-400" /> Extreme Temp</div>
                       <div className="font-bold text-base">
@@ -1764,7 +1763,6 @@ export default function ItineraryPage() {
                         )
                       )}
                   </div>
-
                   {[
                     {
                       l: 'Hiking Safety',
