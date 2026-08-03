@@ -9,6 +9,8 @@ class CreateTripRequest(BaseModel):
     end_date: date
     original_plan: str = ""
     hotel_address: str = ""
+    hotel_lat: float | None = None
+    hotel_lng: float | None = None
 
 class TripOut(BaseModel):
     id: int
@@ -27,6 +29,8 @@ class TripOut(BaseModel):
     departure_other_time: str = ""
     original_plan: str = ""
     hotel_address: str = ""
+    hotel_lat: float | None = None
+    hotel_lng: float | None = None
 
 
 class SelectFlightRequest(BaseModel):
@@ -44,3 +48,8 @@ class UpdateTripRequest(BaseModel):
     start_date: date | None = None
     end_date: date | None = None
     hotel_address: str | None = None
+    # Only meaningful alongside hotel_address (see trips_service.update_trip_details)
+    # — a dropdown pick sends real coordinates, freehand typing sends neither,
+    # which correctly clears any stale coordinates from a prior selection.
+    hotel_lat: float | None = None
+    hotel_lng: float | None = None

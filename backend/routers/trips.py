@@ -23,6 +23,7 @@ async def create_trip(
     return await trips_service.create_trip(
         db, current_user["id"], body.name, body.start_date, body.end_date,
         body.destination, body.origin, body.original_plan, body.hotel_address,
+        body.hotel_lat, body.hotel_lng,
     )
 
 @router.get("/{trip_id}")
@@ -69,5 +70,6 @@ async def update_trip(
     return await trips_service.update_trip_details(
         db, trip_id, current_user["id"],
         body.start_date, body.end_date, body.hotel_address,
+        body.hotel_lat, body.hotel_lng,
     )
 
