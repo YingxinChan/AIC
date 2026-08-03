@@ -3,6 +3,23 @@ from html import escape
 
 FONT_STACK = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
 
+# Matches services.weather_rules.ACTIVE_RULES' rule ids — falls back to the
+# rain icon for anything unmapped (e.g. a swap/tip dict from before rule_id
+# existed, or a future rule not yet added here).
+RULE_ICONS = {
+    "rain": "☔",
+    "fog": "🌫️",
+    "wind": "💨",
+    "extreme_heat": "🔥",
+    "extreme_cold": "❄️",
+    "extreme_uv": "☀️",
+    "beach_safety": "🏖️",
+}
+
+
+def _rule_icon(rule_id: str | None) -> str:
+    return RULE_ICONS.get(rule_id, "☔")
+
 
 def _format_day(day_date: str) -> str:
     try:
@@ -60,6 +77,7 @@ def _swap_row_html(s: dict) -> str:
     alternate_name = escape(s["alternate_name"], quote=False)
     alternate_location = escape(s["alternate_location"], quote=False)
     reason = escape(s["reason"], quote=False)
+    icon = _rule_icon(s.get("rule_id"))
     return f'''<tr>
       <td style="padding:16px 0; border-bottom:1px solid #f3f4f6;">
         <p style="margin:0 0 8px; font-size:12px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.03em; font-family:{FONT_STACK};">{trip_name} &middot; {day}</p>
@@ -76,7 +94,7 @@ def _swap_row_html(s: dict) -> str:
             </td>
           </tr>
         </table>
-        <p style="margin:8px 0 0; font-size:12px; color:#b45309; font-family:{FONT_STACK};">☔ {reason}</p>
+        <p style="margin:8px 0 0; font-size:12px; color:#b45309; font-family:{FONT_STACK};">{icon} {reason}</p>
       </td>
     </tr>'''
 
@@ -96,12 +114,13 @@ def _tip_row_html(t: dict) -> str:
     location = escape(t["location"], quote=False)
     reason = escape(t["reason"], quote=False)
     tip = escape(t["tip"], quote=False)
+    icon = _rule_icon(t.get("rule_id"))
     return f'''<tr>
       <td style="padding:16px 0; border-bottom:1px solid #f3f4f6;">
         <p style="margin:0 0 8px; font-size:12px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.03em; font-family:{FONT_STACK};">{trip_name} &middot; {day}</p>
         <p style="margin:0; font-size:14px; font-weight:600; color:#111827; font-family:{FONT_STACK};">{name}</p>
         <p style="margin:2px 0 0; font-size:12px; color:#6b7280; font-family:{FONT_STACK};">{location}</p>
-        <p style="margin:8px 0 0; font-size:12px; color:#b45309; font-family:{FONT_STACK};">☔ {reason}</p>
+        <p style="margin:8px 0 0; font-size:12px; color:#b45309; font-family:{FONT_STACK};">{icon} {reason}</p>
         <p style="margin:4px 0 0; font-size:13px; color:#374151; font-family:{FONT_STACK};">💡 {tip}</p>
       </td>
     </tr>'''
