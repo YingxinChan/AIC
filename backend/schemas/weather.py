@@ -20,6 +20,7 @@ class ForecastDayOut(BaseModel):
     wind_level: str
     
     visibility_km: float
+    visibility_m: float
 
     sunrise: str
     sunset: str
@@ -37,6 +38,11 @@ class ForecastDayOut(BaseModel):
 
     snow_probability: float
 
+    # Seconds offset from UTC for the destination's resolved local timezone
+    # (Open-Meteo's &timezone=auto) — `date`/`time` fields above are in this
+    # local timezone, not GMT/UTC.
+    utc_offset_seconds: int
+
     temperature_level: str
     temperature_advice: str
 
@@ -50,7 +56,7 @@ class HourlyWeatherOut(BaseModel):
     rain_mm: float
     rain_probability: float | None = None
     condition: str
-    uv_index: float    
-    wind_speed: float        
+    utc_offset_seconds: int
+    uv_index: float
+    wind_speed: float
     visibility_km: float
-

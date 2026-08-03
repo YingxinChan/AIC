@@ -39,6 +39,13 @@ def test_prediction_returns_forecast(auth_client):
         isinstance(day["uv_advice"], str) and day["uv_advice"]
         for day in data
     )
+    # Regression test: visibility_m was computed in weather_service.py but
+    # missing from the ForecastDayOut response_model, so FastAPI silently
+    # stripped it from the response — the frontend's `visibility_m / 1000`
+    # then rendered "NaN km" on the Visibility card instead of a real value.
+    assert "visibility_km" in first_day
+    assert "visibility_m" in first_day
+    assert isinstance(first_day["visibility_m"], (int, float))
 
 def test_hourly_returns_forecast(auth_client):
     response = auth_client.get(
