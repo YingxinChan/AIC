@@ -1,6 +1,6 @@
 # Run: python -m pytest tests/test_climatology_service.py
 from datetime import date
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from services.climatology_service import (
     _climatology_day,
@@ -11,6 +11,41 @@ from services.climatology_service import (
     _safe_replace_year,
     _summarize_climatology_rows,
 )
+
+
+def test_get_historical_forecast_requests_every_field_fetch_historical_rows_reads():
+    """Regression test: _fetch_historical_rows() reads temp_max, temp_min,
+    weather_code, rain_mm, and wind off get_historical_forecast()'s daily
+    response — but every other test in this file mocks get_historical_forecast()
+    itself with a hand-built dict that already includes all of those fields,
+    so none of them would catch it if the *real* function stopped actually
+    requesting one from the Archive API. That's exactly what happened:
+    "wind_speed_10m_mean" was missing from get_historical_forecast()'s own
+    requested daily fields (openmeteo.py) while _fetch_historical_rows()
+    read it anyway — every mocked test stayed green, and it only surfaced as
+    a KeyError against the real Archive API (i.e. in production, not here).
+
+    This test instead mocks only the raw HTTP call (services.openmeteo.
+    requests.get), so it exercises get_historical_forecast()'s actual query
+    construction and would have caught the mismatch directly."""
+    mock_response = MagicMock(status_code=200)
+    mock_response.json.return_value = {
+        "daily": {
+            "time": ["2020-07-01"],
+            "weather_code": [1],
+            "precipitation_sum": [0.0],
+            "temperature_2m_max": [20.0],
+            "temperature_2m_min": [10.0],
+            "wind_speed_10m_mean": [8.0],
+        },
+    }
+
+    with patch("services.openmeteo.requests.get", return_value=mock_response) as mock_get:
+        rows = _fetch_historical_rows(48.8566, 2.3522, [date(2026, 7, 1)])
+
+    requested_url = mock_get.call_args.args[0]
+    assert "wind_speed_10m_mean" in requested_url
+    assert rows[0]["wind"] == 8.0
 
 def test_one_bad_climatology_date_does_not_drop_the_batch():
     dates = [

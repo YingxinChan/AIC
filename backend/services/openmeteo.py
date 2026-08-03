@@ -93,6 +93,7 @@ def get_historical_forecast(lat: float, lon: float, start_date: str, end_date: s
         "precipitation_sum",
         "temperature_2m_max",
         "temperature_2m_min",
+        "wind_speed_10m_mean",
     ])
 
     url = (
