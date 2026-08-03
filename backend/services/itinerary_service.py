@@ -1,5 +1,5 @@
 import json
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 import anthropic
 from fastapi import HTTPException
@@ -16,6 +16,10 @@ from services.weather_rules import ACTIVE_RULES, RainRule
 from services.weather_service import get_hourly_weather, get_weather_prediction
 
 MODEL = "claude-haiku-4-5"
+
+# How close a trip's daily sunrise/sunset times need to be (in minutes) to be
+# summarized as one representative value instead of an earliest-latest range.
+SUN_TIME_DRIFT_THRESHOLD_MINUTES = 30
 
 ITINERARY_SCHEMA = {
     "type": "object",
@@ -78,7 +82,21 @@ TAG_SCHEMA = {
 }
 
 
-async def _trip_rule_day_numbers(trip: Trip, db: AsyncSession) -> tuple[dict[str, list[int]], dict[int, str]]:
+def _summarize_sun_times(times: list[str], threshold_minutes: int = SUN_TIME_DRIFT_THRESHOLD_MINUTES) -> str:
+    """Collapse a trip's daily sunrise or sunset times (each '%I:%M %p') into
+    one representative value when they're all close together, or an explicit
+    earliest-latest range when they drift apart across a longer trip."""
+    ordered = sorted(times, key=lambda t: datetime.strptime(t, "%I:%M %p"))
+    earliest, latest = ordered[0], ordered[-1]
+    spread = datetime.strptime(latest, "%I:%M %p") - datetime.strptime(earliest, "%I:%M %p")
+    if spread <= timedelta(minutes=threshold_minutes):
+        return f"around {earliest}"
+    return f"between {earliest} and {latest}"
+
+
+async def _trip_rule_day_numbers(
+    trip: Trip, db: AsyncSession
+) -> tuple[dict[str, list[int]], dict[int, str], dict[int, str], dict[int, str]]:
     """For each ACTIVE_RULES rule, which day numbers (1-indexed) within the
     forecast horizon already trigger it — so generation can steer away from
     planning a mismatched activity for those days directly, instead of
@@ -98,11 +116,18 @@ async def _trip_rule_day_numbers(trip: Trip, db: AsyncSession) -> tuple[dict[str
     activities are actually affected. Thunderstorm-triggered days, and
     heavy-rain days where hourly data wasn't available, are absent from
     this dict and keep the existing blanket wording via rule_day_numbers.
+
+    Finally, returns day_number -> sunrise and day_number -> sunset mappings
+    ("%I:%M %p" strings), read straight off the same forecast_days response
+    used above — no extra fetch. `.get()`, not direct indexing: a day
+    missing either field (e.g. a test fixture, or a future climatology-
+    fallback day with no sunrise/sunset) is simply absent from both dicts
+    rather than raising.
     """
     if trip.lat == 0.0 and trip.lng == 0.0:
         coords = geocoding_service.geocode(trip.destination)
         if not coords:
-            return {}, {}
+            return {}, {}, {}, {}
         trip.lat, trip.lng = coords
         await db.commit()
 
@@ -111,14 +136,14 @@ async def _trip_rule_day_numbers(trip: Trip, db: AsyncSession) -> tuple[dict[str
     window_start = max(today, trip.start_date)
     window_end = min(trip.end_date, horizon)
     if window_start > window_end:
-        return {}, {}
+        return {}, {}, {}, {}
 
     try:
         forecast_days = get_weather_prediction(
             trip.lat, trip.lng, window_start.isoformat(), window_end.isoformat()
         )
     except Exception:
-        return {}, {}  # a weather fetch failure shouldn't block itinerary generation
+        return {}, {}, {}, {}  # a weather fetch failure shouldn't block itinerary generation
 
     try:
         hourly_days = get_hourly_weather(
@@ -134,8 +159,17 @@ async def _trip_rule_day_numbers(trip: Trip, db: AsyncSession) -> tuple[dict[str
     rain_rule = RainRule()
     rule_day_numbers: dict[str, list[int]] = {rule.id: [] for rule in ACTIVE_RULES}
     rain_windows: dict[int, str] = {}
+    sunrise_by_day: dict[int, str] = {}
+    sunset_by_day: dict[int, str] = {}
     for forecast_day in forecast_days:
         day_number = (date.fromisoformat(forecast_day["date"]) - trip.start_date).days + 1
+
+        sunrise = forecast_day.get("sunrise")
+        sunset = forecast_day.get("sunset")
+        if sunrise and sunset:
+            sunrise_by_day[day_number] = sunrise
+            sunset_by_day[day_number] = sunset
+
         for rule in ACTIVE_RULES:
             if rule.day_triggers(forecast_day):
                 rule_day_numbers[rule.id].append(day_number)
@@ -151,7 +185,12 @@ async def _trip_rule_day_numbers(trip: Trip, db: AsyncSession) -> tuple[dict[str
                 if window:
                     rain_windows[day_number] = window
 
-    return {rid: sorted(days) for rid, days in rule_day_numbers.items()}, rain_windows
+    return (
+        {rid: sorted(days) for rid, days in rule_day_numbers.items()},
+        rain_windows,
+        sunrise_by_day,
+        sunset_by_day,
+    )
 
 
 async def get_itinerary(trip_id: int, db: AsyncSession, user_id: int) -> dict:
@@ -213,7 +252,7 @@ async def generate_itinerary(trip_id: int, db: AsyncSession, user_id: int) -> di
 
     content = f'Plan a {num_days}-day {destination} itinerary for the trip "{trip.name}".'
 
-    rule_day_numbers, rain_windows = await _trip_rule_day_numbers(trip, db)
+    rule_day_numbers, rain_windows, sunrise_by_day, sunset_by_day = await _trip_rule_day_numbers(trip, db)
     for rule in ACTIVE_RULES:
         day_numbers = rule_day_numbers.get(rule.id, [])
         if not day_numbers:
@@ -263,6 +302,14 @@ async def generate_itinerary(trip_id: int, db: AsyncSession, user_id: int) -> di
                 f'{rule.avoid_phrase} — avoid planning those for {that_day} if possible.'
             )
 
+    if sunset_by_day:
+        sunrise_desc = _summarize_sun_times(list(sunrise_by_day.values()))
+        sunset_desc = _summarize_sun_times(list(sunset_by_day.values()))
+        content += (
+            f' In {destination} during this trip, sunrise is {sunrise_desc} and sunset is '
+            f'{sunset_desc}.'
+        )
+
     if trip.arrival_time:
         content += (
             f' The traveler lands in {destination} at {trip.arrival_time} on day 1 — '
@@ -311,7 +358,21 @@ async def generate_itinerary(trip_id: int, db: AsyncSession, user_id: int) -> di
                 f"to visit — do not skip famous landmarks in favor of only lesser-known "
                 f"spots. Suggest a realistic mix of indoor and outdoor activities, 3-4 "
                 f"activities per day, with specific time slots (e.g. '09:00 - 11:00') and "
-                f"real {destination} locations. Each day's activities must be grouped by "
+                f"real {destination} locations. "
+                f"When the prompt below states this trip's sunrise and sunset times, treat "
+                f"that as the full daylight window for outdoor activities and use it — don't "
+                f"cluster them all in the morning and finish hours before sunset out of habit, "
+                f"whether sunset is early (winter, e.g. 4pm) or late (summer, e.g. 9pm); spread "
+                f"them across the daylight available instead. This isn't only about outdoor "
+                f"activities, though: round out "
+                f"every day with an evening plan (dinner, a show, an evening walk or market) "
+                f"instead of finishing by mid-afternoon just because the day's earlier "
+                f"activities — indoor or outdoor — already wrapped up, including on "
+                f"indoor-heavy or rainy days. Keep a realistic evening cutoff around 8-9pm "
+                f"regardless of how late sunset actually falls (e.g. summer in northern "
+                f"Europe, where it may not set until 9:30-10:30pm) — a day's activities "
+                f"shouldn't run later than that. "
+                f"Each day's activities must be grouped by "
                 f"geographic area and ordered into a sensible one-directional route — never "
                 f"schedule a day that crosses the city, comes back, then crosses it again. "
                 f"For every activity, also give its real approximate latitude and longitude "
