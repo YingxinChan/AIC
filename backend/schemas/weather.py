@@ -34,10 +34,9 @@ class ForecastDayOut(BaseModel):
     visibility_km: float | None = None
     visibility_m: float | None = None
 
-    # Optional: climatology-fallback days (see is_climatology) have no real
-    # Open-Meteo response to read these from — climatology_service.py never
-    # sets them. The frontend's "Sunrise / Sunset not available" fallback
-    # (ItineraryPage.jsx) exists specifically for this case, not dead code.
+    # Seconds offset from UTC for destination local timezone
+    utc_offset_seconds: int | None = None
+
     sunrise: str | None = None
     sunset: str | None = None
 
