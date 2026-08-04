@@ -19,7 +19,6 @@ def test_get_prefs_returns_defaults_when_none_set(auth_client):
     assert response.status_code == 200
     assert response.json() == {
         "email_enabled": True,
-        "rain_threshold_mm": 0.0,
     }
 
 
@@ -28,14 +27,12 @@ def test_update_then_get_prefs_persists(auth_client):
         "/api/notifications/preferences",
         json={
             "email_enabled": False,
-            "rain_threshold_mm": 5.0,
         },
     )
 
     assert response.status_code == 200
     assert response.json() == {
         "email_enabled": False,
-        "rain_threshold_mm": 5.0,
     }
 
     get_response = auth_client.get(
@@ -45,7 +42,6 @@ def test_update_then_get_prefs_persists(auth_client):
     assert get_response.status_code == 200
     assert get_response.json() == {
         "email_enabled": False,
-        "rain_threshold_mm": 5.0,
     }
 
 
@@ -304,7 +300,6 @@ def test_send_swap_digest_emails_skips_users_with_email_disabled(
         "/api/notifications/preferences",
         json={
             "email_enabled": False,
-            "rain_threshold_mm": 0.0,
         },
     )
 
@@ -332,71 +327,17 @@ def test_send_swap_digest_emails_skips_users_with_email_disabled(
     mock_send.assert_not_called()
 
 
-def test_send_swap_digest_emails_filters_by_rain_threshold(
+def test_non_rain_swap_email_content_is_correct(
     auth_client,
     monkeypatch,
 ):
+    """A swap caused by e.g. strong wind (services/weather_rules.py's
+    scoring engine, not just rain) should still send, and the email should
+    describe the actual reason rather than the old hardcoded rain copy."""
     trip_id, trip_start_date = _create_trip(
         auth_client,
         monkeypatch,
     )
-
-    preferences_response = auth_client.put(
-        "/api/notifications/preferences",
-        json={
-            "email_enabled": True,
-            "rain_threshold_mm": 10.0,
-        },
-    )
-
-    assert preferences_response.status_code == 200
-
-    mock_send = MagicMock(
-        return_value={"status": "sent"}
-    )
-    monkeypatch.setattr(
-        "services.notifications_service.email_service.send_email",
-        mock_send,
-    )
-
-    results = _run_digest(
-        [
-            _swap(
-                trip_id,
-                1,
-                trip_start_date.isoformat(),
-            )
-        ]
-    )
-
-    assert results == []
-    mock_send.assert_not_called()
-
-
-def test_non_rain_swaps_bypass_the_rain_threshold_filter(
-    auth_client,
-    monkeypatch,
-):
-    """rain_threshold_mm is specifically a rain-volume preference — a swap
-    caused by e.g. strong wind has no meaningful rain_mm to compare against
-    it, so it must still be sent regardless of the user's threshold. Mirrors
-    test_send_swap_digest_emails_filters_by_rain_threshold above, but for a
-    swap the new scoring engine (services/weather_rules.py) triggers for a
-    reason other than rain."""
-    trip_id, trip_start_date = _create_trip(
-        auth_client,
-        monkeypatch,
-    )
-
-    preferences_response = auth_client.put(
-        "/api/notifications/preferences",
-        json={
-            "email_enabled": True,
-            "rain_threshold_mm": 10.0,
-        },
-    )
-
-    assert preferences_response.status_code == 200
 
     mock_send = MagicMock(
         return_value={"status": "sent"}
@@ -514,50 +455,6 @@ def test_tip_copy_does_not_claim_the_activity_cant_be_swapped(
     assert "can't be swapped" not in body.lower()
 
 
-def test_tips_bypass_the_rain_threshold_filter(
-    auth_client,
-    monkeypatch,
-):
-    """Tips are informational, not a plan change, so they should not be
-    gated by the threshold that controls silent swap notifications."""
-    trip_id, trip_start_date = _create_trip(
-        auth_client,
-        monkeypatch,
-    )
-
-    preferences_response = auth_client.put(
-        "/api/notifications/preferences",
-        json={
-            "email_enabled": True,
-            "rain_threshold_mm": 100.0,
-        },
-    )
-
-    assert preferences_response.status_code == 200
-
-    mock_send = MagicMock(
-        return_value={"status": "sent"}
-    )
-    monkeypatch.setattr(
-        "services.notifications_service.email_service.send_email",
-        mock_send,
-    )
-
-    results = _run_digest(
-        [],
-        tips=[
-            _tip(
-                trip_id,
-                1,
-                day_date=trip_start_date.isoformat(),
-            )
-        ],
-    )
-
-    assert len(results) == 1
-    mock_send.assert_called_once()
-
-
 def test_tips_still_respect_email_enabled(
     auth_client,
     monkeypatch,
@@ -571,7 +468,6 @@ def test_tips_still_respect_email_enabled(
         "/api/notifications/preferences",
         json={
             "email_enabled": False,
-            "rain_threshold_mm": 0.0,
         },
     )
 

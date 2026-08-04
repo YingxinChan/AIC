@@ -22,7 +22,7 @@ async def update_preferences(
     db: AsyncSession = Depends(get_db),
 ):
     return await notifications_service.update_preferences(
-        db, current_user["id"], body.email_enabled, body.rain_threshold_mm
+        db, current_user["id"], body.email_enabled
     )
 
 @router.post("/test")
