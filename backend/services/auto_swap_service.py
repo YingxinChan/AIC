@@ -6,33 +6,86 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from models.activity import Activity
 from models.trip import Trip
 from services import geocoding_service, swap_service
-from services.weather_rules import ACTIVE_RULES
+from services.weather_rules import (
+    ADVISORY_THRESHOLD,
+    RainRule,
+    SWAP_THRESHOLD,
+    describe_scores,
+    describe_tip,
+    score_activity,
+    top_rule_id,
+)
 from services.weather_service import (
     FORECAST_HORIZON_DAYS,
     get_hourly_weather,
     get_weather_prediction,
 )
 
+# Rain has no evidence-based scoring thresholds behind it (unlike
+# cold/heat/UV/fog/wind/beach below) — it's checked on its own, exactly as
+# before, with its existing hourly-precision refinement intact. If rain
+# triggers, that alone is decisive (swap/tip immediately); only when it
+# doesn't do we fall through to the new scoring engine for everything else.
+_rain_rule = RainRule()
+
+
+def _evaluate_activity(forecast_day: dict, activity: Activity, hourly: list[dict] | None) -> dict | None:
+    """Rain first (unchanged, existing hourly-precision check) — if it
+    fires, that's decisive on its own, same as before this rewrite. Only
+    when rain doesn't fire does the new scoring engine run. Returns None if
+    neither applies (nothing to report at all — below even the advisory
+    threshold), otherwise a dict with `reason`/`tip`/`rule_id` (for the
+    swap/tip record and notification email) and `adjusted`/`score_trace`
+    (for the caller to decide advisory vs. swap, and for persisting on the
+    Activity row when it swaps)."""
+    rain_reason = _rain_rule.evaluate(forecast_day, activity, hourly=hourly)
+    if rain_reason:
+        return {
+            "reason": rain_reason,
+            "tip": _rain_rule.tip(forecast_day),
+            "rule_id": _rain_rule.id,
+            "score_trace": None,
+            "adjusted": 100.0,
+        }
+
+    result = score_activity(forecast_day, activity, hourly=hourly)
+    if result["adjusted"] < ADVISORY_THRESHOLD:
+        return None
+    effective_values = result["effective_values"]
+    return {
+        "reason": describe_scores(forecast_day, result["scores"], effective_values),
+        "tip": describe_tip(forecast_day, result["scores"], effective_values),
+        "rule_id": top_rule_id(result["scores"]),
+        "score_trace": result,
+        "adjusted": result["adjusted"],
+    }
+
+
 async def run_auto_swap(db: AsyncSession) -> dict:
     """Re-check weather for upcoming/active trips and auto-swap outdoor
-    activities affected by any ACTIVE_RULES condition (rain, fog, wind,
-    extreme heat/cold/UV, poor beach safety) for a suitable alternative.
+    activities affected by rain (checked directly via RainRule, unchanged)
+    or by a combined cold/heat/UV/fog/wind/beach-safety score crossing
+    SWAP_THRESHOLD (see services/weather_rules.py's score_activity()) for a
+    suitable alternative. A combined score in the advisory band (at or above
+    ADVISORY_THRESHOLD but below SWAP_THRESHOLD) produces a tip instead of a
+    swap, same as a *fixed* activity affected by anything at or above the
+    advisory threshold.
 
     Safe to call repeatedly (e.g. on a Celery Beat schedule, or manually for
     testing) — Activity.is_swapped is the idempotency guard, so an
     already-swapped activity is never re-evaluated or re-notified.
 
     Returns {"swapped": [...], "tips": [...]}:
-    - "swapped": {trip_id, activity_id, reason, rain_mm, day_date,
+    - "swapped": {trip_id, activity_id, rule_id, reason, rain_mm, day_date,
       original_name, original_location, alternate_name, alternate_location}
       for activities swapped during this run.
-    - "tips": {trip_id, activity_id, reason, tip, day_date, name, location}
-      for *fixed* activities affected by a rule — these are never swapped
-      (is_fixed excludes them from the swap-candidate pool entirely), so
-      this is informational only, no row is mutated. Not deduped across
-      runs — a fixed activity on a rainy day may generate the same tip on
-      each scheduled check until the day passes or the forecast clears;
-      accepted trade-off since tips are non-destructive, unlike a swap.
+    - "tips": {trip_id, activity_id, rule_id, reason, tip, day_date, name,
+      location} for *fixed* activities, and for non-fixed activities whose
+      combined score only reached the advisory band (no row mutated in
+      either case) — informational only. Not deduped across runs — the same
+      tip may repeat on each scheduled check until the day passes or the
+      forecast improves; accepted trade-off since tips are non-destructive,
+      unlike a swap.
 
     Both are consumed by notifications_service.send_swap_digest_emails to
     build the per-user digest email.
@@ -127,45 +180,57 @@ async def run_auto_swap(db: AsyncSession) -> dict:
         }
 
         for forecast_day in forecast_days:
-            # Fixed activities affected by a rule get a tip instead of a
-            # swap — no Claude call, no apply_swap, no is_swapped mutation.
-            # Checked before the swappable-activities early-exit below, so a
-            # day with only a fixed activity (no swap candidates at all)
-            # still gets its tip generated.
+            hourly_for_day = hourly_by_date.get(forecast_day["date"])
+
+            # Fixed activities affected by anything at or above the advisory
+            # threshold get a tip instead of a swap — no Claude call, no
+            # apply_swap, no is_swapped mutation. Checked before the
+            # swappable-activities early-exit below, so a day with only a
+            # fixed activity (no swap candidates at all) still gets its tip.
             for activity in fixed_activities_by_date.get(forecast_day["date"], []):
-                for rule in ACTIVE_RULES:
-                    reason = rule.evaluate(forecast_day, activity, hourly=hourly_by_date.get(forecast_day["date"]))
-                    if reason:
-                        tips.append({
-                            "trip_id": trip.id,
-                            "activity_id": activity.id,
-                            "rule_id": rule.id,
-                            "reason": reason,
-                            "tip": rule.tip(forecast_day),
-                            "day_date": activity.day_date.isoformat(),
-                            "name": activity.name,
-                            "location": activity.location,
-                        })
-                        break
+                evaluation = _evaluate_activity(forecast_day, activity, hourly_for_day)
+                if evaluation:
+                    tips.append({
+                        "trip_id": trip.id,
+                        "activity_id": activity.id,
+                        "rule_id": evaluation["rule_id"],
+                        "reason": evaluation["reason"],
+                        "tip": evaluation["tip"],
+                        "day_date": activity.day_date.isoformat(),
+                        "name": activity.name,
+                        "location": activity.location,
+                    })
 
             day_activities = activities_by_date.get(forecast_day["date"])
             if not day_activities:
                 continue
 
-            # Evaluated per activity, not once per day — blanket rules (rain)
-            # fire the same for every activity regardless, but targeted rules
-            # (fog, wind, heat, beach...) only fire for activities carrying
-            # the matching weather_sensitivity tag, so two activities on the
-            # same day can get different verdicts.
+            # Evaluated per activity, not once per day — rain and the
+            # blanket fog-safety score fire the same for every activity
+            # regardless, but tag-gated scores (cold/heat/UV/scenic-fog/
+            # wind/beach) only apply to activities carrying the matching
+            # weather_sensitivity tag, so two activities on the same day can
+            # get different verdicts (and different combined scores).
             for activity in day_activities:
-                reason = None
-                for rule in ACTIVE_RULES:
-                    reason = rule.evaluate(forecast_day, activity, hourly=hourly_by_date.get(forecast_day["date"]))
-                    if reason:
-                        break
-                if not reason:
+                evaluation = _evaluate_activity(forecast_day, activity, hourly_for_day)
+                if not evaluation:
                     continue
 
+                if evaluation["adjusted"] < SWAP_THRESHOLD:
+                    # Advisory band — inform, don't touch the activity.
+                    tips.append({
+                        "trip_id": trip.id,
+                        "activity_id": activity.id,
+                        "rule_id": evaluation["rule_id"],
+                        "reason": evaluation["reason"],
+                        "tip": evaluation["tip"],
+                        "day_date": activity.day_date.isoformat(),
+                        "name": activity.name,
+                        "location": activity.location,
+                    })
+                    continue
+
+                reason = evaluation["reason"]
                 try:
                     # Captured before apply_swap mutates the row, so the
                     # digest email can show what the plan used to be.
@@ -175,12 +240,14 @@ async def run_auto_swap(db: AsyncSession) -> dict:
                     alternate = await swap_service.find_alternative_activity(
                         activity, trip, reason, exclude_names=list(planned_names)
                     )
-                    await swap_service.apply_swap(db, activity, alternate, reason)
+                    await swap_service.apply_swap(
+                        db, activity, alternate, reason, evaluation["score_trace"]
+                    )
                     planned_names.add(alternate["name"])
                     swapped.append({
                         "trip_id": trip.id,
                         "activity_id": activity.id,
-                        "rule_id": rule.id,
+                        "rule_id": evaluation["rule_id"],
                         "reason": reason,
                         "rain_mm": forecast_day.get("rain_mm"),
                         "day_date": activity.day_date.isoformat(),

@@ -1,5 +1,6 @@
 from datetime import date
-from sqlalchemy import String, Date, Boolean, Float, ForeignKey
+from typing import Any
+from sqlalchemy import JSON, String, Date, Boolean, Float, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 from models.base import Base
 
@@ -20,6 +21,13 @@ class Activity(Base):
     alternate_name: Mapped[str] = mapped_column(String(255), default="", server_default="")
     alternate_location: Mapped[str] = mapped_column(String(255), default="", server_default="")
     swap_reason: Mapped[str] = mapped_column(String(255), default="", server_default="")
+
+    # The per-metric scores (see services/weather_rules.py's
+    # score_activity()) that triggered this swap — e.g.
+    # {"scores": {"cold": 80, "wind": 50}, "combined": 100, "adjusted": 90}.
+    # None for a rain-caused swap (rain isn't part of the scoring engine,
+    # see auto_swap_service.py) or for an activity never swapped.
+    swap_score_trace: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
 
     # Comma-separated subset of {"view_dependent", "wind_exposed",
     # "strenuous_outdoor", "beach"} — tagged by Claude at generation time,

@@ -96,11 +96,24 @@ async def find_alternative_activity(
     return json.loads(text)
 
 
-async def apply_swap(db: AsyncSession, activity: Activity, alternate: dict, reason: str) -> None:
+async def apply_swap(
+    db: AsyncSession,
+    activity: Activity,
+    alternate: dict,
+    reason: str,
+    score_trace: dict | None = None,
+) -> None:
     activity.is_swapped = True
     activity.alternate_name = alternate["name"]
     activity.alternate_location = alternate["location"]
     activity.swap_reason = reason
+    # The per-metric scores (see weather_rules.score_activity()) that
+    # actually triggered this swap — None for a rain-caused swap, since
+    # rain isn't part of the new scoring engine (see auto_swap_service.py).
+    # Kept for auditability and so a future revert feature can recheck
+    # exactly these metrics rather than re-deriving "why" from swap_reason's
+    # free-text sentence.
+    activity.swap_score_trace = score_trace
     # The map pin (lat/lng) has no separate pre/post-swap field — it always
     # reflects the activity's current plan, so it must move to the
     # alternative's coordinates here or it silently keeps pointing at the

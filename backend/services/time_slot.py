@@ -49,3 +49,55 @@ def hourly_window_is_rainy(hourly_day: list[dict], window: tuple[int, int], thre
         if start_hour <= hour <= end_hour and (entry.get("rain_probability") or 0) >= threshold:
             return True
     return False
+
+
+def _hourly_window_values(hourly_day: list[dict], window: tuple[int, int], field: str) -> list[float]:
+    """Every non-None value of `field` among hourly entries within `window`
+    (inclusive start/end hour) — shared by the hourly_window_min_*/max_*
+    helpers below, which just reduce this list differently depending on
+    which direction is "worst" for that metric."""
+    start_hour, end_hour = window
+    return [
+        entry[field]
+        for entry in hourly_day
+        if start_hour <= datetime.fromisoformat(entry["time"]).hour <= end_hour
+        and entry.get(field) is not None
+    ]
+
+
+def hourly_window_min_visibility_km(hourly_day: list[dict], window: tuple[int, int]) -> float | None:
+    """Worst (lowest) visibility_km among hourly entries within `window`, or
+    None if no entry falls in that window (or none of them carry a
+    visibility_km at all — e.g. hourly fixtures built for rain-only
+    testing). Same refinement idea as hourly_window_is_rainy above, applied
+    to fog scoring instead of rain — the activity's own time slot might miss
+    a fog bank that only affects a different part of the day."""
+    values = _hourly_window_values(hourly_day, window, "visibility_km")
+    return min(values) if values else None
+
+
+def hourly_window_max_wind_speed(hourly_day: list[dict], window: tuple[int, int]) -> float | None:
+    """Worst (highest) wind_speed within `window` — same refinement idea as
+    hourly_window_min_visibility_km above, applied to wind instead."""
+    values = _hourly_window_values(hourly_day, window, "wind_speed")
+    return max(values) if values else None
+
+
+def hourly_window_max_uv_index(hourly_day: list[dict], window: tuple[int, int]) -> float | None:
+    """Worst (highest) uv_index within `window`."""
+    values = _hourly_window_values(hourly_day, window, "uv_index")
+    return max(values) if values else None
+
+
+def hourly_window_min_temperature(hourly_day: list[dict], window: tuple[int, int]) -> float | None:
+    """Worst (coldest) temperature within `window` — feeds cold-risk
+    scoring, mirroring the day-level temp_min this refines."""
+    values = _hourly_window_values(hourly_day, window, "temperature")
+    return min(values) if values else None
+
+
+def hourly_window_max_temperature(hourly_day: list[dict], window: tuple[int, int]) -> float | None:
+    """Worst (hottest) temperature within `window` — feeds heat-risk
+    scoring, mirroring the day-level temp_max this refines."""
+    values = _hourly_window_values(hourly_day, window, "temperature")
+    return max(values) if values else None
