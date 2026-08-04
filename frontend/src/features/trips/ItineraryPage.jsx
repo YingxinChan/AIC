@@ -149,6 +149,19 @@ const CARD_IDENTITY_BG = {
 // by the caller.
 const RISK_CARD_CLASSES = 'shrink-0 w-[160px] p-4 rounded border text-center flex flex-col items-center justify-center gap-1'
 
+// Heavy Rain, Extreme Temp, Hiking Safety, Wind, UV and Visibility all read
+// straight off the real forecast/ML path (see _get_forecast_days in
+// weather_service.py) — climatology_service.py never sets them, by design,
+// so a climatology day always has them null. That's a different situation
+// from Flood/Beach Safety/Snow (which climatology *does* compute from
+// historical data) and from a genuine "checked and unknown" result, so
+// these cards swap their badge for this note instead of a plain 'Unknown'.
+// Mirrors the Extreme Temp card's own existing bold-value + small-note-below
+// layout (e.g. "High Heat" + "Limit intense outdoor activities...") rather
+// than inventing new typography, so the row height/font sizing stays
+// consistent with how a real-forecast day's row already looks.
+const FORECAST_ONLY_NOTE = 'Only available once this day is within the 14-day forecast'
+
 // Visibility has no backend-supplied level (unlike UV/wind), so it's
 // classified here using the same Good/Moderate/Poor vocabulary Beach Safety
 // already uses — no changes needed to levelColorClass to support it.
@@ -1360,6 +1373,11 @@ export default function ItineraryPage() {
 
                 <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-800">
                     <Thermometer size={16} className="text-indigo-600" /> Weather
+                    {forecastDay.is_climatology && (
+                      <span className="inline-flex text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 whitespace-nowrap">
+                        Typical weather (historical average)
+                      </span>
+                    )}
                 </h3>
 
                 {/* Daily Summary Header — items-start (not items-center): the
@@ -1381,11 +1399,6 @@ export default function ItineraryPage() {
                             crammed right against it. */}
                         <div className="flex flex-col items-center shrink-0">
                             <div className="text-sm font-semibold text-gray-500 mb-2">{forecastDay.date}</div>
-                            {forecastDay.is_climatology && (
-                              <div className="inline-flex mb-2 text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 whitespace-nowrap">
-                                Typical weather (historical average)
-                              </div>
-                            )}
                             <WeatherIcon condition={forecastDay.condition} timeStr={forecastDay.date + "T12:00:00"} className="w-10 h-10 text-indigo-500" />
                             <span className="text-sm font-semibold text-gray-700 capitalize whitespace-nowrap mt-1">{forecastDay.condition}</span>
                         </div>
@@ -1482,7 +1495,7 @@ export default function ItineraryPage() {
                       l: 'Heavy Rain',
                       v: forecastDay.heavy_rain_probability == null ? '—' : `${forecastDay.heavy_rain_probability}%`,
                       s: forecastDay.heavy_rain_probability == null ? 'Unknown' : (forecastDay.heavy_rain_warning ? 'High' : 'Low'),
-                      i: Umbrella, bg: CARD_IDENTITY_BG.heavyRain,
+                      i: Umbrella, bg: CARD_IDENTITY_BG.heavyRain, forecastOnly: true,
                     },
                     {
                       l: 'Flood',
@@ -1510,18 +1523,30 @@ export default function ItineraryPage() {
                       // regardless of how tall its neighbors are.
                       <div key={c.l} className={`${RISK_CARD_CLASSES} ${c.bg}`}>
                           <div className="text-xs text-gray-500 uppercase flex items-center justify-center gap-2"><c.i size={22} className="text-indigo-400" /> {c.l}</div>
-                          <div className="font-bold text-lg">{c.v}</div>
-                          <span className={`text-xs px-2 rounded-full ${levelColorClass(c.s)}`}>
-                              {c.s}
-                          </span>
+                          <div className="font-bold text-lg">
+                            {forecastDay.is_climatology && c.forecastOnly ? '—' : c.v}
+                          </div>
+                          {forecastDay.is_climatology && c.forecastOnly ? (
+                            <div className="text-[11px] text-gray-500 leading-snug">{FORECAST_ONLY_NOTE}</div>
+                          ) : (
+                            <span className={`text-xs px-2 rounded-full ${levelColorClass(c.s)}`}>
+                                {c.s}
+                            </span>
+                          )}
                       </div>
                   ))}
 
                   <div className={`${RISK_CARD_CLASSES} ${CARD_IDENTITY_BG.extremeTemp}`}>
                       <div className="text-xs text-gray-500 uppercase flex items-center justify-center gap-2"><Flame size={22} className="text-indigo-400" /> Extreme Temp</div>
-                      <div className="font-bold text-base">{forecastDay.temperature_level ?? '—'}</div>
-                      {forecastDay.temperature_advice && (
-                        <div className="text-[11px] text-gray-500 leading-snug">{forecastDay.temperature_advice}</div>
+                      <div className="font-bold text-base">
+                        {forecastDay.is_climatology ? '—' : (forecastDay.temperature_level ?? '—')}
+                      </div>
+                      {forecastDay.is_climatology ? (
+                        <div className="text-[11px] text-gray-500 leading-snug">{FORECAST_ONLY_NOTE}</div>
+                      ) : (
+                        forecastDay.temperature_advice && (
+                          <div className="text-[11px] text-gray-500 leading-snug">{forecastDay.temperature_advice}</div>
+                        )
                       )}
                   </div>
 
@@ -1530,41 +1555,51 @@ export default function ItineraryPage() {
                       l: 'Hiking Safety',
                       v: forecastDay.hiking_safety_score == null ? '—' : `${Math.round(forecastDay.hiking_safety_score)}%`,
                       s: forecastDay.hiking_safety_level || 'Unknown',
-                      i: Mountain, bg: CARD_IDENTITY_BG.hikingSafety,
+                      i: Mountain, bg: CARD_IDENTITY_BG.hikingSafety, forecastOnly: true,
                     },
                     {
                       l: 'Wind',
                       v: forecastDay.wind_speed == null ? '—' : `${Math.round(forecastDay.wind_speed)} km/h`,
                       s: forecastDay.wind_level || 'Unknown',
-                      i: Wind, bg: CARD_IDENTITY_BG.wind, metric: 'wind',
+                      i: Wind, bg: CARD_IDENTITY_BG.wind, metric: 'wind', forecastOnly: true,
                     },
                     {
                       l: 'UV Index',
                       v: forecastDay.uv_index == null ? '—' : Math.round(forecastDay.uv_index),
                       s: forecastDay.uv_level || 'Unknown',
-                      i: SunDim, bg: CARD_IDENTITY_BG.uv, metric: 'uv',
+                      i: SunDim, bg: CARD_IDENTITY_BG.uv, metric: 'uv', forecastOnly: true,
                     },
                     {
                       l: 'Visibility',
                       v: forecastDay.visibility_m == null ? '—' : `${(forecastDay.visibility_m / 1000).toFixed(1)} km`,
                       s: forecastDay.visibility_m == null ? 'Unknown' : visibilityLevel(forecastDay.visibility_m),
-                      i: Eye, bg: CARD_IDENTITY_BG.visibility, metric: 'visibility',
+                      i: Eye, bg: CARD_IDENTITY_BG.visibility, metric: 'visibility', forecastOnly: true,
                     },
                   ].map((c) => {
                       // Only the 3 weather-info cards (metric set) open the hourly-trend
                       // popup on click — the risk cards (heavy rain/flood/etc.) aren't
-                      // clickable, so this renders a <button> only for those three.
-                      const Tag = c.metric ? 'button' : 'div'
+                      // clickable, so this renders a <button> only for those three. A
+                      // climatology day has no hourly data for the popup to show (see
+                      // forecastDay.is_climatology), so it falls back to a plain <div>
+                      // same as the non-metric cards, instead of opening an empty popup.
+                      const showsNote = forecastDay.is_climatology && c.forecastOnly
+                      const Tag = c.metric && !showsNote ? 'button' : 'div'
                       return (
                         <Tag key={c.l}
-                            type={c.metric ? 'button' : undefined}
-                            onClick={c.metric ? () => setWeatherInfoModalMetric(c.metric) : undefined}
-                            className={`${RISK_CARD_CLASSES} ${c.bg} ${c.metric ? 'cursor-pointer hover:brightness-95 transition' : ''}`}>
+                            type={c.metric && !showsNote ? 'button' : undefined}
+                            onClick={c.metric && !showsNote ? () => setWeatherInfoModalMetric(c.metric) : undefined}
+                            className={`${RISK_CARD_CLASSES} ${c.bg} ${c.metric && !showsNote ? 'cursor-pointer hover:brightness-95 transition' : ''}`}>
                             <div className="text-xs text-gray-500 uppercase flex items-center justify-center gap-2"><c.i size={22} className="text-indigo-400" /> {c.l}</div>
-                            <div className="font-bold text-lg">{c.v}</div>
-                            <span className={`text-xs px-2 rounded-full ${levelColorClass(c.s)}`}>
-                                {c.s}
-                            </span>
+                            <div className="font-bold text-lg">
+                              {showsNote ? '—' : c.v}
+                            </div>
+                            {showsNote ? (
+                              <div className="text-[11px] text-gray-500 leading-snug">{FORECAST_ONLY_NOTE}</div>
+                            ) : (
+                              <span className={`text-xs px-2 rounded-full ${levelColorClass(c.s)}`}>
+                                  {c.s}
+                              </span>
+                            )}
                         </Tag>
                       )
                   })}
