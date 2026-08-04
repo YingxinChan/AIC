@@ -1458,7 +1458,7 @@ export default function ItineraryPage() {
             ) : (
               <>
                 {/* Score */}
-                {riskInfoMeta[riskInfoModal]?.score !== null && (
+                {riskInfoMeta[riskInfoModal]?.score != null && (
                   <div className="text-center">
                     <div className="text-3xl font-bold">
                       {Math.round(riskInfoMeta[riskInfoModal].score)}%
