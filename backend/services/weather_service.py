@@ -202,7 +202,7 @@ def _get_forecast_days(lat: float, lon: float, start_date: str, end_date: str) -
             feels_like_temp=feels_like_temp
         )
         temperature_advice = temp_advice(
-            temp_level=temperature_level
+            temp_level=temperature_level["temperature_level"]
         )
 
         # Hiking safety
@@ -213,15 +213,15 @@ def _get_forecast_days(lat: float, lon: float, start_date: str, end_date: str) -
             heavy_rain_probability=prediction["heavy_rain_probability"],
             wind=wind,
             visibility=visibility,
-            temp_risk=temperature_level,
+            temp_risk=temperature_level["temperature_level"],
             snow_probability=snow["snow_probability"],
         )
 
         day.update(flood)
         day.update(beach)
         day.update(snow)
+        day.update(temperature_level)
         day.update({
-            "temperature_level": temperature_level,
             "temperature_advice": temperature_advice,
         })
         day.update(hiking)
@@ -274,14 +274,14 @@ def get_hourly_weather(lat: float, lon: float, start_date: str = None, end_date:
 
 if __name__ == "__main__":
 
-    # result = get_weather_prediction(
-    #     lat=51.5074,
-    #     lon=-0.1278
-    # )
-
-    result = get_hourly_weather(
+    result = get_weather_prediction(
         lat=51.5074,
         lon=-0.1278
     )
+
+    # result = get_hourly_weather(
+    #     lat=51.5074,
+    #     lon=-0.1278
+    # )
 
     print(result)

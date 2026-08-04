@@ -193,6 +193,50 @@ const WEATHER_INFO_META = {
   visibility: { label: 'Visibility', unit: 'km', hourlyKey: 'visibility_km', advice: () => null, color: '#64748b' },
 };
 
+const getRiskInfoMeta = (forecastDay) => ({
+  heavyRain: {
+    label: "Heavy Rain Prediction Calculation",
+    score: forecastDay.heavy_rain_probability,
+    level: forecastDay.heavy_rain_warning ? "High" : "Low",
+    breakdown: []
+  },
+
+  flood: {
+    label: "Flood Risk Calculation",
+    score: forecastDay.flood_score,
+    level: forecastDay.flood_risk,
+    breakdown: forecastDay.flood_breakdown
+  },
+
+  beach: {
+    label: "Beach Safety Calculation",
+    score: forecastDay.beach_safety_score,
+    level: forecastDay.beach_safety_level,
+    breakdown: forecastDay.beach_safety_breakdown
+  },
+
+  snow: {
+    label: "Snow Probability Calculation",
+    score: forecastDay.snow_probability,
+    level: snowLevel(forecastDay.snow_probability),
+    breakdown: forecastDay.snow_breakdown
+  },
+
+  hiking: {
+    label: "Hiking Safety Calculation",
+    score: forecastDay.hiking_safety_score,
+    level: forecastDay.hiking_safety_level,
+    breakdown: forecastDay.hiking_safety_breakdown
+  },
+
+  temperature: {
+    label: "Extreme Temperature Calculation",
+    level: forecastDay.temperature_level,
+    advice: forecastDay.temperature_advice,
+    breakdown: forecastDay.temperature_breakdown
+  }
+})
+
 // Hand-rolled SVG sparkline rather than pulling in a charting library for
 // one simple hourly-trend line — points are normalized into the viewBox,
 // flat-lining at the vertical center if every value is identical (avoids a
@@ -471,6 +515,7 @@ export default function ItineraryPage() {
   // trend popup open, or null if none — only these 3 cards are clickable,
   // not the risk cards (heavy rain/flood/beach/snow/extreme temp/hiking).
   const [weatherInfoModalMetric, setWeatherInfoModalMetric] = useState(null)
+  const [riskInfoModal, setRiskInfoModal] = useState(null);
 
   const [editActivityModalOpen, setEditActivityModalOpen] = useState(false)
   const [editingActivityId, setEditingActivityId] = useState(null)
@@ -865,6 +910,7 @@ export default function ItineraryPage() {
   // independently of each other and of the tab source.
   const tripDates = trip?.start_date && trip?.end_date ? datesBetween(trip.start_date, trip.end_date) : []
   const forecastDay = forecast?.find(d => d.date === selectedDate)
+  const riskInfoMeta = forecastDay ? getRiskInfoMeta(forecastDay) : {}
   const itineraryDay = itinerary?.days?.find(d => d.date === selectedDate)
   const selectedDayNumber = tripDates.indexOf(selectedDate) + 1
 
@@ -1329,6 +1375,145 @@ export default function ItineraryPage() {
         )}
       </Modal>
 
+      {/*RISK MODAL*/}
+      <Modal open={Boolean(riskInfoModal)} onClose={() => setRiskInfoModal(null)} title={riskInfoMeta[riskInfoModal]?.label || ""}>
+        {riskInfoModal && (
+          <div className="space-y-4">
+            
+            {/* Heavy rain prob ml model info */}
+            {riskInfoModal === "heavyRain" ? (
+
+              <div className="space-y-4 text-sm">
+
+                {/* Probability */}
+                <div className="text-center">
+                  <div className="text-3xl font-bold">
+                    {forecastDay.heavy_rain_probability}%
+                  </div>
+
+                  <div className="text-gray-500">
+                    Heavy rain probability
+                  </div>
+                </div>
+
+                <div className="border-t pt-4 space-y-3">
+
+                  <h3 className="font-semibold">
+                    About this prediction
+                  </h3>
+
+                  <div>
+                    <span className="font-medium">
+                      Model:
+                    </span>
+                    <p>
+                      LightGBM Classifier
+                    </p>
+                  </div>
+
+                  <div>
+                    <span className="font-medium">
+                      Purpose:
+                    </span>
+                    <p>
+                      Predict the probability of heavy rainfall
+                      based on weather forecast conditions.
+                    </p>
+                  </div>
+
+                  <div>
+                    <span className="font-medium">
+                      Features analysed:
+                    </span>
+                    <p>
+                      17 weather and seasonal features
+                    </p>
+                  </div>
+
+                  <div>
+                    <span className="font-medium">
+                      Includes:
+                    </span>
+
+                    <ul className="list-disc ml-5">
+                      <li>Rainfall</li>
+                      <li>Temperature</li>
+                      <li>Humidity</li>
+                      <li>Pressure</li>
+                      <li>Wind</li>
+                      <li>Solar radiation</li>
+                      <li>Location</li>
+                      <li>Seasonal patterns</li>
+                    </ul>
+                  </div>
+
+                  <p className="text-xs text-gray-500">
+                    The prediction is generated using historical
+                    weather patterns and current forecast data.
+                  </p>
+
+                </div>
+              </div>
+
+            ) : (
+              <>
+                {/* Score */}
+                {riskInfoMeta[riskInfoModal]?.score != null && (
+                  <div className="text-center">
+                    <div className="text-3xl font-bold">
+                      {Math.round(riskInfoMeta[riskInfoModal].score)}%
+                    </div>
+
+                    <div className="text-sm text-gray-500">
+                      {riskInfoMeta[riskInfoModal].level}
+                    </div>
+                  </div>
+                )}
+
+                {/* Temperature advice */}
+                {riskInfoModal === "temperature" && (
+                  <div className="text-sm text-gray-600">
+                    {riskInfoMeta.temperature.advice}
+                  </div>
+                )}
+
+                {/* Breakdown */}
+                {riskInfoMeta[riskInfoModal]?.breakdown?.map((item) => (
+                  <div
+                    key={item.factor}
+                    className="flex justify-between items-center border-b pb-2"
+                  >
+                    <div>
+                      <div className="font-medium">
+                        {item.factor}
+                      </div>
+
+                      <div className="text-xs text-gray-500">
+                        {item.value} {item.unit}
+                      </div>
+                    </div>
+
+                    <div
+                      className={
+                        item.impact > 0
+                          ? "text-green-600"
+                          : item.impact < 0
+                          ? "text-red-600"
+                          : "text-gray-400"
+                      }
+                    >
+                      {item.impact > 0 ? "+" : ""}
+                      {item.impact}
+                    </div>
+
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+      </Modal>
+
       {/* 5D: Itinerary & Weather Section */}
       {trip && (
       <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
@@ -1369,7 +1554,7 @@ export default function ItineraryPage() {
         )}
 
         {weatherStatus === 'loaded' && forecastDay && (
-  <div className="border border-gray-100 p-4 rounded-lg bg-gray-50/50 space-y-4">
+          <div className="border border-gray-100 p-4 rounded-lg bg-gray-50/50 space-y-4">
 
                 <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-800">
                     <Thermometer size={16} className="text-indigo-600" /> Weather
@@ -1493,27 +1678,48 @@ export default function ItineraryPage() {
                   {[
                     {
                       l: 'Heavy Rain',
-                      v: forecastDay.heavy_rain_probability == null ? '—' : `${forecastDay.heavy_rain_probability}%`,
-                      s: forecastDay.heavy_rain_probability == null ? 'Unknown' : (forecastDay.heavy_rain_warning ? 'High' : 'Low'),
-                      i: Umbrella, bg: CARD_IDENTITY_BG.heavyRain, forecastOnly: true,
+                      v: forecastDay.heavy_rain_probability == null
+                        ? '—'
+                        : `${forecastDay.heavy_rain_probability}%`,
+                      s: forecastDay.heavy_rain_probability == null
+                        ? 'Unknown'
+                        : (forecastDay.heavy_rain_warning ? 'High' : 'Low'),
+                      i: Umbrella,
+                      bg: CARD_IDENTITY_BG.heavyRain,
+                      type: 'heavyRain',
+                      forecastOnly: true,
                     },
                     {
                       l: 'Flood',
-                      v: forecastDay.flood_score == null ? '—' : `${Math.round(forecastDay.flood_score)}%`,
+                      v: forecastDay.flood_score == null
+                        ? '—'
+                        : `${Math.round(forecastDay.flood_score)}%`,
                       s: forecastDay.flood_risk || 'Unknown',
-                      i: Waves, bg: CARD_IDENTITY_BG.flood,
+                      i: Waves,
+                      bg: CARD_IDENTITY_BG.flood,
+                      type: 'flood',
                     },
                     {
                       l: 'Beach Safety',
-                      v: forecastDay.beach_safety_score == null ? '—' : `${Math.round(forecastDay.beach_safety_score)}%`,
+                      v: forecastDay.beach_safety_score == null
+                        ? '—'
+                        : `${Math.round(forecastDay.beach_safety_score)}%`,
                       s: forecastDay.beach_safety_level || 'Unknown',
-                      i: Palmtree, bg: CARD_IDENTITY_BG.beachSafety,
+                      i: Palmtree,
+                      bg: CARD_IDENTITY_BG.beachSafety,
+                      type: 'beach',
                     },
                     {
                       l: 'Snow',
-                      v: forecastDay.snow_probability == null ? '—' : `${forecastDay.snow_probability}%`,
-                      s: forecastDay.snow_probability == null ? 'Unknown' : snowLevel(forecastDay.snow_probability),
-                      i: Snowflake, bg: CARD_IDENTITY_BG.snow,
+                      v: forecastDay.snow_probability == null
+                        ? '—'
+                        : `${forecastDay.snow_probability}%`,
+                      s: forecastDay.snow_probability == null
+                        ? 'Unknown'
+                        : snowLevel(forecastDay.snow_probability),
+                      i: Snowflake,
+                      bg: CARD_IDENTITY_BG.snow,
+                      type: 'snow',
                     },
                   ].map((c) => (
                       // flex-col justify-center: label/value/badge stay a tight cluster
@@ -1521,41 +1727,57 @@ export default function ItineraryPage() {
                       // leftover height the row-stretch adds evenly above and below that
                       // cluster — so every card gets the same top/bottom breathing room
                       // regardless of how tall its neighbors are.
-                      <div key={c.l} className={`${RISK_CARD_CLASSES} ${c.bg}`}>
-                          <div className="text-xs text-gray-500 uppercase flex items-center justify-center gap-2"><c.i size={22} className="text-indigo-400" /> {c.l}</div>
-                          <div className="font-bold text-lg">
-                            {forecastDay.is_climatology && c.forecastOnly ? '—' : c.v}
+                      <div key={c.l} onClick={() => setRiskInfoModal(c.type)} className={`${RISK_CARD_CLASSES} ${c.bg} cursor-pointer hover:brightness-95 transition`}>
+                        <div className="text-xs text-gray-500 uppercase flex items-center justify-center gap-2">
+                          <c.i size={22} className="text-indigo-400" /> {c.l}
+                        </div>
+
+                        <div className="font-bold text-lg">
+                          {forecastDay.is_climatology && c.forecastOnly ? '—' : c.v}
+                        </div>
+
+                        {forecastDay.is_climatology && c.forecastOnly ? (
+                          <div className="text-[11px] text-gray-500 leading-snug">
+                            {FORECAST_ONLY_NOTE}
                           </div>
-                          {forecastDay.is_climatology && c.forecastOnly ? (
-                            <div className="text-[11px] text-gray-500 leading-snug">{FORECAST_ONLY_NOTE}</div>
-                          ) : (
-                            <span className={`text-xs px-2 rounded-full ${levelColorClass(c.s)}`}>
-                                {c.s}
-                            </span>
-                          )}
+                        ) : (
+                          <span className={`text-xs px-2 rounded-full ${levelColorClass(c.s)}`}>
+                            {c.s}
+                          </span>
+                        )}
                       </div>
                   ))}
+                  <div
+                      onClick={() => setRiskInfoModal("temperature")}
+                      className={`${RISK_CARD_CLASSES} ${CARD_IDENTITY_BG.extremeTemp} cursor-pointer hover:brightness-95 transition`}
+                    >
+                      <div className="text-xs text-gray-500 uppercase flex items-center justify-center gap-2">
+                        <Flame size={22} className="text-indigo-400" /> Extreme Temp
+                      </div>
 
-                  <div className={`${RISK_CARD_CLASSES} ${CARD_IDENTITY_BG.extremeTemp}`}>
-                      <div className="text-xs text-gray-500 uppercase flex items-center justify-center gap-2"><Flame size={22} className="text-indigo-400" /> Extreme Temp</div>
                       <div className="font-bold text-base">
                         {forecastDay.is_climatology ? '—' : (forecastDay.temperature_level ?? '—')}
                       </div>
+
                       {forecastDay.is_climatology ? (
-                        <div className="text-[11px] text-gray-500 leading-snug">{FORECAST_ONLY_NOTE}</div>
+                        <div className="text-[11px] text-gray-500 leading-snug">
+                          {FORECAST_ONLY_NOTE}
+                        </div>
                       ) : (
                         forecastDay.temperature_advice && (
-                          <div className="text-[11px] text-gray-500 leading-snug">{forecastDay.temperature_advice}</div>
+                          <div className="text-[11px] text-gray-500 leading-snug">
+                            {forecastDay.temperature_advice}
+                          </div>
                         )
                       )}
-                  </div>
-
+                    </div>
                   {[
                     {
                       l: 'Hiking Safety',
                       v: forecastDay.hiking_safety_score == null ? '—' : `${Math.round(forecastDay.hiking_safety_score)}%`,
                       s: forecastDay.hiking_safety_level || 'Unknown',
                       i: Mountain, bg: CARD_IDENTITY_BG.hikingSafety, forecastOnly: true,
+                      type: 'hiking',
                     },
                     {
                       l: 'Wind',
@@ -1576,19 +1798,17 @@ export default function ItineraryPage() {
                       i: Eye, bg: CARD_IDENTITY_BG.visibility, metric: 'visibility', forecastOnly: true,
                     },
                   ].map((c) => {
-                      // Only the 3 weather-info cards (metric set) open the hourly-trend
-                      // popup on click — the risk cards (heavy rain/flood/etc.) aren't
-                      // clickable, so this renders a <button> only for those three. A
-                      // climatology day has no hourly data for the popup to show (see
-                      // forecastDay.is_climatology), so it falls back to a plain <div>
-                      // same as the non-metric cards, instead of opening an empty popup.
+                       // Weather-info cards (metric set) open the hourly-trend popup.
+                       // Risk cards (heavy rain/flood/etc.) open their risk-detail modal.
+                       // Climatology days have no hourly data, so metric cards fall back
+                       // to non-clickable cards instead of opening an empty popup.
                       const showsNote = forecastDay.is_climatology && c.forecastOnly
-                      const Tag = c.metric && !showsNote ? 'button' : 'div'
+                      const Tag = (c.metric || c.type) && !showsNote ? 'button' : 'div'
                       return (
                         <Tag key={c.l}
-                            type={c.metric && !showsNote ? 'button' : undefined}
-                            onClick={c.metric && !showsNote ? () => setWeatherInfoModalMetric(c.metric) : undefined}
-                            className={`${RISK_CARD_CLASSES} ${c.bg} ${c.metric && !showsNote ? 'cursor-pointer hover:brightness-95 transition' : ''}`}>
+                            type={(c.metric || c.type) && !showsNote ? 'button' : undefined}
+                            onClick={c.metric && !showsNote ? () => setWeatherInfoModalMetric(c.metric) : c.type ? () => setRiskInfoModal(c.type): undefined}
+                            className={`${RISK_CARD_CLASSES} ${c.bg} ${(c.metric || c.type) && !showsNote ? 'cursor-pointer hover:brightness-95 transition' : ''}`}>
                             <div className="text-xs text-gray-500 uppercase flex items-center justify-center gap-2"><c.i size={22} className="text-indigo-400" /> {c.l}</div>
                             <div className="font-bold text-lg">
                               {showsNote ? '—' : c.v}

@@ -1,4 +1,5 @@
 // Test: npm test itinerarypage
+// Risk model meta data
 
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -28,6 +29,84 @@ beforeEach(() => {
   sessionStorage.clear()
   getTrip.mockResolvedValue({ destination: 'London' })
   getItinerary.mockResolvedValue({ status: 'not_generated' })
+  getForecast.mockResolvedValue([
+    {
+      date: "2026-07-22",
+      condition: "Rain Showers",
+
+      temp_min: 15,
+      temp_max: 22,
+
+      sunrise: "05:10 AM",
+      sunset: "09:15 PM",
+
+      heavy_rain_probability: 20,
+      heavy_rain_warning: false,
+
+      flood_score: 10,
+      flood_risk: "Low",
+      flood_breakdown: [
+        {
+          factor: "Heavy Rain Probability",
+          value: 20,
+          unit: "%",
+          impact: 10
+        }
+      ],
+
+      beach_safety_score: 90,
+      beach_safety_level: "Excellent",
+
+      snow_probability: 0,
+      snow_breakdown: [
+        {
+          factor: "Temperature",
+          value: 18,
+          unit: "°C",
+          impact: 0
+        },
+        {
+          factor: "Precipitation",
+          value: 0,
+          unit: "mm",
+          impact: 0
+        }
+      ],
+
+      temperature_level: "Safe",
+      temperature_advice:
+        "Temperature conditions are comfortable for outdoor activities.",
+
+      temperature_breakdown: [
+        {
+          factor: "Feels Like Temperature",
+          value: 18,
+          unit: "°C",
+          impact: 0
+        }
+      ],
+
+      hiking_safety_score: 100,
+      hiking_safety_level: "Safe",
+
+      wind_speed: 10,
+      wind_level: "Calm",
+
+      uv_index: 4,
+      uv_level: "Moderate",
+
+      visibility_m: 10000,
+    }
+  ])
+
+  getHourlyForecast.mockResolvedValue([
+    {
+      time: "2026-07-22T12:00",
+      wind_speed: 10,
+      uv_index: 4,
+      visibility_m: 10000
+    }
+  ])
 })
 
 vi.mock('./tripsApi', () => ({
@@ -69,6 +148,20 @@ function renderAt(tripId) {
     </MemoryRouter>
   )
 }
+
+const renderItineraryPage = () => {
+  return render(
+    <MemoryRouter initialEntries={["/trips/571"]}>
+      <Routes>
+        <Route
+          path="/trips/:tripId"
+          element={<ItineraryPage />}
+        />
+      </Routes>
+    </MemoryRouter>
+  )
+}
+
 
 test('renders itinerary sections', async () => {
   renderAt(1)
@@ -2027,4 +2120,85 @@ test('a rejected delete shows a removal-failed message instead of crashing', asy
   expect(await screen.findByText(/removing this activity failed/i)).toBeInTheDocument()
 
   window.confirm.mockRestore()
+})
+
+// test for weather info click
+it("opens flood risk calculation modal", async () => {
+  geocodeCity.mockResolvedValue([
+    "51.5074",
+    "-0.1278"
+  ])
+
+  getTrip.mockResolvedValue({
+    destination: "London",
+    start_date: "2026-07-22",
+    end_date: "2026-07-22"
+  })
+
+  renderItineraryPage()
+  const card = await screen.findByText("Flood")
+  await userEvent.click(card)
+  expect(
+    screen.getByText("Flood")
+  ).toBeInTheDocument()
+  expect(
+    screen.getByText(/Heavy Rain Probability/)
+  ).toBeInTheDocument()
+})
+
+it("opens snow probability calculation modal", async () => {
+  geocodeCity.mockResolvedValue([
+    "51.5074",
+    "-0.1278"
+  ])
+
+  getTrip.mockResolvedValue({
+    destination: "London",
+    start_date: "2026-07-22",
+    end_date: "2026-07-22"
+  })
+
+  renderItineraryPage()
+  const card = await screen.findByText(/Snow/i)
+  await userEvent.click(card)
+  expect(
+    screen.getByText("Snow Probability Calculation")
+  ).toBeInTheDocument()
+  expect(
+    screen.getByText("Temperature")
+  ).toBeInTheDocument()
+  expect(
+    screen.getByText("Precipitation")
+  ).toBeInTheDocument()
+})
+
+it("opens wind hourly trend modal", async () => {
+  geocodeCity.mockResolvedValue([
+    "51.5074",
+    "-0.1278"
+  ])
+  getTrip.mockResolvedValue({
+    destination: "London",
+    start_date: "2026-07-22",
+    end_date: "2026-07-22"
+  })
+
+  renderItineraryPage()
+  const card = await screen.findByText(/Wind/i)
+  await userEvent.click(card)
+  expect(
+    screen.getByText("Wind — Hourly Trend")
+  ).toBeInTheDocument()
+})
+
+it("shows weather unavailable when forecast fails", async () => {
+  getForecast.mockRejectedValueOnce(
+    new Error("Weather failed")
+  )
+  renderItineraryPage()
+  expect(
+    await screen.findByText(
+      "Weather unavailable for this destination."
+    )
+  ).toBeInTheDocument()
 })

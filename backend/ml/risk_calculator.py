@@ -2,8 +2,7 @@
 from datetime import datetime
 import math
 
-
-# Heavy rain probability + accumulated rainfall
+# Flood
 def flood_risk(
     heavy_rain_probability: float,
     rain_today: float,
@@ -11,33 +10,72 @@ def flood_risk(
     max_hourly_rain: float,
 ):
     score = 0
+    breakdown = []
 
-    # Heavy rain probability contribution (max 40 points)
-    score += (heavy_rain_probability / 100) * 40
+    # Heavy rain probability (max 40)
+    impact = (heavy_rain_probability / 100) * 40
+    score += impact
 
-    # Today's rainfall (max 25 points)
+    breakdown.append({
+        "factor": "Heavy Rain Probability",
+        "value": heavy_rain_probability,
+        "unit": "%",
+        "impact": round(impact, 2),
+    })
+
+    # Today's rainfall (max 25)
+    impact = 0
+
     if rain_today >= 50:
-        score += 25
+        impact = 25
     elif rain_today >= 20:
-        score += 15
+        impact = 15
     elif rain_today >= 10:
-        score += 5
+        impact = 5
+    score += impact
 
-    # Tomorrow rainfall (max 15 points)
+    breakdown.append({
+        "factor": "Today's Rainfall",
+        "value": rain_today,
+        "unit": "mm",
+        "impact": round(impact, 2),
+    })
+
+    # Tomorrow rainfall (max 15)
+    impact = 0
+
     if rain_tomorrow >= 50:
-        score += 15
+        impact = 15
     elif rain_tomorrow >= 20:
-        score += 10
+        impact = 10
     elif rain_tomorrow >= 10:
-        score += 5
+        impact = 5
+    score += impact
 
-    # Short intense rainfall / flash flood indicator (max 20 points)
+    breakdown.append({
+        "factor": "Tomorrow Rainfall",
+        "value": rain_tomorrow,
+        "unit": "mm",
+        "impact": round(impact, 2),
+    })
+
+    # Maximum hourly rainfall (max 20)
+    impact = 0
+
     if max_hourly_rain >= 30:
-        score += 20
+        impact = 20
     elif max_hourly_rain >= 15:
-        score += 10
+        impact = 10
     elif max_hourly_rain >= 5:
-        score += 5
+        impact = 5
+    score += round(impact, 2)
+
+    breakdown.append({
+        "factor": "Peak Hourly Rainfall",
+        "value": max_hourly_rain,
+        "unit": "mm/h",
+        "impact": round(impact, 2),
+    })
 
     score = min(score, 100)
 
@@ -51,9 +89,10 @@ def flood_risk(
     return {
         "flood_score": round(score, 2),
         "flood_risk": level,
+        "flood_breakdown": breakdown,
     }
 
-# Heavy rain probability + wind + temp
+# Beach safety
 def beach_safety(
     heavy_rain_probability: float,
     rain: float,
@@ -61,38 +100,83 @@ def beach_safety(
     feels_like_temp: float,
 ):
     score = 100
+    breakdown = []
 
     # Heavy rain probability
+    impact = 0
+
     if heavy_rain_probability >= 80:
-        score -= 40
+        impact = -40
     elif heavy_rain_probability >= 50:
-        score -= 25
+        impact = -25
     elif heavy_rain_probability >= 20:
-        score -= 10
+        impact = -10
+
+    score += impact
+
+    breakdown.append({
+        "factor": "Heavy Rain Probability",
+        "value": heavy_rain_probability,
+        "unit": "%",
+        "impact": impact,
+    })
 
     # Daily rainfall amount
+    impact = 0
+
     if rain >= 30:
-        score -= 25
+        impact = -25
     elif rain >= 10:
-        score -= 15
+        impact = -15
     elif rain >= 5:
-        score -= 5
+        impact = -5
+
+    score += impact
+
+    breakdown.append({
+        "factor": "Rainfall",
+        "value": rain,
+        "unit": "mm",
+        "impact": impact,
+    })
 
     # Wind
+    impact = 0
+
     if wind >= 50:
-        score -= 30
+        impact = -30
     elif wind >= 35:
-        score -= 15
+        impact = -15
     elif wind >= 20:
-        score -= 5
+        impact = -5
+
+    score += impact
+
+    breakdown.append({
+        "factor": "Wind Speed",
+        "value": wind,
+        "unit": "km/h",
+        "impact": impact,
+    })
 
     # Feels-like temperature
+    impact = 0
+
     if feels_like_temp >= 40:
-        score -= 25
+        impact = -25
     elif feels_like_temp >= 35:
-        score -= 15
+        impact = -15
     elif feels_like_temp <= 10:
-        score -= 15
+        impact = -15
+
+    score += impact
+
+    breakdown.append({
+        "factor": "Feels Like Temperature",
+        "value": feels_like_temp,
+        "unit": "°C",
+        "impact": impact,
+    })
 
     score = max(0, score)
 
@@ -108,34 +192,66 @@ def beach_safety(
     return {
         "beach_safety_score": round(score, 2),
         "beach_safety_level": level,
+        "beach_safety_breakdown": breakdown,
     }
 
-# Rainfall + wind + temperature
+# Snow prob
 def snow_probability(
     rain: float,
     snowfall: float,
     temp: float,
 ):
+    impact = 0
+    breakdown = []
+
     # Actual snowfall predicted
     if snowfall > 0:
-        probability = min(
+        impact = min(
             snowfall / 5,
             1.0
         )
+        breakdown.append({
+            "factor": "Forecast Snowfall",
+            "value": snowfall,
+            "unit": "mm",
+            "impact": round(impact * 100, 2),
+        })
 
     # Cold enough + precipitation but no snowfall prediction
     elif temp <= 1 and rain > 0:
-        probability = min(
-            rain / 20,
-            0.8
-        )
+        impact = min(rain / 20, 0.8)
+        breakdown.append({
+            "factor": "Temperature",
+            "value": temp,
+            "unit": "°C",
+            "impact": 0,
+        })
+        breakdown.append({
+            "factor": "Rainfall",
+            "value": rain,
+            "unit": "mm",
+            "impact": round(impact * 100, 2),
+        })
 
     # Too warm or no precipitation
     else:
-        probability = 0
+        impact = 0
+        breakdown.append({
+            "factor": "Temperature",
+            "value": temp,
+            "unit": "°C",
+            "impact": 0,
+        })
+        breakdown.append({
+            "factor": "Precipitation",
+            "value": rain,
+            "unit": "mm",
+            "impact": 0,
+        })
 
     return {
-        "snow_probability": round(probability * 100, 2)
+        "snow_probability": round(impact * 100, 2),
+        "snow_breakdown": breakdown,
     }
 
 # UV level
@@ -198,16 +314,36 @@ def wind_level(wind: float):
 # temp level
 def temp_level(feels_like_temp: float):
     if feels_like_temp >= 35:
-        return "Extreme Heat"
+        impact = -20
+        level = "Extreme Heat"
+
     elif feels_like_temp >= 30:
-            return "High Heat"
+        impact = -10
+        level = "High Heat"
+
     elif feels_like_temp <= -10:
-        return "Extreme Cold"
+        impact = -20
+        level = "Extreme Cold"
+
     elif feels_like_temp <= 0:
-        return "Cold Conditions"
+        impact = -5
+        level = "Cold Conditions"
 
     else:
-        return "Safe"
+        impact = 0
+        level = "Safe"
+
+    return {
+        "temperature_level": level,
+        "temperature_breakdown": [
+            {
+                "factor": "Feels Like Temperature",
+                "value": feels_like_temp,
+                "unit": "°C",
+                "impact": impact,
+            }
+        ]
+    }
 
 # temp advice
 def temp_advice(temp_level: str):
@@ -241,46 +377,101 @@ def hiking_safety(
     snow_probability: float,
 ):
     score = 100
+    breakdown = []
+
+    # Heavy rain probability
+    impact = 0
+
     if heavy_rain_probability >= 80:
-        score -= 30
+        impact = -30
     elif heavy_rain_probability >= 50:
-        score -= 20
+        impact = -20
     elif heavy_rain_probability >= 20:
-        score -= 10
+        impact = -10
+    score += impact
+
+    breakdown.append({
+        "factor": "Heavy Rain Probability",
+        "value": heavy_rain_probability,
+        "unit": "%",
+        "impact": impact,
+    })
+
+    # Wind
+    impact = 0
 
     if wind >= 50:
-        score -= 25
+        impact = -25
     elif wind >= 35:
-        score -= 15
+        impact = -15
     elif wind >= 20:
-        score -= 5
+        impact = -5
+    score += impact
+
+    breakdown.append({
+        "factor": "Wind Speed",
+        "value": wind,
+        "unit": "km/h",
+        "impact": impact,
+    })
+
+    # Visibility
+    impact = 0
 
     if visibility < 500:
-        score -= 20
+        impact = -20
     elif visibility < 1000:
-        score -= 10
+        impact = -10
     elif visibility < 3000:
-        score -= 5
+        impact = -5
+    score += impact
+
+    breakdown.append({
+        "factor": "Visibility",
+        "value": round(visibility / 1000, 2),
+        "unit": "km",
+        "impact": impact,
+    })
+
+    # Temperature risk
+    impact = 0
 
     if temp_risk == "Extreme Heat":
-        score -= 20
+        impact = -20
     elif temp_risk == "Extreme Cold":
-        score -= 20
+        impact = -20
     elif temp_risk == "High Heat":
-        score -= 10
+        impact = -10
     elif temp_risk == "Cold Conditions":
-        score -= 5
+        impact = -5
+    score += impact
+
+    breakdown.append({
+        "factor": "Extreme Temperature",
+        "value": temp_risk,
+        "impact": impact,
+    })
+
+    # Snow probability
+    impact = 0
 
     if snow_probability >= 80:
-        score -= 20
+        impact = -20
     elif snow_probability >= 50:
-        score -= 10
+        impact = -10
     elif snow_probability >= 20:
-        score -= 5
+        impact = -5
+    score += impact
+
+    breakdown.append({
+        "factor": "Snow Probability",
+        "value": snow_probability,
+        "unit": "%",
+        "impact": impact,
+    })
 
     score = max(0, score)
 
-    # hiking safety level
     if score >= 80:
         level = "Safe"
     elif score >= 60:
@@ -291,18 +482,20 @@ def hiking_safety(
         level = "Dangerous"
 
     return {
-            "hiking_safety_score": round(score, 2),
-            "hiking_safety_level": level,
-        }
+        "hiking_safety_score": round(score, 2),
+        "hiking_safety_level": level,
+        "hiking_safety_breakdown": breakdown,
+    }
 
 
 # For testing
 if __name__ == "__main__":
 
     result = flood_risk(
-        heavy_rain_probability=0.82,
+        heavy_rain_probability=82,
         rain_today=18.5,
-        rain_tomorrow=12.3
+        rain_tomorrow=12.3,
+        max_hourly_rain=5.2
     )
 
     print(result)
