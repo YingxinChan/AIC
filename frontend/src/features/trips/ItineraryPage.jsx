@@ -107,6 +107,19 @@ const snowLevel = (pct) => {
   return 'High';
 };
 
+// Climatology days have no heavy_rain_probability (that's a live ML
+// prediction, see weather_service.py) — rain_chance (% of the last 10
+// years' matching dates with >=1mm rain, climatology_service.py) stands in
+// for it on the Heavy Rain card instead. Different signal, same rough
+// tiers as flood_risk()'s score bands so the badge coloring reads the same
+// way a user already expects.
+const rainChanceLevel = (pct) => {
+  if (pct == null) return 'Unknown';
+  if (pct < 30) return 'Low';
+  if (pct < 60) return 'Moderate';
+  return 'High';
+};
+
 // Explicit level -> color mapping for the risk-card badges, rather than an
 // inline ternary that only recognizes 'High'/'Poor'/'Moderate'/'Low' — that
 // old check treated 'Low' the same as 'Moderate' (both yellow), which was
@@ -149,18 +162,34 @@ const CARD_IDENTITY_BG = {
 // by the caller.
 const RISK_CARD_CLASSES = 'shrink-0 w-[160px] p-4 rounded border text-center flex flex-col items-center justify-center gap-1'
 
-// Heavy Rain, Extreme Temp, Hiking Safety, Wind, UV and Visibility all read
-// straight off the real forecast/ML path (see _get_forecast_days in
-// weather_service.py) — climatology_service.py never sets them, by design,
-// so a climatology day always has them null. That's a different situation
-// from Flood/Beach Safety/Snow (which climatology *does* compute from
-// historical data) and from a genuine "checked and unknown" result, so
-// these cards swap their badge for this note instead of a plain 'Unknown'.
-// Mirrors the Extreme Temp card's own existing bold-value + small-note-below
-// layout (e.g. "High Heat" + "Limit intense outdoor activities...") rather
-// than inventing new typography, so the row height/font sizing stays
-// consistent with how a real-forecast day's row already looks.
-const FORECAST_ONLY_NOTE = 'Only available once this day is within the 14-day forecast'
+// Flood, Snow, Hiking Safety, Wind, UV and Visibility are all null on a
+// climatology (>14-day) day with no historical substitute standing in for
+// them — Flood/Snow need real-time inputs (today/tomorrow rainfall, peak
+// hourly rain, snowfall) a pooled multi-year window can't reconstruct
+// (see climatology_service.py), and Hiking Safety/Wind/UV/Visibility read
+// straight off the real forecast/ML path with no historical equivalent at
+// all (confirmed against Open-Meteo's Archive API — no historical
+// visibility data exists). That's different from Heavy Rain/Extreme Temp,
+// which climatology *does* approximate (via rain_chance/temp_max — real
+// values, just less precise), and from Beach Safety, which climatology
+// computes directly with no gaps. Every card face just shows its normal
+// value+badge either way (null renders as '—'/'Unknown', same shape as a
+// real value) — the explanation for *why* lives in the risk-info modal
+// (see riskInfoModal), not on the card.
+const FORECAST_ONLY_NOTE = "We'll have this once your trip is within 14 days away"
+const CLIMATOLOGY_UNAVAILABLE_TYPES = ['flood', 'snow', 'hiking', 'uv', 'visibility']
+
+// Risk-info modal breakdown values (ItineraryPage's risk-detail Modal) —
+// climatology's statistics.mean() results come back unrounded (e.g.
+// 22.4546875), and Heavy Rain Probability wants more precision than the
+// others. Factors not listed here render as-is (e.g. Flood's "Today's/
+// Tomorrow Rainfall", Snow's "Precipitation").
+const RISK_BREAKDOWN_DECIMALS = {
+  'Feels Like Temperature': 1,
+  'Wind Speed': 1,
+  'Rainfall': 1,
+  'Heavy Rain Probability': 2,
+}
 
 // Visibility has no backend-supplied level (unlike UV/wind), so it's
 // classified here using the same Good/Moderate/Poor vocabulary Beach Safety
@@ -227,6 +256,23 @@ const getRiskInfoMeta = (forecastDay) => ({
     score: forecastDay.hiking_safety_score,
     level: forecastDay.hiking_safety_level,
     breakdown: forecastDay.hiking_safety_breakdown
+  },
+
+  // Wind/UV/Visibility only ever reach this modal on a climatology day (see
+  // CLIMATOLOGY_UNAVAILABLE_TYPES) — the real-forecast path opens the
+  // hourly-trend popup (setWeatherInfoModalMetric) instead, never this one.
+  // So these just need a label for the modal title; no score/breakdown is
+  // ever read for them here.
+  wind: {
+    label: "Wind Speed",
+  },
+
+  uv: {
+    label: "UV Index",
+  },
+
+  visibility: {
+    label: "Visibility",
   },
 
   temperature: {
@@ -1379,84 +1425,138 @@ export default function ItineraryPage() {
       <Modal open={Boolean(riskInfoModal)} onClose={() => setRiskInfoModal(null)} title={riskInfoMeta[riskInfoModal]?.label || ""}>
         {riskInfoModal && (
           <div className="space-y-4">
-            
-            {/* Heavy rain prob ml model info */}
-            {riskInfoModal === "heavyRain" ? (
 
-              <div className="space-y-4 text-sm">
+            {forecastDay.is_climatology && CLIMATOLOGY_UNAVAILABLE_TYPES.includes(riskInfoModal) ? (
+              // Flood, Snow, Hiking Safety, UV, Visibility — no historical
+              // substitute exists for these (see FORECAST_ONLY_NOTE above), so
+              // there's no score/breakdown to show, just the explanation.
+              <p className="text-sm text-gray-600">{FORECAST_ONLY_NOTE}</p>
 
-                {/* Probability */}
-                <div className="text-center">
-                  <div className="text-3xl font-bold">
-                    {forecastDay.heavy_rain_probability}%
+            ) : riskInfoModal === "heavyRain" ? (
+              forecastDay.is_climatology ? (
+                // rain_chance stands in for heavy_rain_probability on climatology
+                // days (see rainChanceLevel above) — a real historical stat, but a
+                // different one, so this skips the ML-model writeup entirely
+                // rather than describing a model that didn't run.
+                <div className="space-y-4 text-sm">
+                  <div className="text-center">
+                    <div className="text-3xl font-bold">{forecastDay.rain_chance}%</div>
+                    <div className="text-gray-500">Historical rain frequency</div>
                   </div>
-
-                  <div className="text-gray-500">
-                    Heavy rain probability
-                  </div>
-                </div>
-
-                <div className="border-t pt-4 space-y-3">
-
-                  <h3 className="font-semibold">
-                    About this prediction
-                  </h3>
-
-                  <div>
-                    <span className="font-medium">
-                      Model:
-                    </span>
-                    <p>
-                      LightGBM Classifier
-                    </p>
-                  </div>
-
-                  <div>
-                    <span className="font-medium">
-                      Purpose:
-                    </span>
-                    <p>
-                      Predict the probability of heavy rainfall
-                      based on weather forecast conditions.
-                    </p>
-                  </div>
-
-                  <div>
-                    <span className="font-medium">
-                      Features analysed:
-                    </span>
-                    <p>
-                      17 weather and seasonal features
-                    </p>
-                  </div>
-
-                  <div>
-                    <span className="font-medium">
-                      Includes:
-                    </span>
-
-                    <ul className="list-disc ml-5">
-                      <li>Rainfall</li>
-                      <li>Temperature</li>
-                      <li>Humidity</li>
-                      <li>Pressure</li>
-                      <li>Wind</li>
-                      <li>Solar radiation</li>
-                      <li>Location</li>
-                      <li>Seasonal patterns</li>
-                    </ul>
-                  </div>
-
-                  <p className="text-xs text-gray-500">
-                    The prediction is generated using historical
-                    weather patterns and current forecast data.
+                  <p className="text-xs text-gray-500 border-t pt-4">
+                    Based on this destination's 10-year historical rain frequency, not a live forecast.
                   </p>
-
                 </div>
+              ) : (
+                <div className="space-y-4 text-sm">
+
+                  {/* Probability */}
+                  <div className="text-center">
+                    <div className="text-3xl font-bold">
+                      {forecastDay.heavy_rain_probability}%
+                    </div>
+
+                    <div className="text-gray-500">
+                      Heavy rain probability
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-4 space-y-3">
+
+                    <h3 className="font-semibold">
+                      About this prediction
+                    </h3>
+
+                    <div>
+                      <span className="font-medium">
+                        Model:
+                      </span>
+                      <p>
+                        LightGBM Classifier
+                      </p>
+                    </div>
+
+                    <div>
+                      <span className="font-medium">
+                        Purpose:
+                      </span>
+                      <p>
+                        Predict the probability of heavy rainfall
+                        based on weather forecast conditions.
+                      </p>
+                    </div>
+
+                    <div>
+                      <span className="font-medium">
+                        Features analysed:
+                      </span>
+                      <p>
+                        17 weather and seasonal features
+                      </p>
+                    </div>
+
+                    <div>
+                      <span className="font-medium">
+                        Includes:
+                      </span>
+
+                      <ul className="list-disc ml-5">
+                        <li>Rainfall</li>
+                        <li>Temperature</li>
+                        <li>Humidity</li>
+                        <li>Pressure</li>
+                        <li>Wind</li>
+                        <li>Solar radiation</li>
+                        <li>Location</li>
+                        <li>Seasonal patterns</li>
+                      </ul>
+                    </div>
+
+                    <p className="text-xs text-gray-500">
+                      The prediction is generated using historical
+                      weather patterns and current forecast data.
+                    </p>
+
+                  </div>
+                </div>
+              )
+
+            ) : riskInfoModal === "wind" ? (
+              // Wind only ever reaches this modal on a climatology day (see
+              // CLIMATOLOGY_UNAVAILABLE_TYPES, which no longer includes it) —
+              // a real-forecast day opens the hourly-trend popup instead.
+              // wind_speed here is a real 10-year historical average
+              // (climatology_service.py), not a computed 0-100 risk score,
+              // so this shows the value/level directly rather than the
+              // generic score block below.
+              <div className="space-y-4 text-sm">
+                <div className="text-center">
+                  <div className="text-3xl font-bold">{Math.round(forecastDay.wind_speed)} km/h</div>
+                  <div className="text-gray-500">{forecastDay.wind_level}</div>
+                </div>
+                <p className="text-xs text-gray-500 border-t pt-4">
+                  Based on this destination's 10-year historical average wind speed, not a live forecast.
+                </p>
               </div>
 
             ) : (
               <>
+                {/* Extreme Temp and Beach Safety both compute a real score on
+                    climatology days from historical averages standing in for
+                    live inputs (temp_max for feels_like_temp; rain_chance/
+                    average_rain/historical wind for their real-forecast
+                    counterparts — see climatology_service.py). Score/advice/
+                    breakdown below are still real values from that
+                    substitution, just with this one extra line making the
+                    source clear. */}
+                {forecastDay.is_climatology && (riskInfoModal === "temperature" || riskInfoModal === "beach") && (
+                  <p className="text-xs text-gray-500">
+                    {riskInfoModal === "temperature"
+                      ? "Based on this destination's 10-year historical average temperature, not a live forecast."
+                      : "Based on this destination's 10-year historical weather averages, not a live forecast."}
+                  </p>
+                )}
+
                 {/* Score */}
                 {riskInfoMeta[riskInfoModal]?.score != null && (
                   <div className="text-center">
@@ -1489,7 +1589,9 @@ export default function ItineraryPage() {
                       </div>
 
                       <div className="text-xs text-gray-500">
-                        {item.value} {item.unit}
+                        {typeof item.value === "number" && item.factor in RISK_BREAKDOWN_DECIMALS
+                          ? item.value.toFixed(RISK_BREAKDOWN_DECIMALS[item.factor])
+                          : item.value} {item.unit}
                       </div>
                     </div>
 
@@ -1677,17 +1779,20 @@ export default function ItineraryPage() {
                 <div className="flex overflow-x-auto gap-3 pb-2 cursor-grab active:cursor-grabbing">
                   {[
                     {
+                      // Climatology days have no live heavy_rain_probability, so this
+                      // falls back to rain_chance (10-year historical rain frequency,
+                      // see rainChanceLevel above) — a different signal standing in for
+                      // the real one, same as Flood/Beach Safety/Snow already do.
                       l: 'Heavy Rain',
-                      v: forecastDay.heavy_rain_probability == null
-                        ? '—'
-                        : `${forecastDay.heavy_rain_probability}%`,
-                      s: forecastDay.heavy_rain_probability == null
-                        ? 'Unknown'
-                        : (forecastDay.heavy_rain_warning ? 'High' : 'Low'),
+                      v: forecastDay.is_climatology
+                        ? (forecastDay.rain_chance == null ? '—' : `${forecastDay.rain_chance}%`)
+                        : (forecastDay.heavy_rain_probability == null ? '—' : `${forecastDay.heavy_rain_probability}%`),
+                      s: forecastDay.is_climatology
+                        ? rainChanceLevel(forecastDay.rain_chance)
+                        : (forecastDay.heavy_rain_probability == null ? 'Unknown' : (forecastDay.heavy_rain_warning ? 'High' : 'Low')),
                       i: Umbrella,
                       bg: CARD_IDENTITY_BG.heavyRain,
                       type: 'heavyRain',
-                      forecastOnly: true,
                     },
                     {
                       l: 'Flood',
@@ -1732,21 +1837,18 @@ export default function ItineraryPage() {
                           <c.i size={22} className="text-indigo-400" /> {c.l}
                         </div>
 
-                        <div className="font-bold text-lg">
-                          {forecastDay.is_climatology && c.forecastOnly ? '—' : c.v}
-                        </div>
+                        <div className="font-bold text-lg">{c.v}</div>
 
-                        {forecastDay.is_climatology && c.forecastOnly ? (
-                          <div className="text-[11px] text-gray-500 leading-snug">
-                            {FORECAST_ONLY_NOTE}
-                          </div>
-                        ) : (
-                          <span className={`text-xs px-2 rounded-full ${levelColorClass(c.s)}`}>
-                            {c.s}
-                          </span>
-                        )}
+                        <span className={`text-xs px-2 rounded-full ${levelColorClass(c.s)}`}>
+                          {c.s}
+                        </span>
                       </div>
                   ))}
+                  {/* Explanations (climatology caveats, forecast-only notices, the
+                      real ML/formula writeups) all live in the risk-info modal now
+                      (see riskInfoModal below) — every card face just shows label,
+                      value, badge, same shape whether the day is climatology or a
+                      real forecast, tap for detail. */}
                   <div
                       onClick={() => setRiskInfoModal("temperature")}
                       className={`${RISK_CARD_CLASSES} ${CARD_IDENTITY_BG.extremeTemp} cursor-pointer hover:brightness-95 transition`}
@@ -1756,19 +1858,11 @@ export default function ItineraryPage() {
                       </div>
 
                       <div className="font-bold text-base">
-                        {forecastDay.is_climatology ? '—' : (forecastDay.temperature_level ?? '—')}
+                        {forecastDay.temperature_level ?? '—'}
                       </div>
 
-                      {forecastDay.is_climatology ? (
-                        <div className="text-[11px] text-gray-500 leading-snug">
-                          {FORECAST_ONLY_NOTE}
-                        </div>
-                      ) : (
-                        forecastDay.temperature_advice && (
-                          <div className="text-[11px] text-gray-500 leading-snug">
-                            {forecastDay.temperature_advice}
-                          </div>
-                        )
+                      {forecastDay.temperature_advice && (
+                        <div className="text-[11px] text-gray-500 leading-snug">{forecastDay.temperature_advice}</div>
                       )}
                     </div>
                   {[
@@ -1776,51 +1870,43 @@ export default function ItineraryPage() {
                       l: 'Hiking Safety',
                       v: forecastDay.hiking_safety_score == null ? '—' : `${Math.round(forecastDay.hiking_safety_score)}%`,
                       s: forecastDay.hiking_safety_level || 'Unknown',
-                      i: Mountain, bg: CARD_IDENTITY_BG.hikingSafety, forecastOnly: true,
+                      i: Mountain, bg: CARD_IDENTITY_BG.hikingSafety,
                       type: 'hiking',
                     },
                     {
                       l: 'Wind',
                       v: forecastDay.wind_speed == null ? '—' : `${Math.round(forecastDay.wind_speed)} km/h`,
                       s: forecastDay.wind_level || 'Unknown',
-                      i: Wind, bg: CARD_IDENTITY_BG.wind, metric: 'wind', forecastOnly: true,
+                      i: Wind, bg: CARD_IDENTITY_BG.wind, metric: 'wind', type: 'wind',
                     },
                     {
                       l: 'UV Index',
                       v: forecastDay.uv_index == null ? '—' : Math.round(forecastDay.uv_index),
                       s: forecastDay.uv_level || 'Unknown',
-                      i: SunDim, bg: CARD_IDENTITY_BG.uv, metric: 'uv', forecastOnly: true,
+                      i: SunDim, bg: CARD_IDENTITY_BG.uv, metric: 'uv', type: 'uv',
                     },
                     {
                       l: 'Visibility',
                       v: forecastDay.visibility_m == null ? '—' : `${(forecastDay.visibility_m / 1000).toFixed(1)} km`,
                       s: forecastDay.visibility_m == null ? 'Unknown' : visibilityLevel(forecastDay.visibility_m),
-                      i: Eye, bg: CARD_IDENTITY_BG.visibility, metric: 'visibility', forecastOnly: true,
+                      i: Eye, bg: CARD_IDENTITY_BG.visibility, metric: 'visibility', type: 'visibility',
                     },
                   ].map((c) => {
-                       // Weather-info cards (metric set) open the hourly-trend popup.
-                       // Risk cards (heavy rain/flood/etc.) open their risk-detail modal.
-                       // Climatology days have no hourly data, so metric cards fall back
-                       // to non-clickable cards instead of opening an empty popup.
-                      const showsNote = forecastDay.is_climatology && c.forecastOnly
-                      const Tag = (c.metric || c.type) && !showsNote ? 'button' : 'div'
+                       // Weather-info cards (metric set) open the hourly-trend popup on a
+                       // real-forecast day — climatology days have no hourly data for it
+                       // to show, so they open the risk-detail modal instead (same modal
+                       // Hiking Safety, which has no hourly popup at all, always uses).
                       return (
-                        <Tag key={c.l}
-                            type={(c.metric || c.type) && !showsNote ? 'button' : undefined}
-                            onClick={c.metric && !showsNote ? () => setWeatherInfoModalMetric(c.metric) : c.type ? () => setRiskInfoModal(c.type): undefined}
-                            className={`${RISK_CARD_CLASSES} ${c.bg} ${(c.metric || c.type) && !showsNote ? 'cursor-pointer hover:brightness-95 transition' : ''}`}>
+                        <button key={c.l}
+                            type="button"
+                            onClick={forecastDay.is_climatology || !c.metric ? () => setRiskInfoModal(c.type) : () => setWeatherInfoModalMetric(c.metric)}
+                            className={`${RISK_CARD_CLASSES} ${c.bg} cursor-pointer hover:brightness-95 transition`}>
                             <div className="text-xs text-gray-500 uppercase flex items-center justify-center gap-2"><c.i size={22} className="text-indigo-400" /> {c.l}</div>
-                            <div className="font-bold text-lg">
-                              {showsNote ? '—' : c.v}
-                            </div>
-                            {showsNote ? (
-                              <div className="text-[11px] text-gray-500 leading-snug">{FORECAST_ONLY_NOTE}</div>
-                            ) : (
-                              <span className={`text-xs px-2 rounded-full ${levelColorClass(c.s)}`}>
-                                  {c.s}
-                              </span>
-                            )}
-                        </Tag>
+                            <div className="font-bold text-lg">{c.v}</div>
+                            <span className={`text-xs px-2 rounded-full ${levelColorClass(c.s)}`}>
+                                {c.s}
+                            </span>
+                        </button>
                       )
                   })}
                 </div>

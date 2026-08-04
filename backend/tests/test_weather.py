@@ -75,7 +75,13 @@ def test_prediction_beyond_horizon_falls_back_to_climatology_with_real_historica
     assert len(data) == 2
     assert all(day["is_climatology"] is True for day in data)
     assert all("weather_code" in day for day in data)
-    
+    # Regression test: sunrise/sunset are pure astronomy (date + lat/lon, see
+    # _sunrise_sunset in climatology_service.py), not weather — real values
+    # even on a climatology day, unlike everything else that needs
+    # historical data.
+    assert all(day["sunrise"] is not None for day in data)
+    assert all(day["sunset"] is not None for day in data)
+
 def test_prediction_requires_auth(client):
     response = client.get(
         "/api/weather/prediction?lat=51.5074&lon=-0.1278"
