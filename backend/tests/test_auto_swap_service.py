@@ -201,7 +201,7 @@ def test_auto_swap_targeted_rule_only_swaps_the_tagged_activity(auth_client, mon
     market_id = _add_activity(trip_id, "outdoor", name="Borough Market", weather_sensitivity="")
     _mock_weather(monkeypatch, forecast=[{
         "date": TODAY.isoformat(), "heavy_rain_warning": False, "heavy_rain_probability": 2.0,
-        "visibility_km": 0.8,
+        "visibility_km": 0.8, "visibility_m": 800,
     }])
     _mock_hourly_weather(monkeypatch)
     _mock_find_alternative(monkeypatch)
@@ -342,7 +342,7 @@ def test_auto_swap_fixed_activity_tip_respects_weather_sensitivity_tag(auth_clie
     untagged_id = _add_activity(trip_id, "outdoor", name="Fixed Market Tour", weather_sensitivity="", is_fixed=True)
     _mock_weather(monkeypatch, forecast=[{
         "date": TODAY.isoformat(), "heavy_rain_warning": False, "heavy_rain_probability": 2.0,
-        "visibility_km": 0.8,
+        "visibility_km": 0.8, "visibility_m": 800,
     }])
     _mock_hourly_weather(monkeypatch)
     _mock_find_alternative(monkeypatch)
@@ -353,3 +353,121 @@ def test_auto_swap_fixed_activity_tip_respects_weather_sensitivity_tag(auth_clie
     assert our_tip_ids == {tagged_id}
     assert untagged_id not in our_tip_ids
     assert result["swapped"] == [] or all(s["trip_id"] != trip_id for s in result["swapped"])
+
+
+# ---------------------------------------------------------------------------
+# New scoring engine, at the run_auto_swap() integration level (see
+# tests/test_weather_rules.py for the underlying score_activity() unit
+# tests). Rain-related behavior above is untouched by the redesign — these
+# cover the new cold/heat/UV/fog-safety/wind/beach scoring + advisory tier +
+# stacking + score-trace persistence.
+# ---------------------------------------------------------------------------
+
+def test_auto_swap_single_moderate_score_produces_advisory_tip_not_swap(auth_client, monkeypatch):
+    """Strong wind alone scores 50 — above ADVISORY_THRESHOLD (40) but below
+    SWAP_THRESHOLD (70), so a wind_exposed activity should get a tip, not be
+    swapped."""
+    trip_id = _create_trip(auth_client, monkeypatch)
+    activity_id = _add_activity(trip_id, "outdoor", name="Thames Boat Tour", weather_sensitivity="wind_exposed")
+    _mock_weather(monkeypatch, forecast=[{
+        "date": TODAY.isoformat(), "heavy_rain_warning": False, "heavy_rain_probability": 2.0,
+        "wind_level": "Strong",
+    }])
+    _mock_hourly_weather(monkeypatch)
+    mock_find = _mock_find_alternative(monkeypatch)
+
+    result = _run_auto_swap()
+    our_swaps = [s for s in result["swapped"] if s["trip_id"] == trip_id]
+    our_tips = [t for t in result["tips"] if t["trip_id"] == trip_id]
+
+    assert our_swaps == []
+    assert len(our_tips) == 1
+    assert our_tips[0]["activity_id"] == activity_id
+    assert "wind" in our_tips[0]["reason"].lower()
+    calls_for_our_activity = [c for c in mock_find.call_args_list if c.args[0].id == activity_id]
+    assert calls_for_our_activity == []
+
+    activity = _get_activity(activity_id)
+    assert activity.is_swapped is False
+
+
+def test_auto_swap_stacked_scores_swap_even_when_neither_alone_would(auth_client, monkeypatch):
+    """Strong wind (score 50) and Moderate beach safety (score 40) each sit
+    below SWAP_THRESHOLD alone, but combined (50 + 0.5*40 = 70) cross it —
+    an activity tagged with both should be swapped."""
+    trip_id = _create_trip(auth_client, monkeypatch)
+    activity_id = _add_activity(
+        trip_id, "outdoor", name="Beach Windsurfing", weather_sensitivity="wind_exposed,beach",
+    )
+    _mock_weather(monkeypatch, forecast=[{
+        "date": TODAY.isoformat(), "heavy_rain_warning": False, "heavy_rain_probability": 2.0,
+        "wind_level": "Strong", "beach_safety_level": "Moderate",
+    }])
+    _mock_hourly_weather(monkeypatch)
+    _mock_find_alternative(monkeypatch)
+
+    swapped = _run_auto_swap()["swapped"]
+    our_swaps = [s for s in swapped if s["trip_id"] == trip_id]
+
+    assert len(our_swaps) == 1
+    assert our_swaps[0]["activity_id"] == activity_id
+
+    activity = _get_activity(activity_id)
+    assert activity.is_swapped is True
+    assert activity.swap_score_trace is not None
+    assert activity.swap_score_trace["scores"]["wind"] == 50
+    assert activity.swap_score_trace["scores"]["beach"] == 40
+    assert activity.swap_score_trace["combined"] == 70.0
+
+
+def test_auto_swap_below_advisory_threshold_does_nothing(auth_client, monkeypatch):
+    activity_id = None
+    trip_id = _create_trip(auth_client, monkeypatch)
+    activity_id = _add_activity(trip_id, "outdoor", name="City Walk", weather_sensitivity="wind_exposed")
+    _mock_weather(monkeypatch, forecast=[{
+        "date": TODAY.isoformat(), "heavy_rain_warning": False, "heavy_rain_probability": 2.0,
+        "wind_level": "Moderate",
+    }])
+    _mock_hourly_weather(monkeypatch)
+    mock_find = _mock_find_alternative(monkeypatch)
+
+    result = _run_auto_swap()
+    assert [s for s in result["swapped"] if s["trip_id"] == trip_id] == []
+    assert [t for t in result["tips"] if t["trip_id"] == trip_id] == []
+    assert [c for c in mock_find.call_args_list if c.args[0].id == activity_id] == []
+
+
+def test_auto_swap_rain_caused_swap_has_no_score_trace(auth_client, monkeypatch):
+    """Rain is checked separately from the new scoring engine (no evidence-
+    based thresholds were given for it) — a rain-caused swap should leave
+    swap_score_trace as None, not a stale/fabricated trace."""
+    trip_id = _create_trip(auth_client, monkeypatch)
+    activity_id = _add_activity(trip_id, "outdoor")
+    _mock_weather(monkeypatch)  # RAINY_FORECAST default
+    _mock_hourly_weather(monkeypatch)
+    _mock_find_alternative(monkeypatch)
+
+    _run_auto_swap()
+
+    activity = _get_activity(activity_id)
+    assert activity.is_swapped is True
+    assert activity.swap_score_trace is None
+
+
+def test_auto_swap_cold_and_heat_use_temp_min_max_directly(auth_client, monkeypatch):
+    """temp_min <= -10 swaps a strenuous_outdoor activity (the new stricter
+    swap tier; -5..-10 would only be advisory, see test_weather_rules.py)."""
+    trip_id = _create_trip(auth_client, monkeypatch)
+    activity_id = _add_activity(trip_id, "outdoor", name="Long Hike", weather_sensitivity="strenuous_outdoor")
+    _mock_weather(monkeypatch, forecast=[{
+        "date": TODAY.isoformat(), "heavy_rain_warning": False, "heavy_rain_probability": 2.0,
+        "temp_min": -12, "temp_max": 5,
+    }])
+    _mock_hourly_weather(monkeypatch)
+    _mock_find_alternative(monkeypatch)
+
+    swapped = _run_auto_swap()["swapped"]
+    our_swaps = [s for s in swapped if s["trip_id"] == trip_id]
+    assert len(our_swaps) == 1
+    assert our_swaps[0]["activity_id"] == activity_id
+    assert "cold" in our_swaps[0]["reason"].lower()

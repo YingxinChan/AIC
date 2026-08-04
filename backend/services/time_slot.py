@@ -49,3 +49,21 @@ def hourly_window_is_rainy(hourly_day: list[dict], window: tuple[int, int], thre
         if start_hour <= hour <= end_hour and (entry.get("rain_probability") or 0) >= threshold:
             return True
     return False
+
+
+def hourly_window_min_visibility_km(hourly_day: list[dict], window: tuple[int, int]) -> float | None:
+    """Worst (lowest) visibility_km among hourly entries within `window`
+    (inclusive start/end hour), or None if no entry falls in that window (or
+    none of them carry a visibility_km at all — e.g. hourly fixtures built
+    for rain-only testing). Same refinement idea as hourly_window_is_rainy
+    above, applied to fog scoring instead of rain — the activity's own time
+    slot might miss a fog bank that only affects a different part of the
+    day."""
+    start_hour, end_hour = window
+    values = [
+        entry["visibility_km"]
+        for entry in hourly_day
+        if start_hour <= datetime.fromisoformat(entry["time"]).hour <= end_hour
+        and entry.get("visibility_km") is not None
+    ]
+    return min(values) if values else None

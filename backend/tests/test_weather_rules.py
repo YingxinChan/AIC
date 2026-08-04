@@ -1,6 +1,9 @@
+from datetime import date, timedelta
+
 from models.activity import Activity
 from services.weather_rules import (
     ACTIVE_RULES,
+    ADVISORY_THRESHOLD,
     RainRule,
     FogRule,
     WindRule,
@@ -8,6 +11,18 @@ from services.weather_rules import (
     ExtremeColdRule,
     ExtremeUVRule,
     BeachSafetyRule,
+    SWAP_THRESHOLD,
+    describe_scores,
+    describe_tip,
+    score_activity,
+    score_beach,
+    score_cold,
+    score_fog_safety,
+    score_fog_scenic,
+    score_heat,
+    score_uv,
+    score_wind,
+    top_rule_id,
 )
 
 
@@ -235,3 +250,172 @@ def test_default_tip_falls_back_to_reason():
     rule = _NoTipOverride()
     day = {"wind_level": "Strong"}
     assert rule.tip(day) == rule.reason(day)
+
+
+# ---------------------------------------------------------------------------
+# New scoring engine (score_cold/heat/uv/wind/beach/fog_*, score_activity) —
+# replaces the class-based rules above for run_auto_swap()'s actual
+# swap/advisory decision. The classes above stay in active use for
+# itinerary_service.py's pre-generation steering, unrelated to this.
+# ---------------------------------------------------------------------------
+
+def test_score_cold_boundaries():
+    assert score_cold({"temp_min": -4.9}) == 0
+    assert score_cold({"temp_min": -5}) == 40
+    assert score_cold({"temp_min": -9.9}) == 40
+    assert score_cold({"temp_min": -10}) == 80
+    assert score_cold({"temp_min": -10.1}) == 80
+    assert score_cold({"temp_min": None}) == 0
+    assert score_cold({}) == 0
+
+
+def test_score_heat_boundaries():
+    assert score_heat({"temp_max": 29.9}) == 0
+    assert score_heat({"temp_max": 30}) == 40
+    assert score_heat({"temp_max": 34.9}) == 40
+    assert score_heat({"temp_max": 35}) == 80
+    assert score_heat({"temp_max": None}) == 0
+
+
+def test_score_uv_bands():
+    assert score_uv({"uv_level": "Low"}) == 0
+    assert score_uv({"uv_level": "Moderate"}) == 0
+    assert score_uv({"uv_level": "High"}) == 40
+    assert score_uv({"uv_level": "Very High"}) == 80
+    assert score_uv({"uv_level": "Extreme"}) == 90
+    assert score_uv({"uv_level": "Unknown"}) == 0
+    assert score_uv({}) == 0
+
+
+def test_score_wind_is_flat_matching_existing_wind_rule():
+    assert score_wind({"wind_level": "Calm"}) == 0
+    assert score_wind({"wind_level": "Moderate"}) == 0
+    assert score_wind({"wind_level": "Strong"}) == 50
+    assert score_wind({"wind_level": "Very Strong"}) == 50
+
+
+def test_score_beach_bands():
+    assert score_beach({"beach_safety_level": "Excellent"}) == 0
+    assert score_beach({"beach_safety_level": "Good"}) == 0
+    assert score_beach({"beach_safety_level": "Moderate"}) == 40
+    assert score_beach({"beach_safety_level": "Poor"}) == 90
+
+
+def test_score_fog_safety_boundaries_use_meters_not_km():
+    assert score_fog_safety({"visibility_m": 1000}) == 0
+    assert score_fog_safety({"visibility_m": 999}) == 30
+    assert score_fog_safety({"visibility_m": 200}) == 30
+    assert score_fog_safety({"visibility_m": 199}) == 60
+    assert score_fog_safety({"visibility_m": 50}) == 60
+    assert score_fog_safety({"visibility_m": 49}) == 90
+    assert score_fog_safety({"visibility_m": None}) == 0
+
+
+def test_score_fog_scenic_boundaries_are_looser_than_fog_safety():
+    assert score_fog_scenic({"visibility_m": 10000}) == 0
+    assert score_fog_scenic({"visibility_m": 9999}) == 40
+    assert score_fog_scenic({"visibility_m": 2000}) == 40
+    assert score_fog_scenic({"visibility_m": 1999}) == 80
+    assert score_fog_scenic({"visibility_m": None}) == 0
+
+
+def test_score_fog_safety_and_scenic_use_the_activitys_own_hourly_window():
+    """Same hourly-refinement idea as RainRule — worst visibility within
+    the activity's own time_slot, not just the whole-day value."""
+    hourly = [
+        {"time": "2026-08-01T09:00", "visibility_km": 10.0},
+        {"time": "2026-08-01T10:00", "visibility_km": 0.03},  # 30m — severe fog
+        {"time": "2026-08-01T14:00", "visibility_km": 10.0},
+    ]
+    morning_activity = _activity(time_slot="09:00 - 11:00")
+    afternoon_activity = _activity(time_slot="14:00 - 16:00")
+    day = {"visibility_m": 10000}  # whole-day value looks clear
+
+    assert score_fog_safety(day, morning_activity, hourly) == 90  # catches the 30m dip
+    assert score_fog_safety(day, afternoon_activity, hourly) == 0  # afternoon really is clear
+
+
+def test_score_activity_single_metric_reduces_to_just_that_score():
+    activity = Activity(
+        trip_id=1, day_date=date.today(), name="Kayaking", type="outdoor",
+        time_slot="10:00 - 12:00", weather_sensitivity="wind_exposed",
+    )
+    result = score_activity({"wind_level": "Strong", "visibility_m": 10000}, activity, today=date.today())
+    assert result["scores"]["wind"] == 50
+    assert result["combined"] == 50.0
+    assert result["adjusted"] == 50.0
+
+
+def test_score_activity_stacks_two_moderate_scores_across_swap_threshold():
+    """Neither wind (50) nor beach (40) alone reaches SWAP_THRESHOLD (70),
+    but combined via max + 0.5*second_highest they do: 50 + 0.5*40 = 70."""
+    activity = Activity(
+        trip_id=1, day_date=date.today(), name="Beach windsurfing", type="outdoor",
+        time_slot="10:00 - 12:00", weather_sensitivity="wind_exposed,beach",
+    )
+    forecast_day = {"wind_level": "Strong", "beach_safety_level": "Moderate", "visibility_m": 10000}
+    result = score_activity(forecast_day, activity, today=date.today())
+    assert result["scores"]["wind"] == 50
+    assert result["scores"]["beach"] == 40
+    assert result["combined"] == 70.0
+    assert result["adjusted"] >= SWAP_THRESHOLD
+
+
+def test_score_activity_untagged_activity_only_gets_blanket_fog_safety():
+    activity = Activity(
+        trip_id=1, day_date=date.today(), name="Walking tour", type="outdoor",
+        time_slot="10:00 - 12:00", weather_sensitivity="",
+    )
+    forecast_day = {"wind_level": "Strong", "beach_safety_level": "Poor", "temp_max": 40, "visibility_m": 10000}
+    result = score_activity(forecast_day, activity, today=date.today())
+    # wind/beach/heat all score high on this forecast, but none apply without
+    # the matching tag — only the always-on blanket fog-safety check runs.
+    assert result["scores"] == {"fog_safety": 0}
+    assert result["combined"] == 0
+    assert result["adjusted"] == 0
+
+
+def test_score_activity_horizon_decay_matches_each_band():
+    activity_tags = "wind_exposed"
+    forecast_day = {"wind_level": "Strong", "visibility_m": 10000}
+    today = date.today()
+
+    for days_out, expected_factor in [(0, 1.0), (1, 0.9), (2, 0.9), (3, 0.7), (5, 0.7), (6, 0.5), (14, 0.5)]:
+        activity = Activity(
+            trip_id=1, day_date=today + timedelta(days=days_out), name="Kayaking",
+            type="outdoor", time_slot="10:00 - 12:00", weather_sensitivity=activity_tags,
+        )
+        result = score_activity(forecast_day, activity, today=today)
+        assert result["horizon_factor"] == expected_factor, f"days_out={days_out}"
+        assert result["adjusted"] == 50.0 * expected_factor
+
+
+def test_describe_scores_joins_every_contributing_metric_worst_first():
+    reason = describe_scores(
+        {"wind_level": "Strong", "beach_safety_level": "Moderate"},
+        {"fog_safety": 0, "wind": 50, "beach": 40},
+    )
+    lowered = reason.lower()
+    assert "wind" in lowered
+    assert "beach" in lowered
+    assert lowered.index("wind") < lowered.index("beach")  # worst (wind, 50) listed first
+
+
+def test_describe_scores_handles_no_contributing_metrics():
+    assert describe_scores({}, {"fog_safety": 0}) == "Weather conditions flagged for this activity"
+
+
+def test_describe_tip_uses_only_the_single_worst_contributor():
+    tip = describe_tip(
+        {"temp_min": -12},
+        {"cold": 80, "wind": 50},
+    )
+    from ml.risk_calculator import temp_advice
+    assert tip == temp_advice("Extreme Cold")
+
+
+def test_top_rule_id_maps_metric_names_to_email_icon_keys():
+    assert top_rule_id({"cold": 80, "wind": 50}) == "extreme_cold"
+    assert top_rule_id({"beach": 90}) == "beach_safety"
+    assert top_rule_id({"fog_scenic": 80}) == "fog"
+    assert top_rule_id({"fog_safety": 0}) is None
