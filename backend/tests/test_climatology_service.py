@@ -71,15 +71,18 @@ def test_one_bad_climatology_date_does_not_drop_the_batch():
 
     real_summarize = _summarize_climatology_rows
 
-    def summarize_with_one_failure(target, rows):
+    def summarize_with_one_failure(target, rows, lat, lon, utc_offset_seconds):
         if target == date(2026, 7, 2) and rows:
             raise TypeError("unexpected archive value")
 
-        return real_summarize(target, rows)
+        return real_summarize(target, rows, lat, lon, utc_offset_seconds)
 
     with patch(
         "services.climatology_service.get_historical_forecast",
         return_value=historical_response,
+    ), patch(
+        "services.climatology_service.get_forecast",
+        return_value={"utc_offset_seconds": 0},
     ), patch(
         "services.climatology_service._summarize_climatology_rows",
         side_effect=summarize_with_one_failure,
@@ -176,7 +179,10 @@ def test_get_climatology_days_returns_a_safe_placeholder_per_date():
         "weather_code": [],
         "precipitation_sum": [],
         "wind_speed_10m_mean": [],
-    },}):
+    },}), patch(
+        "services.climatology_service.get_forecast",
+        return_value={"utc_offset_seconds": 0},
+    ):
         results = get_climatology_days(51.5074, -0.1278, dates)
 
     assert [r["date"] for r in results] == ["2026-09-25", "2026-09-26"]
@@ -197,6 +203,9 @@ def test_get_climatology_days_survives_a_failed_historical_fetch():
     with patch(
         "services.climatology_service.get_historical_forecast",
         side_effect=Exception("archive API is down"),
+    ), patch(
+        "services.climatology_service.get_forecast",
+        return_value={"utc_offset_seconds": 0},
     ):
         results = get_climatology_days(51.5074, -0.1278, dates)
 
@@ -227,7 +236,10 @@ def test_get_climatology_days_calculates_values_from_historical_api_data():
     with patch(
         "services.climatology_service.get_historical_forecast",
         return_value=historical_response,
-    ) as mocked:
+    ) as mocked, patch(
+        "services.climatology_service.get_forecast",
+        return_value={"utc_offset_seconds": 0},
+    ):
         results = get_climatology_days(
             51.5074,
             -0.1278,
@@ -284,6 +296,9 @@ def test_summarize_climatology_rows_calculates_averages():
     result = _summarize_climatology_rows(
         date(2026, 7, 1),
         rows,
+        51.5074,
+        -0.1278,
+        0,
     )
 
     assert result["is_climatology"] is True
@@ -291,12 +306,21 @@ def test_summarize_climatology_rows_calculates_averages():
     assert result["temp_min"] == 11.0
     assert result["weather_code"] == 3
     assert result["rain_chance"] == 66.7
+    # Regression test: sunrise/sunset are pure astronomy (date + lat/lon,
+    # see _sunrise_sunset in climatology_service.py) — real values either way,
+    # not blanked out just because this is a climatology day.
+    assert result["sunrise"] is not None
+    assert result["sunset"] is not None
+    assert result["utc_offset_seconds"] == 0
 
 def test_summarize_climatology_rows_empty_rows():
 
     result = _summarize_climatology_rows(
         date(2026, 7, 1),
         [],
+        51.5074,
+        -0.1278,
+        0,
     )
 
     assert result["is_climatology"] is True
@@ -304,6 +328,10 @@ def test_summarize_climatology_rows_empty_rows():
     assert result["temp_max"] is None
     assert result["temp_min"] is None
     assert result["rain_chance"] is None
+    # Sunrise/sunset don't depend on historical rows at all — still real
+    # even when there's no historical weather data to compute anything else.
+    assert result["sunrise"] is not None
+    assert result["sunset"] is not None
 
 def test_get_climatology_days_fetches_archive_once_for_multiple_dates():
     dates = [
@@ -332,7 +360,10 @@ def test_get_climatology_days_fetches_archive_once_for_multiple_dates():
     with patch(
         "services.climatology_service.get_historical_forecast",
         return_value=historical_response,
-    ) as mocked:
+    ) as mocked, patch(
+        "services.climatology_service.get_forecast",
+        return_value={"utc_offset_seconds": 0},
+    ):
         results = get_climatology_days(
             51.5074,
             -0.1278,
