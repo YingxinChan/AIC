@@ -442,10 +442,12 @@ def test_auto_swap_below_advisory_threshold_does_nothing(auth_client, monkeypatc
     assert [c for c in mock_find.call_args_list if c.args[0].id == activity_id] == []
 
 
-def test_auto_swap_rain_caused_swap_has_no_score_trace(auth_client, monkeypatch):
-    """Rain is checked separately from the new scoring engine (no evidence-
-    based thresholds were given for it) — a rain-caused swap should leave
-    swap_score_trace as None, not a stale/fabricated trace."""
+def test_auto_swap_rain_caused_swap_has_a_score_trace(auth_client, monkeypatch):
+    """Rain is now part of the scoring engine (see score_rain() in
+    services/weather_rules.py), so it can stack with other risks (e.g.
+    moderate wind + moderate rain) instead of being checked in total
+    isolation — a rain-caused swap should have a real score_trace with
+    "rain": 90 (the heavy tier), not None."""
     trip_id = _create_trip(auth_client, monkeypatch)
     activity_id = _add_activity(trip_id, "outdoor")
     _mock_weather(monkeypatch)  # RAINY_FORECAST default
@@ -456,7 +458,8 @@ def test_auto_swap_rain_caused_swap_has_no_score_trace(auth_client, monkeypatch)
 
     activity = _get_activity(activity_id)
     assert activity.is_swapped is True
-    assert activity.swap_score_trace is None
+    assert activity.swap_score_trace is not None
+    assert activity.swap_score_trace["scores"]["rain"] == 90
 
 
 def test_auto_swap_cold_and_heat_use_temp_min_max_directly(auth_client, monkeypatch):

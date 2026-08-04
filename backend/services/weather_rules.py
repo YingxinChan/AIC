@@ -272,14 +272,20 @@ ACTIVE_RULES: list[WeatherRiskRule] = [
 # tip() methods above for run_auto_swap()'s actual swap/advisory decision).
 #
 # Every threshold here reuses an existing forecast field/function — nothing
-# below is a new formula. Rain is deliberately NOT part of this scoring
-# system: no evidence-based thresholds were provided for it, so RainRule
-# above (with its existing hourly-precision refinement) keeps handling rain
-# on its own, unchanged, checked alongside (not replaced by) these scores —
-# see run_auto_swap() in auto_swap_service.py.
+# below is a new formula. Rain IS part of this scoring system (score_rain()
+# below) — its heavy tier reuses RainRule above verbatim (same hourly-
+# precision refinement, same 90/100 severity, comfortably clearing
+# SWAP_THRESHOLD alone), while moderate/light rain can now stack with other
+# moderate risks (e.g. moderate wind + moderate rain — genuinely worse
+# together than either alone) the same way any other two moderate scores
+# can. Unlike the pre-scoring-engine RainRule path, this is NOT exempt from
+# horizon_factor decay below — a heavy-rain forecast still 3+ days out is
+# exactly the kind of not-yet-reliable signal decay exists to avoid
+# over-committing to, so it now only swaps confidently within the next
+# ~2 days and is advisory-only further out, same as every other risk.
 #
 # Score bands (per metric, 0-100): 0 = fine, ~30-50 = advisory (discomfort,
-# not swap-worthy alone — light fog sits lower at 30, everything else's
+# not swap-worthy alone — light rain/fog sit lower at 30, everything else's
 # advisory tier is 50), ~75-90 = swap-tier on its own. Multiple simultaneous
 # non-zero scores combine via `max_score + 0.5 * second_highest_score`
 # (score_activity() below) so two moderate (50) risks together reach
@@ -289,6 +295,38 @@ ACTIVE_RULES: list[WeatherRiskRule] = [
 
 SWAP_THRESHOLD = 70
 ADVISORY_THRESHOLD = 40
+
+# Reused by score_rain() below purely for its heavy-tier check (day_triggers
+# + evaluate()'s existing hourly time_slot refinement) — not for reason()/
+# tip()/id, which _METRIC_REASONS/_METRIC_TIPS/_METRIC_TO_RULE_ID replicate
+# separately below so rain's text can vary by severity tier like every
+# other metric's does.
+_rain_rule = RainRule()
+
+
+def score_rain(forecast_day: dict, activity=None, hourly: list[dict] | None = None) -> float:
+    """Blanket (applies to any outdoor activity, like fog_safety above) —
+    every outdoor activity gets rained on the same way regardless of what
+    it is. Heavy tier reuses RainRule.evaluate() verbatim, including its
+    existing hourly time_slot refinement, so a heavy-rain/thunderstorm day
+    scores 90 — comfortably >= SWAP_THRESHOLD on its own, same severity
+    RainRule always gave it (this score still goes through score_activity()'s
+    horizon_factor decay like every other metric, though — see the module
+    comment above; 90 is "as certain a signal as rain gets", not "always
+    swaps regardless of how far out the day is"). Moderate/light tiers reuse
+    flood_risk()'s own rain_today bands (ml/risk_calculator.py) — day-level
+    only, no hourly refinement, since hourly data gives per-hour rain_mm,
+    not a comparable running total for the activity's window."""
+    if _rain_rule.evaluate(forecast_day, activity, hourly=hourly):
+        return 90
+    rain_mm = forecast_day.get("rain_mm")
+    if rain_mm is None:
+        return 0
+    if rain_mm >= 20:
+        return 50
+    if rain_mm >= 10:
+        return 30
+    return 0
 
 
 def _score_cold_from_temp_min(temp_min: float | None) -> float:
@@ -598,7 +636,7 @@ def score_activity(
     today: date | None = None,
 ) -> dict:
     """Gather every score whose tag-gate applies to this activity (plus the
-    always-on blanket fog-safety check), combine via
+    always-on blanket rain/fog-safety checks), combine via
     max + 0.5*second_highest (naturally reduces to just that one score when
     only one metric is non-zero), then apply horizon decay. Returns
     {"scores": {name: score, ...}, "combined": float, "horizon_factor":
@@ -614,6 +652,7 @@ def score_activity(
     actually scored it."""
     effective_visibility_m = _effective_visibility_m(forecast_day, activity, hourly)
     scores: dict[str, float] = {
+        "rain": score_rain(forecast_day, activity, hourly),
         "fog_safety": _score_fog_safety_from_visibility(effective_visibility_m),
     }
     effective_values: dict[str, float | None] = {"visibility_m": effective_visibility_m}
@@ -663,7 +702,21 @@ def score_activity(
     }
 
 
+def _rain_reason_text(fd: dict) -> str:
+    """Heavy tier reuses RainRule.reason() verbatim (same day_triggers()
+    condition — heavy_rain_warning or thunderstorm — that score_rain()'s
+    heavy tier fires on). Moderate/light phrase around the same rain_mm
+    used to pick those tiers in score_rain()."""
+    if _rain_rule.day_triggers(fd):
+        return _rain_rule.reason(fd)
+    rain_mm = fd.get("rain_mm") or 0
+    if rain_mm >= 20:
+        return f"Moderate rain expected ({rain_mm}mm) — outdoor plans may get wet"
+    return f"Light rain expected ({rain_mm}mm) — pack a rain jacket just in case"
+
+
 _METRIC_REASONS = {
+    "rain": _rain_reason_text,
     "cold": lambda fd: f"Extreme cold expected (around {fd.get('temp_min')}°C) — unsafe for extended outdoor exertion",
     "heat": lambda fd: f"Extreme heat expected (around {fd.get('temp_max')}°C) — unsafe for extended outdoor exertion",
     "uv": lambda fd: f"{fd.get('uv_level')} UV expected — unsafe for extended sun exposure",
@@ -674,6 +727,7 @@ _METRIC_REASONS = {
 }
 
 _METRIC_TIPS = {
+    "rain": lambda fd: _rain_rule.tip(fd),
     "cold": lambda fd: temp_advice("Extreme Cold"),
     "heat": lambda fd: temp_advice("Extreme Heat"),
     "uv": lambda fd: "High UV expected — wear sunscreen and a hat.",
@@ -762,6 +816,7 @@ def describe_tip(
 # strictly needed (RULE_ICONS.get() already falls back gracefully), just
 # nicer than every new-scoring swap defaulting to the rain icon.
 _METRIC_TO_RULE_ID = {
+    "rain": "rain",
     "cold": "extreme_cold",
     "heat": "extreme_heat",
     "uv": "extreme_uv",

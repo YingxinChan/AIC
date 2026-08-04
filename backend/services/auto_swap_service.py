@@ -8,7 +8,6 @@ from models.trip import Trip
 from services import geocoding_service, swap_service
 from services.weather_rules import (
     ADVISORY_THRESHOLD,
-    RainRule,
     SWAP_THRESHOLD,
     describe_scores,
     describe_tip,
@@ -21,33 +20,23 @@ from services.weather_service import (
     get_weather_prediction,
 )
 
-# Rain has no evidence-based scoring thresholds behind it (unlike
-# cold/heat/UV/fog/wind/beach below) — it's checked on its own, exactly as
-# before, with its existing hourly-precision refinement intact. If rain
-# triggers, that alone is decisive (swap/tip immediately); only when it
-# doesn't do we fall through to the new scoring engine for everything else.
-_rain_rule = RainRule()
-
 
 def _evaluate_activity(forecast_day: dict, activity: Activity, hourly: list[dict] | None) -> dict | None:
-    """Rain first (unchanged, existing hourly-precision check) — if it
-    fires, that's decisive on its own, same as before this rewrite. Only
-    when rain doesn't fire does the new scoring engine run. Returns None if
-    neither applies (nothing to report at all — below even the advisory
-    threshold), otherwise a dict with `reason`/`tip`/`rule_id` (for the
-    swap/tip record and notification email) and `adjusted`/`score_trace`
-    (for the caller to decide advisory vs. swap, and for persisting on the
-    Activity row when it swaps)."""
-    rain_reason = _rain_rule.evaluate(forecast_day, activity, hourly=hourly)
-    if rain_reason:
-        return {
-            "reason": rain_reason,
-            "tip": _rain_rule.tip(forecast_day),
-            "rule_id": _rain_rule.id,
-            "score_trace": None,
-            "adjusted": 100.0,
-        }
-
+    """Every weather metric — rain included — goes through the scoring
+    engine (see services/weather_rules.py's score_activity()), so a
+    moderate risk on its own (e.g. moderate rain) can stack with another
+    moderate risk (e.g. moderate wind) into a swap even though neither
+    alone would cross SWAP_THRESHOLD. Heavy rain is NOT exempt from
+    horizon_factor decay, deliberately — a "heavy rain" forecast 3+ days
+    out is exactly the kind of not-yet-certain signal horizon decay exists
+    to avoid over-committing to (stability: don't swap today for a forecast
+    that's likely to shift before the day arrives), the same reasoning that
+    already applies to every other risk. Returns None if nothing applies at
+    all (combined score below even the advisory threshold), otherwise a
+    dict with `reason`/`tip`/`rule_id` (for the swap/tip record and
+    notification email) and `adjusted`/`score_trace` (for the caller to
+    decide advisory vs. swap, and for persisting on the Activity row when
+    it swaps)."""
     result = score_activity(forecast_day, activity, hourly=hourly)
     if result["adjusted"] < ADVISORY_THRESHOLD:
         return None
@@ -63,10 +52,10 @@ def _evaluate_activity(forecast_day: dict, activity: Activity, hourly: list[dict
 
 async def run_auto_swap(db: AsyncSession) -> dict:
     """Re-check weather for upcoming/active trips and auto-swap outdoor
-    activities affected by rain (checked directly via RainRule, unchanged)
-    or by a combined cold/heat/UV/fog/wind/beach-safety score crossing
-    SWAP_THRESHOLD (see services/weather_rules.py's score_activity()) for a
-    suitable alternative. A combined score in the advisory band (at or above
+    activities affected by a combined rain/cold/heat/UV/fog/wind/
+    beach-safety score crossing SWAP_THRESHOLD (see
+    services/weather_rules.py's score_activity()) for a suitable
+    alternative. A combined score in the advisory band (at or above
     ADVISORY_THRESHOLD but below SWAP_THRESHOLD) produces a tip instead of a
     swap, same as a *fixed* activity affected by anything at or above the
     advisory threshold.

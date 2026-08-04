@@ -20,6 +20,7 @@ from services.weather_rules import (
     score_fog_safety,
     score_fog_scenic,
     score_heat,
+    score_rain,
     score_uv,
     score_wind,
     top_rule_id,
@@ -301,6 +302,53 @@ def test_score_beach_bands():
     assert score_beach({"beach_safety_level": "Poor"}) == 90
 
 
+def test_score_rain_heavy_tier_matches_rain_rule_exactly():
+    assert score_rain({"heavy_rain_warning": True, "heavy_rain_probability": 80.0}) == 90
+    assert score_rain({"heavy_rain_warning": False, "weather_code": 96}) == 90  # thunderstorm
+
+
+def test_score_rain_moderate_and_light_tiers():
+    assert score_rain({"heavy_rain_warning": False, "rain_mm": 9.9}) == 0
+    assert score_rain({"heavy_rain_warning": False, "rain_mm": 10}) == 30
+    assert score_rain({"heavy_rain_warning": False, "rain_mm": 19.9}) == 30
+    assert score_rain({"heavy_rain_warning": False, "rain_mm": 20}) == 50
+    assert score_rain({"heavy_rain_warning": False, "rain_mm": 35}) == 50
+    assert score_rain({"heavy_rain_warning": False, "rain_mm": None}) == 0
+    assert score_rain({"heavy_rain_warning": False}) == 0
+
+
+def test_score_rain_uses_the_activitys_own_hourly_window_for_heavy_tier():
+    """Heavy tier reuses RainRule's existing hourly refinement — a rainy
+    morning shouldn't flag an activity happening in a clear afternoon."""
+    hourly = [
+        {"time": "2026-08-01T09:00", "rain_probability": 85},
+        {"time": "2026-08-01T14:00", "rain_probability": 5},
+    ]
+    day = {"heavy_rain_warning": True, "heavy_rain_probability": 90.0}
+    morning_activity = _activity("", time_slot="09:00 - 11:00")
+    afternoon_activity = _activity("", time_slot="14:00 - 16:00")
+
+    assert score_rain(day, morning_activity, hourly) == 90
+    assert score_rain(day, afternoon_activity, hourly) == 0
+
+
+def test_score_activity_moderate_rain_stacks_with_another_moderate_risk():
+    """Neither moderate rain (50) nor Moderate beach safety (50) alone
+    reaches SWAP_THRESHOLD (70), but combined they do: 50 + 0.5*50 = 75 —
+    a windy+rainy (or here, rainy+poor-swimming) day being worse together
+    than either alone is exactly the scenario stacking exists for."""
+    activity = Activity(
+        trip_id=1, day_date=date.today(), name="Beach Day", type="outdoor",
+        time_slot="10:00 - 12:00", weather_sensitivity="beach",
+    )
+    forecast_day = {"heavy_rain_warning": False, "rain_mm": 25, "beach_safety_level": "Moderate"}
+    result = score_activity(forecast_day, activity, today=date.today())
+    assert result["scores"]["rain"] == 50
+    assert result["scores"]["beach"] == 50
+    assert result["combined"] == 75.0
+    assert result["adjusted"] >= SWAP_THRESHOLD
+
+
 def test_score_fog_safety_boundaries_use_meters_not_km():
     assert score_fog_safety({"visibility_m": 1000}) == 0
     assert score_fog_safety({"visibility_m": 999}) == 30
@@ -366,7 +414,7 @@ def test_score_activity_stacks_two_moderate_scores_across_swap_threshold():
     assert result["adjusted"] >= SWAP_THRESHOLD
 
 
-def test_score_activity_untagged_activity_only_gets_blanket_fog_safety():
+def test_score_activity_untagged_activity_only_gets_blanket_checks():
     activity = Activity(
         trip_id=1, day_date=date.today(), name="Walking tour", type="outdoor",
         time_slot="10:00 - 12:00", weather_sensitivity="",
@@ -374,8 +422,8 @@ def test_score_activity_untagged_activity_only_gets_blanket_fog_safety():
     forecast_day = {"wind_level": "Strong", "beach_safety_level": "Poor", "temp_max": 40, "visibility_m": 10000}
     result = score_activity(forecast_day, activity, today=date.today())
     # wind/beach/heat all score high on this forecast, but none apply without
-    # the matching tag — only the always-on blanket fog-safety check runs.
-    assert result["scores"] == {"fog_safety": 0}
+    # the matching tag — only the always-on blanket rain/fog-safety checks run.
+    assert result["scores"] == {"rain": 0, "fog_safety": 0}
     assert result["combined"] == 0
     assert result["adjusted"] == 0
 
