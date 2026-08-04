@@ -655,7 +655,6 @@ export default function ItineraryPage() {
     if (trip.destination) {
       geocodeCity(trip.destination).then(coords => {
         if (cancelled || !coords) {
-          console.log("GEOCODE FAILED:", trip.destination);
           setWeatherStatus('failed');
           return;
         }
@@ -677,8 +676,6 @@ export default function ItineraryPage() {
           })
           .catch((err) => {
             console.error("Weather fetch error:", err);
-            console.error("Destination:", trip.destination);
-            console.error("Coordinates:", lat, lon);
             if (!cancelled) setWeatherStatus('failed');
           });
       });
@@ -1750,25 +1747,37 @@ export default function ItineraryPage() {
                         )}
                       </div>
                   ))}
-                  <div className={`${RISK_CARD_CLASSES} ${CARD_IDENTITY_BG.extremeTemp}`}>
-                      <div className="text-xs text-gray-500 uppercase flex items-center justify-center gap-2"><Flame size={22} className="text-indigo-400" /> Extreme Temp</div>
+                  <div
+                      onClick={() => setRiskInfoModal("temperature")}
+                      className={`${RISK_CARD_CLASSES} ${CARD_IDENTITY_BG.extremeTemp} cursor-pointer hover:brightness-95 transition`}
+                    >
+                      <div className="text-xs text-gray-500 uppercase flex items-center justify-center gap-2">
+                        <Flame size={22} className="text-indigo-400" /> Extreme Temp
+                      </div>
+
                       <div className="font-bold text-base">
                         {forecastDay.is_climatology ? '—' : (forecastDay.temperature_level ?? '—')}
                       </div>
+
                       {forecastDay.is_climatology ? (
-                        <div className="text-[11px] text-gray-500 leading-snug">{FORECAST_ONLY_NOTE}</div>
+                        <div className="text-[11px] text-gray-500 leading-snug">
+                          {FORECAST_ONLY_NOTE}
+                        </div>
                       ) : (
                         forecastDay.temperature_advice && (
-                          <div className="text-[11px] text-gray-500 leading-snug">{forecastDay.temperature_advice}</div>
+                          <div className="text-[11px] text-gray-500 leading-snug">
+                            {forecastDay.temperature_advice}
+                          </div>
                         )
                       )}
-                  </div>
+                    </div>
                   {[
                     {
                       l: 'Hiking Safety',
                       v: forecastDay.hiking_safety_score == null ? '—' : `${Math.round(forecastDay.hiking_safety_score)}%`,
                       s: forecastDay.hiking_safety_level || 'Unknown',
                       i: Mountain, bg: CARD_IDENTITY_BG.hikingSafety, forecastOnly: true,
+                      type: 'hiking',
                     },
                     {
                       l: 'Wind',
@@ -1789,19 +1798,17 @@ export default function ItineraryPage() {
                       i: Eye, bg: CARD_IDENTITY_BG.visibility, metric: 'visibility', forecastOnly: true,
                     },
                   ].map((c) => {
-                      // Only the 3 weather-info cards (metric set) open the hourly-trend
-                      // popup on click — the risk cards (heavy rain/flood/etc.) aren't
-                      // clickable, so this renders a <button> only for those three. A
-                      // climatology day has no hourly data for the popup to show (see
-                      // forecastDay.is_climatology), so it falls back to a plain <div>
-                      // same as the non-metric cards, instead of opening an empty popup.
+                       // Weather-info cards (metric set) open the hourly-trend popup.
+                       // Risk cards (heavy rain/flood/etc.) open their risk-detail modal.
+                       // Climatology days have no hourly data, so metric cards fall back
+                       // to non-clickable cards instead of opening an empty popup.
                       const showsNote = forecastDay.is_climatology && c.forecastOnly
-                      const Tag = c.metric && !showsNote ? 'button' : 'div'
+                      const Tag = (c.metric || c.type) && !showsNote ? 'button' : 'div'
                       return (
                         <Tag key={c.l}
-                            type={c.metric && !showsNote ? 'button' : undefined}
-                            onClick={c.metric && !showsNote ? () => setWeatherInfoModalMetric(c.metric) : undefined}
-                            className={`${RISK_CARD_CLASSES} ${c.bg} ${c.metric && !showsNote ? 'cursor-pointer hover:brightness-95 transition' : ''}`}>
+                            type={(c.metric || c.type) && !showsNote ? 'button' : undefined}
+                            onClick={c.metric && !showsNote ? () => setWeatherInfoModalMetric(c.metric) : c.type ? () => setRiskInfoModal(c.type): undefined}
+                            className={`${RISK_CARD_CLASSES} ${c.bg} ${(c.metric || c.type) && !showsNote ? 'cursor-pointer hover:brightness-95 transition' : ''}`}>
                             <div className="text-xs text-gray-500 uppercase flex items-center justify-center gap-2"><c.i size={22} className="text-indigo-400" /> {c.l}</div>
                             <div className="font-bold text-lg">
                               {showsNote ? '—' : c.v}
