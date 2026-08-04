@@ -3,9 +3,11 @@ from html import escape
 
 FONT_STACK = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
 
-# Matches services.weather_rules.ACTIVE_RULES' rule ids — falls back to the
-# rain icon for anything unmapped (e.g. a swap/tip dict from before rule_id
-# existed, or a future rule not yet added here).
+# Matches services.weather_rules.ACTIVE_RULES' rule ids, and (via
+# _METRIC_TO_RULE_ID) the swap-scoring engine's metric names too — both
+# produce the same id strings on purpose so this one mapping covers both.
+# Falls back to the rain icon for anything unmapped (e.g. a swap/tip dict
+# from before rule_id existed, or a future rule not yet added here).
 RULE_ICONS = {
     "rain": "☔",
     "fog": "🌫️",
@@ -144,7 +146,7 @@ def swap_digest_email(swaps: list[dict], tips: list[dict] | None = None) -> tupl
         rows = "".join(_swap_row_html(s) for s in swaps)
         sections_html.append(f"""
           <p style="margin:0 0 16px; font-size:14px; color:#374151; line-height:1.6; font-family:{FONT_STACK};">
-            Rain is in the forecast, so we've swapped the affected outdoor plans for indoor alternatives:
+            The forecast means we've swapped the affected outdoor plans for indoor alternatives:
           </p>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0">{rows}</table>
         """)
@@ -157,20 +159,15 @@ def swap_digest_email(swaps: list[dict], tips: list[dict] | None = None) -> tupl
         rows = "".join(_tip_row_html(t) for t in tips)
         sections_html.append(f"""
           <p style="margin:24px 0 16px; font-size:14px; color:#374151; line-height:1.6; font-family:{FONT_STACK};">
-            These fixed plans can't be swapped, but here's what to know before you go:
+            Weather's worth a heads-up here, even though we haven't changed these plans:
           </p>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0">{rows}</table>
         """)
         sections_text.append(
-            "Weather tips for your fixed plans:\n\n" + "\n".join(_tip_row_text(t) for t in tips)
+            "Weather tips for your trip:\n\n" + "\n".join(_tip_row_text(t) for t in tips)
         )
 
-    if swaps and tips:
-        heading = "Your itinerary was updated for weather"
-    elif swaps:
-        heading = "Your itinerary was updated for weather"
-    else:
-        heading = "Weather tips for your upcoming trip"
+    heading = "Your itinerary was updated for weather" if swaps else "Weather tips for your upcoming trip"
 
     body_html = "".join(sections_html)
     text = "\n\n".join(sections_text)

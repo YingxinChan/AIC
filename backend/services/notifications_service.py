@@ -44,9 +44,14 @@ async def send_swap_digest_emails(db: AsyncSession, swapped: list[dict], tips: l
     their email_enabled preference. `swapped` and `tips` are the two
     collections run_auto_swap() returns.
 
-    Swaps are additionally gated by rain_threshold_mm (a silent plan
-    change should meet the user's bar); tips are not — they're informational
-    only, no plan was changed, so only email_enabled applies to them."""
+    Rain-caused swaps are additionally gated by rain_threshold_mm (a silent
+    plan change should meet the user's bar) — non-rain swaps (wind, extreme
+    heat/cold, UV, beach safety, fog; see services/weather_rules.py's
+    scoring engine) always qualify, since rain_threshold_mm is specifically
+    a rain-volume preference and has no meaningful value to compare against
+    for a swap that had nothing to do with rain. Tips are not gated by
+    rain_threshold_mm at all — they're informational only, no plan was
+    changed, so only email_enabled applies to them."""
     tips = tips or []
     if not swapped and not tips:
         return []
@@ -78,7 +83,10 @@ async def send_swap_digest_emails(db: AsyncSession, swapped: list[dict], tips: l
         user_swaps = by_user_swaps.get(user_id, [])
         user_tips = by_user_tips.get(user_id, [])
 
-        qualifying_swaps = [s for s in user_swaps if (s.get("rain_mm") or 0) >= prefs["rain_threshold_mm"]]
+        qualifying_swaps = [
+            s for s in user_swaps
+            if s.get("rule_id") != "rain" or (s.get("rain_mm") or 0) >= prefs["rain_threshold_mm"]
+        ]
         if not qualifying_swaps and not user_tips:
             continue
 

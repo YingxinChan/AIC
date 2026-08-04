@@ -182,12 +182,16 @@ def _swap(
     original_location="Hyde Park",
     alternate_name="British Museum",
     alternate_location="Great Russell St",
+    rule_id="rain",
+    reason="Heavy rain expected (80.0% chance)",
+    rain_mm=3.2,
 ):
     return {
         "trip_id": trip_id,
         "activity_id": activity_id,
-        "reason": "Heavy rain expected (80.0% chance)",
-        "rain_mm": 3.2,
+        "rule_id": rule_id,
+        "reason": reason,
+        "rain_mm": rain_mm,
         "day_date": day_date,
         "original_name": original_name,
         "original_location": original_location,
@@ -369,6 +373,60 @@ def test_send_swap_digest_emails_filters_by_rain_threshold(
     mock_send.assert_not_called()
 
 
+def test_non_rain_swaps_bypass_the_rain_threshold_filter(
+    auth_client,
+    monkeypatch,
+):
+    """rain_threshold_mm is specifically a rain-volume preference — a swap
+    caused by e.g. strong wind has no meaningful rain_mm to compare against
+    it, so it must still be sent regardless of the user's threshold. Mirrors
+    test_send_swap_digest_emails_filters_by_rain_threshold above, but for a
+    swap the new scoring engine (services/weather_rules.py) triggers for a
+    reason other than rain."""
+    trip_id, trip_start_date = _create_trip(
+        auth_client,
+        monkeypatch,
+    )
+
+    preferences_response = auth_client.put(
+        "/api/notifications/preferences",
+        json={
+            "email_enabled": True,
+            "rain_threshold_mm": 10.0,
+        },
+    )
+
+    assert preferences_response.status_code == 200
+
+    mock_send = MagicMock(
+        return_value={"status": "sent"}
+    )
+    monkeypatch.setattr(
+        "services.notifications_service.email_service.send_email",
+        mock_send,
+    )
+
+    results = _run_digest(
+        [
+            _swap(
+                trip_id,
+                1,
+                trip_start_date.isoformat(),
+                rule_id="wind",
+                reason="Very Strong winds expected — unsafe/unpleasant for this activity",
+                rain_mm=0.0,
+            )
+        ]
+    )
+
+    assert len(results) == 1
+    assert results[0]["status"] == "sent"
+
+    body = mock_send.call_args.args[2]
+    assert "Very Strong winds expected" in body
+    assert "Rain is in the forecast" not in body
+
+
 def _tip(trip_id, activity_id, day_date="2026-08-01", name="Beach Day", location="Bondi Beach"):
     return {
         "trip_id": trip_id, "activity_id": activity_id,
@@ -416,6 +474,44 @@ def test_send_tip_only_digest_sends_an_email(
     assert "Beach Day" in body
     assert "Bondi Beach" in body
     assert "check local flags" in body
+
+
+def test_tip_copy_does_not_claim_the_activity_cant_be_swapped(
+    auth_client,
+    monkeypatch,
+):
+    """A tip can come from either a genuinely *fixed* activity, or a
+    swappable activity whose combined score only reached the advisory band
+    (see run_auto_swap()'s docstring in services/auto_swap_service.py) — the
+    tip dict itself doesn't distinguish which, so the copy must stay
+    accurate for both rather than asserting every tip is for a fixed,
+    unswappable plan."""
+    trip_id, trip_start_date = _create_trip(
+        auth_client,
+        monkeypatch,
+    )
+
+    mock_send = MagicMock(
+        return_value={"status": "sent"}
+    )
+    monkeypatch.setattr(
+        "services.notifications_service.email_service.send_email",
+        mock_send,
+    )
+
+    _run_digest(
+        [],
+        tips=[
+            _tip(
+                trip_id,
+                1,
+                day_date=trip_start_date.isoformat(),
+            )
+        ],
+    )
+
+    body = mock_send.call_args.args[2]
+    assert "can't be swapped" not in body.lower()
 
 
 def test_tips_bypass_the_rain_threshold_filter(
