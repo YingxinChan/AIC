@@ -191,6 +191,58 @@ const RISK_BREAKDOWN_DECIMALS = {
   'Heavy Rain Probability': 2,
 }
 
+// Hero header photo backgrounds (see Hero Header below) — all 25 supported
+// cities (see CLAUDE.md) now have one. Falls back to the flat indigo/purple
+// gradient if a destination is somehow missing from this map. All local
+// assets (public/images/destinations/) — AI-generated, provided by the
+// project owner, as wide aerial/panorama establishing shots (landmark
+// prominent but with margin around it, not a tight close-up) at various
+// wide aspect ratios (~1.8:1 up to ~5.6:1) — all wider than a standard
+// photo and close to or wider than this banner's own ~3:1 shape, so
+// 'center' needs little to no vertical crop for any of them. An optional
+// `fit: 'contain'` is supported (see Hero Header below) for a photo whose
+// subject can't survive any crop at all (e.g. a tight close-up of one tall
+// structure) — not needed by any of these.
+const DESTINATION_HERO_IMAGES = {
+  Amsterdam: { url: '/images/destinations/amsterdam.jpg', position: 'center' },
+  Athens: { url: '/images/destinations/athens.jpg', position: 'center' },
+  Barcelona: { url: '/images/destinations/barcelona.jpg', position: 'center' },
+  Berlin: { url: '/images/destinations/berlin.jpg', position: 'center' },
+  Bruges: { url: '/images/destinations/bruges.jpg', position: 'center' },
+  Brussels: { url: '/images/destinations/brussels.jpg', position: 'center' },
+  Budapest: { url: '/images/destinations/budapest.jpg', position: 'center' },
+  Copenhagen: { url: '/images/destinations/copenhagen.jpg', position: 'center' },
+  Dublin: { url: '/images/destinations/dublin.jpg', position: 'center' },
+  Edinburgh: { url: '/images/destinations/edinburgh.jpg', position: 'center' },
+  Florence: { url: '/images/destinations/florence.jpg', position: 'center' },
+  Istanbul: { url: '/images/destinations/istanbul.jpg', position: 'center' },
+  Krakow: { url: '/images/destinations/krakow.jpg', position: 'center' },
+  Lisbon: { url: '/images/destinations/lisbon.jpg', position: 'center' },
+  London: { url: '/images/destinations/london.jpg', position: 'center' },
+  Madrid: { url: '/images/destinations/madrid.jpg', position: 'center' },
+  Milan: { url: '/images/destinations/milan.jpg', position: 'center' },
+  Munich: { url: '/images/destinations/munich.jpg', position: 'center' },
+  Oslo: { url: '/images/destinations/oslo.jpg', position: 'center' },
+  Paris: { url: '/images/destinations/paris.jpg', position: 'center' },
+  Prague: { url: '/images/destinations/prague.jpg', position: 'center' },
+  Rome: { url: '/images/destinations/rome.jpg', position: 'center' },
+  Venice: { url: '/images/destinations/venice.jpg', position: 'center' },
+  Vienna: { url: '/images/destinations/vienna.jpg', position: 'center' },
+  Zurich: { url: '/images/destinations/zurich.jpg', position: 'center' },
+}
+
+// trip.destination is free-typed text (see NewTripPage's plain input, no
+// fixed city list enforced) — a straight DESTINATION_HERO_IMAGES[destination]
+// lookup silently missed any trip saved with different casing than the
+// object keys above (e.g. "amsterdam" saved instead of "Amsterdam"), even
+// though the file existed. Case-insensitive lookup instead.
+const findDestinationImage = (destination) => {
+  if (!destination) return null
+  const normalized = destination.trim().toLowerCase()
+  const key = Object.keys(DESTINATION_HERO_IMAGES).find(k => k.toLowerCase() === normalized)
+  return key ? DESTINATION_HERO_IMAGES[key] : null
+}
+
 // Visibility has no backend-supplied level (unlike UV/wind), so it's
 // classified here using the same Good/Moderate/Poor vocabulary Beach Safety
 // already uses — no changes needed to levelColorClass to support it.
@@ -1028,12 +1080,48 @@ export default function ItineraryPage() {
 
       {/* 5A: Hero Header */}
       {trip && (
-        <div className="relative left-1/2 -translate-x-1/2 w-screen -mt-8">
-          <div className="bg-gradient-to-br from-indigo-600 to-purple-600 text-white h-72 flex flex-col justify-between px-4 sm:px-8 py-8">
-            <div className="max-w-6xl mx-auto w-full flex justify-end">
+        // Contained to max-w-6xl (matching every section below) instead of
+        // the previous edge-to-edge w-screen breakout — full-bleed made the
+        // banner's aspect ratio so wide/short relative to the source photo
+        // that bg-cover had to zoom in drastically, leaving almost nothing
+        // of the skyline visible regardless of vertical crop position.
+        <div className="max-w-6xl mx-auto">
+          {(() => {
+            const heroImage = findDestinationImage(destination)
+            return (
+          <div
+            // h-96 (not h-72) when there's a photo — a taller banner needs
+            // less bg-cover zoom to fill its width, so more of the photo's
+            // height survives the crop. Each photo has its own tuned
+            // backgroundPosition (see DESTINATION_HERO_IMAGES above).
+            // fit:'contain' photos (see above) layer the photo over the
+            // same indigo/purple gradient as the no-photo fallback, so the
+            // letterboxed gap reads as intentional, not a rendering bug.
+            className={`relative text-white flex flex-col justify-between px-4 sm:px-8 py-8 rounded-lg overflow-hidden ${heroImage ? 'h-96' : 'h-72 bg-gradient-to-br from-indigo-600 to-purple-600'} ${heroImage && heroImage.fit !== 'contain' ? 'bg-cover' : ''}`}
+            style={
+              heroImage
+                ? heroImage.fit === 'contain'
+                  ? {
+                      backgroundImage: `url(${heroImage.url}), linear-gradient(to bottom right, #4f46e5, #9333ea)`,
+                      backgroundSize: 'contain, cover',
+                      backgroundPosition: `${heroImage.position}, center`,
+                      backgroundRepeat: 'no-repeat, no-repeat',
+                    }
+                  : { backgroundImage: `url(${heroImage.url})`, backgroundPosition: heroImage.position }
+                : undefined
+            }
+          >
+            {/* Scrim so the white text stays legible over a photo, tinted
+                indigo/purple (not flat black) to stay tonally consistent with
+                the gradient this replaces, rather than looking like an
+                unrelated photo dropped on top of the app. */}
+            {heroImage && (
+              <div className="absolute inset-0 bg-gradient-to-t from-indigo-950/85 via-indigo-900/40 to-purple-900/20" />
+            )}
+            <div className="relative w-full flex justify-end">
               {status && <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_STYLES[status]}`}>{status}</span>}
             </div>
-            <div className="max-w-6xl mx-auto w-full">
+            <div className="relative w-full">
               <p className="flex items-center gap-1.5 text-sm text-indigo-200"><MapPin size={14} /> {capitalize(destination)}</p>
               <h2 className="text-3xl font-bold mt-1">{capitalize(trip.name || `${destination} Trip`)}</h2>
               {trip.start_date && trip.end_date && (
@@ -1044,6 +1132,8 @@ export default function ItineraryPage() {
               )}
             </div>
           </div>
+            )
+          })()}
         </div>
       )}
 
