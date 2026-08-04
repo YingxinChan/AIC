@@ -7,6 +7,46 @@ import { deleteTrip } from './tripsApi'
 import { tripStatus, STATUS_STYLES } from './tripStatus'
 import { capitalize } from '../../lib/format'
 
+// Same as ItineraryPage's hero header — see the matching constant there
+// for the full rationale. All 25 supported cities (see CLAUDE.md).
+const DESTINATION_CARD_IMAGES = {
+  Amsterdam: { url: '/images/destinations/amsterdam.jpg', position: 'center' },
+  Athens: { url: '/images/destinations/athens.jpg', position: 'center' },
+  Barcelona: { url: '/images/destinations/barcelona.jpg', position: 'center' },
+  Berlin: { url: '/images/destinations/berlin.jpg', position: 'center' },
+  Bruges: { url: '/images/destinations/bruges.jpg', position: 'center' },
+  Brussels: { url: '/images/destinations/brussels.jpg', position: 'center' },
+  Budapest: { url: '/images/destinations/budapest.jpg', position: 'center' },
+  Copenhagen: { url: '/images/destinations/copenhagen.jpg', position: 'center' },
+  Dublin: { url: '/images/destinations/dublin.jpg', position: 'center' },
+  Edinburgh: { url: '/images/destinations/edinburgh.jpg', position: 'center' },
+  Florence: { url: '/images/destinations/florence.jpg', position: 'center' },
+  Istanbul: { url: '/images/destinations/istanbul.jpg', position: 'center' },
+  Krakow: { url: '/images/destinations/krakow.jpg', position: 'center' },
+  Lisbon: { url: '/images/destinations/lisbon.jpg', position: 'center' },
+  London: { url: '/images/destinations/london.jpg', position: 'center' },
+  Madrid: { url: '/images/destinations/madrid.jpg', position: 'center' },
+  Milan: { url: '/images/destinations/milan.jpg', position: 'center' },
+  Munich: { url: '/images/destinations/munich.jpg', position: 'center' },
+  Oslo: { url: '/images/destinations/oslo.jpg', position: 'center' },
+  Paris: { url: '/images/destinations/paris.jpg', position: 'center' },
+  Prague: { url: '/images/destinations/prague.jpg', position: 'center' },
+  Rome: { url: '/images/destinations/rome.jpg', position: 'center' },
+  Venice: { url: '/images/destinations/venice.jpg', position: 'center' },
+  Vienna: { url: '/images/destinations/vienna.jpg', position: 'center' },
+  Zurich: { url: '/images/destinations/zurich.jpg', position: 'center' },
+}
+
+// trip.destination is free-typed text (see NewTripPage's plain input, no
+// fixed city list enforced) — see the matching helper in ItineraryPage.jsx
+// for why this needs to be case-insensitive.
+const findCardImage = (destination) => {
+  if (!destination) return null
+  const normalized = destination.trim().toLowerCase()
+  const key = Object.keys(DESTINATION_CARD_IMAGES).find(k => k.toLowerCase() === normalized)
+  return key ? DESTINATION_CARD_IMAGES[key] : null
+}
+
 export default function MyTripsPage() {
   const { trips, loading, error, removeTrip } = useTrips()
   const [deletingId, setDeletingId] = useState(null)
@@ -64,13 +104,28 @@ export default function MyTripsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {trips.map((trip) => {
             const status = tripStatus(trip)
+            const cardImage = findCardImage(trip.destination)
             return (
               <Link
                 key={trip.id}
                 to={`/trips/${trip.id}`}
                 className="block bg-white rounded-xl border border-gray-200 overflow-hidden hover:border-indigo-300 transition-colors"
               >
-                <div className="h-36 bg-gradient-to-br from-indigo-400 to-purple-400" />
+                <div
+                  className={`h-36 ${cardImage ? '' : 'bg-gradient-to-br from-indigo-400 to-purple-400'} ${cardImage && cardImage.fit !== 'contain' ? 'bg-cover' : ''}`}
+                  style={
+                    cardImage
+                      ? cardImage.fit === 'contain'
+                        ? {
+                            backgroundImage: `url(${cardImage.url}), linear-gradient(to bottom right, #818cf8, #c084fc)`,
+                            backgroundSize: 'contain, cover',
+                            backgroundPosition: `${cardImage.position}, center`,
+                            backgroundRepeat: 'no-repeat, no-repeat',
+                          }
+                        : { backgroundImage: `url(${cardImage.url})`, backgroundPosition: cardImage.position }
+                      : undefined
+                  }
+                />
                 <div className="p-4">
                   <p className="font-semibold text-gray-900">{capitalize(trip.name)}</p>
                   <p className="flex items-center gap-1.5 text-sm text-gray-500 mt-1">
