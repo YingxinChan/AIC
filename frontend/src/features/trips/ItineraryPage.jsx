@@ -1434,19 +1434,29 @@ export default function ItineraryPage() {
 
             ) : riskInfoModal === "heavyRain" ? (
               forecastDay.is_climatology ? (
-                // rain_chance stands in for heavy_rain_probability on climatology
-                // days (see rainChanceLevel above) — a real historical stat, but a
-                // different one, so this skips the ML-model writeup entirely
-                // rather than describing a model that didn't run.
-                <div className="space-y-4 text-sm">
-                  <div className="text-center">
-                    <div className="text-3xl font-bold">{forecastDay.rain_chance}%</div>
-                    <div className="text-gray-500">Historical rain frequency</div>
+                forecastDay.rain_chance == null ? (
+                  // rain_chance is normally always real on a climatology day —
+                  // null here means the historical archive fetch itself failed
+                  // (e.g. an API outage/quota limit), not that this destination
+                  // genuinely has no rain data. Same caveat Flood/Snow show for
+                  // their own "nothing to report" case, rather than rendering
+                  // a bare "%" with no number.
+                  <p className="text-sm text-gray-600">{FORECAST_ONLY_NOTE}</p>
+                ) : (
+                  // rain_chance stands in for heavy_rain_probability on climatology
+                  // days (see rainChanceLevel above) — a real historical stat, but a
+                  // different one, so this skips the ML-model writeup entirely
+                  // rather than describing a model that didn't run.
+                  <div className="space-y-4 text-sm">
+                    <div className="text-center">
+                      <div className="text-3xl font-bold">{forecastDay.rain_chance}%</div>
+                      <div className="text-gray-500">Historical rain frequency</div>
+                    </div>
+                    <p className="text-xs text-gray-500 border-t pt-4">
+                      Based on this destination's 10-year historical rain frequency, not a live forecast.
+                    </p>
                   </div>
-                  <p className="text-xs text-gray-500 border-t pt-4">
-                    Based on this destination's 10-year historical rain frequency, not a live forecast.
-                  </p>
-                </div>
+                )
               ) : (
                 <div className="space-y-4 text-sm">
 
@@ -1529,15 +1539,24 @@ export default function ItineraryPage() {
               // (climatology_service.py), not a computed 0-100 risk score,
               // so this shows the value/level directly rather than the
               // generic score block below.
-              <div className="space-y-4 text-sm">
-                <div className="text-center">
-                  <div className="text-3xl font-bold">{Math.round(forecastDay.wind_speed)} km/h</div>
-                  <div className="text-gray-500">{forecastDay.wind_level}</div>
+              forecastDay.wind_speed == null ? (
+                // wind_speed is normally always real on a climatology day —
+                // null means the historical archive fetch itself failed (e.g.
+                // an API outage/quota limit). Math.round(null) is 0 in JS, so
+                // without this guard it would silently show "0 km/h" — a real-
+                // looking number for a day with no actual data.
+                <p className="text-sm text-gray-600">{FORECAST_ONLY_NOTE}</p>
+              ) : (
+                <div className="space-y-4 text-sm">
+                  <div className="text-center">
+                    <div className="text-3xl font-bold">{Math.round(forecastDay.wind_speed)} km/h</div>
+                    <div className="text-gray-500">{forecastDay.wind_level}</div>
+                  </div>
+                  <p className="text-xs text-gray-500 border-t pt-4">
+                    Based on this destination's 10-year historical average wind speed, not a live forecast.
+                  </p>
                 </div>
-                <p className="text-xs text-gray-500 border-t pt-4">
-                  Based on this destination's 10-year historical average wind speed, not a live forecast.
-                </p>
-              </div>
+              )
 
             ) : (
               <>
