@@ -154,3 +154,55 @@ def test_hourly_returns_forecast(auth_client):
     # as the visibility_m bug above) would go unnoticed.
     assert "utc_offset_seconds" in first_hour
 
+
+def test_hourly_beyond_horizon_returns_empty_without_erroring(auth_client):
+    # Regression test: get_hourly_weather used to pass the full requested
+    # range straight to Open-Meteo's forecast API with no horizon check.
+    # Open-Meteo 400s on start_date/end_date beyond its forecast window, so
+    # any trip planned more than FORECAST_HORIZON_DAYS out made this endpoint
+    # raise — which the frontend's Promise.all([prediction, hourly]) turned
+    # into "Weather unavailable for this destination" for the *whole* trip,
+    # even though /prediction's climatology fallback had real data.
+    far_start = (
+        date.today() + timedelta(days=FORECAST_HORIZON_DAYS + 5)
+    ).isoformat()
+    far_end = (
+        date.today() + timedelta(days=FORECAST_HORIZON_DAYS + 6)
+    ).isoformat()
+
+    response = auth_client.get(
+        "/api/weather/hourly"
+        f"?lat=51.5074"
+        f"&lon=-0.1278"
+        f"&start_date={far_start}"
+        f"&end_date={far_end}"
+    )
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_hourly_spanning_horizon_only_covers_in_horizon_days(auth_client):
+    start = date.today().isoformat()
+    end = (
+        date.today() + timedelta(days=FORECAST_HORIZON_DAYS + 5)
+    ).isoformat()
+
+    response = auth_client.get(
+        "/api/weather/hourly"
+        f"?lat=51.5074"
+        f"&lon=-0.1278"
+        f"&start_date={start}"
+        f"&end_date={end}"
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+    assert len(data) > 0
+
+    horizon = (
+        date.today() + timedelta(days=FORECAST_HORIZON_DAYS)
+    ).isoformat()
+    assert all(hour["time"][:10] <= horizon for hour in data)
+

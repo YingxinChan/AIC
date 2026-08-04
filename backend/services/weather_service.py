@@ -232,8 +232,20 @@ def _get_forecast_days(lat: float, lon: float, start_date: str, end_date: str) -
     return results
 
 def get_hourly_weather(lat: float, lon: float, start_date: str = None, end_date: str = None):
+    """Hourly detail only exists for the real-forecast portion of a trip —
+    Open-Meteo has no hourly climatology equivalent, so days beyond
+    FORECAST_HORIZON_DAYS are dropped instead of sent to the forecast API,
+    which 400s on out-of-range dates (same horizon split as
+    get_weather_prediction(), just with nothing standing in for the
+    climatology days here)."""
+    range_start, range_end = resolve_date_range(start_date, end_date)
+    horizon = date.today() + timedelta(days=FORECAST_HORIZON_DAYS)
+    forecast_end = min(range_end, horizon)
 
-    forecast = get_forecast(lat, lon, start_date, end_date)
+    if range_start > forecast_end:
+        return []
+
+    forecast = get_forecast(lat, lon, range_start.isoformat(), forecast_end.isoformat())
     hourly = forecast["hourly"]
     utc_offset_seconds = forecast["utc_offset_seconds"]
 
