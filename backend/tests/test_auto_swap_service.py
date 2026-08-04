@@ -364,14 +364,16 @@ def test_auto_swap_fixed_activity_tip_respects_weather_sensitivity_tag(auth_clie
 # ---------------------------------------------------------------------------
 
 def test_auto_swap_single_moderate_score_produces_advisory_tip_not_swap(auth_client, monkeypatch):
-    """Strong wind alone scores 50 — above ADVISORY_THRESHOLD (40) but below
-    SWAP_THRESHOLD (70), so a wind_exposed activity should get a tip, not be
-    swapped."""
+    """High UV alone scores 50 — above ADVISORY_THRESHOLD (40) but below
+    SWAP_THRESHOLD (70), so a strenuous_outdoor activity should get a tip,
+    not be swapped. (Strong wind used to be this test's example, but wind is
+    now swap-tier alone at 75 — see score_wind — so it no longer
+    demonstrates the advisory-only path.)"""
     trip_id = _create_trip(auth_client, monkeypatch)
-    activity_id = _add_activity(trip_id, "outdoor", name="Thames Boat Tour", weather_sensitivity="wind_exposed")
+    activity_id = _add_activity(trip_id, "outdoor", name="Long Hike", weather_sensitivity="strenuous_outdoor")
     _mock_weather(monkeypatch, forecast=[{
         "date": TODAY.isoformat(), "heavy_rain_warning": False, "heavy_rain_probability": 2.0,
-        "wind_level": "Strong",
+        "uv_level": "High", "uv_index": 7,
     }])
     _mock_hourly_weather(monkeypatch)
     mock_find = _mock_find_alternative(monkeypatch)
@@ -383,7 +385,7 @@ def test_auto_swap_single_moderate_score_produces_advisory_tip_not_swap(auth_cli
     assert our_swaps == []
     assert len(our_tips) == 1
     assert our_tips[0]["activity_id"] == activity_id
-    assert "wind" in our_tips[0]["reason"].lower()
+    assert "uv" in our_tips[0]["reason"].lower()
     calls_for_our_activity = [c for c in mock_find.call_args_list if c.args[0].id == activity_id]
     assert calls_for_our_activity == []
 
@@ -392,16 +394,19 @@ def test_auto_swap_single_moderate_score_produces_advisory_tip_not_swap(auth_cli
 
 
 def test_auto_swap_stacked_scores_swap_even_when_neither_alone_would(auth_client, monkeypatch):
-    """Strong wind (score 50) and Moderate beach safety (score 40) each sit
-    below SWAP_THRESHOLD alone, but combined (50 + 0.5*40 = 70) cross it —
-    an activity tagged with both should be swapped."""
+    """Extreme cold (score 50, the -5..-10 advisory tier) and Moderate beach
+    safety (score 50) each sit below SWAP_THRESHOLD alone, but combined
+    (50 + 0.5*50 = 75) cross it — an activity tagged with both should be
+    swapped. (Wind used to be this test's example, but wind is now
+    swap-tier alone at 75 — see score_wind — so it no longer demonstrates
+    two moderates stacking.)"""
     trip_id = _create_trip(auth_client, monkeypatch)
     activity_id = _add_activity(
-        trip_id, "outdoor", name="Beach Windsurfing", weather_sensitivity="wind_exposed,beach",
+        trip_id, "outdoor", name="Beach Walk", weather_sensitivity="strenuous_outdoor,beach",
     )
     _mock_weather(monkeypatch, forecast=[{
         "date": TODAY.isoformat(), "heavy_rain_warning": False, "heavy_rain_probability": 2.0,
-        "wind_level": "Strong", "beach_safety_level": "Moderate",
+        "temp_min": -7, "beach_safety_level": "Moderate",
     }])
     _mock_hourly_weather(monkeypatch)
     _mock_find_alternative(monkeypatch)
@@ -415,9 +420,9 @@ def test_auto_swap_stacked_scores_swap_even_when_neither_alone_would(auth_client
     activity = _get_activity(activity_id)
     assert activity.is_swapped is True
     assert activity.swap_score_trace is not None
-    assert activity.swap_score_trace["scores"]["wind"] == 50
-    assert activity.swap_score_trace["scores"]["beach"] == 40
-    assert activity.swap_score_trace["combined"] == 70.0
+    assert activity.swap_score_trace["scores"]["cold"] == 50
+    assert activity.swap_score_trace["scores"]["beach"] == 50
+    assert activity.swap_score_trace["combined"] == 75.0
 
 
 def test_auto_swap_below_advisory_threshold_does_nothing(auth_client, monkeypatch):
@@ -426,7 +431,7 @@ def test_auto_swap_below_advisory_threshold_does_nothing(auth_client, monkeypatc
     activity_id = _add_activity(trip_id, "outdoor", name="City Walk", weather_sensitivity="wind_exposed")
     _mock_weather(monkeypatch, forecast=[{
         "date": TODAY.isoformat(), "heavy_rain_warning": False, "heavy_rain_probability": 2.0,
-        "wind_level": "Moderate",
+        "wind_level": "Moderate", "wind_speed": 15,
     }])
     _mock_hourly_weather(monkeypatch)
     mock_find = _mock_find_alternative(monkeypatch)

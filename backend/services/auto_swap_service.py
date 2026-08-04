@@ -51,9 +51,10 @@ def _evaluate_activity(forecast_day: dict, activity: Activity, hourly: list[dict
     result = score_activity(forecast_day, activity, hourly=hourly)
     if result["adjusted"] < ADVISORY_THRESHOLD:
         return None
+    effective_values = result["effective_values"]
     return {
-        "reason": describe_scores(forecast_day, result["scores"]),
-        "tip": describe_tip(forecast_day, result["scores"]),
+        "reason": describe_scores(forecast_day, result["scores"], effective_values),
+        "tip": describe_tip(forecast_day, result["scores"], effective_values),
         "rule_id": top_rule_id(result["scores"]),
         "score_trace": result,
         "adjusted": result["adjusted"],
