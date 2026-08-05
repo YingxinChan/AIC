@@ -1,12 +1,12 @@
 import uuid
 
 
-def test_register_creates_user_and_sets_cookie(client):
+def test_register_creates_user_and_returns_token(client):
     email = f"test+{uuid.uuid4()}@example.com"
     response = client.post("/api/auth/register", json={"email": email, "password": "pass123"})
     assert response.status_code == 200
     assert response.json()["user"]["email"] == email
-    assert "access_token" in response.cookies
+    assert response.json()["token"]
 
 
 def test_register_duplicate_email_returns_409(client):
@@ -16,12 +16,12 @@ def test_register_duplicate_email_returns_409(client):
     assert response.status_code == 409
 
 
-def test_login_valid_credentials_sets_cookie(client):
+def test_login_valid_credentials_returns_token(client):
     email = f"test+{uuid.uuid4()}@example.com"
     client.post("/api/auth/register", json={"email": email, "password": "pass123"})
     response = client.post("/api/auth/login", json={"email": email, "password": "pass123"})
     assert response.status_code == 200
-    assert "access_token" in response.cookies
+    assert response.json()["token"]
 
 
 def test_login_wrong_password_returns_401(client):
@@ -52,27 +52,25 @@ def test_register_duplicate_email_is_case_insensitive(client):
     assert response.status_code == 409
 
 
-def test_logout_clears_cookie(client):
+def test_logout_succeeds(client):
     response = client.post("/api/auth/logout")
     assert response.status_code == 204
 
 
-def test_me_without_cookie_returns_401(client):
+def test_me_without_token_returns_401(client):
     response = client.get("/api/auth/me")
     assert response.status_code == 401
 
 
-def test_me_with_valid_cookie_returns_user(client):
+def test_me_with_valid_token_returns_user(client):
     email = f"test+{uuid.uuid4()}@example.com"
     reg = client.post("/api/auth/register", json={"email": email, "password": "pass123"})
-    token = reg.cookies.get("access_token")
-    client.cookies.set("access_token", token)
-    response = client.get("/api/auth/me")
+    token = reg.json()["token"]
+    response = client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
     assert response.json()["user"]["email"] == email
 
 
 def test_me_with_invalid_token_returns_401(client):
-    client.cookies.set("access_token", "invalid.jwt.token")
-    response = client.get("/api/auth/me")
+    response = client.get("/api/auth/me", headers={"Authorization": "Bearer invalid.jwt.token"})
     assert response.status_code == 401

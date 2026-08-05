@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Response, Depends
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.security import get_current_user, create_access_token
 from core.database import get_db
@@ -9,28 +9,27 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=AuthOut)
-async def register(body: RegisterRequest, response: Response, db: AsyncSession = Depends(get_db)):
+async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     user = await auth_service.register_user(db, body.email, body.password)
     token = create_access_token(user.id, user.email)
-    # samesite="none" is required for the cookie to be sent on cross-site
-    # requests — frontend (Netlify) and backend (Render) are on different
-    # domains, and browsers withhold samesite="lax" cookies on cross-site
-    # fetch/XHR calls (only same-site or top-level navigations get them).
-    response.set_cookie(key="access_token", value=token, httponly=True, samesite="none", secure=True)
-    return {"user": {"id": user.id, "email": user.email, "created_at": user.created_at,}}
+    return {"user": {"id": user.id, "email": user.email, "created_at": user.created_at}, "token": token}
 
 
 @router.post("/login", response_model=AuthOut)
-async def login(body: LoginRequest, response: Response, db: AsyncSession = Depends(get_db)):
+async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
     user = await auth_service.login_user(db, body.email, body.password)
     token = create_access_token(user.id, user.email)
-    response.set_cookie(key="access_token", value=token, httponly=True, samesite="none", secure=True)
-    return {"user": {"id": user.id, "email": user.email, "created_at": user.created_at,}}
+    return {"user": {"id": user.id, "email": user.email, "created_at": user.created_at}, "token": token}
 
 
 @router.post("/logout", status_code=204)
-async def logout(response: Response):
-    response.delete_cookie("access_token", samesite="none", secure=True)
+async def logout():
+    # Nothing to do server-side — the token lives in the frontend's
+    # localStorage (see lib/api.js), not a cookie, so "logging out" is just
+    # the frontend discarding it. Kept as a real endpoint (rather than
+    # removed) so the frontend has a stable place to call on logout even if
+    # server-side revocation gets added later.
+    pass
 
 
 @router.get("/me", response_model=AuthOut)

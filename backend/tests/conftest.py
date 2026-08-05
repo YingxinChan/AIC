@@ -42,8 +42,8 @@ def _new_auth_client():
     c = TestClient(app)
     email = f"test+{uuid.uuid4()}@example.com"
     response = c.post("/api/auth/register", json={"email": email, "password": "testpass123"})
-    token = response.cookies.get("access_token")
-    c.cookies.set("access_token", token)
+    token = response.json()["token"]
+    c.headers["Authorization"] = f"Bearer {token}"
     return c
 
 

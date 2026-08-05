@@ -8,6 +8,10 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!window.localStorage.getItem('access_token')) {
+      setLoading(false)
+      return
+    }
     getMe()
       .then(data => setUser(data.user))
       .catch(() => setUser(null))

@@ -38,9 +38,14 @@ async def get_current_user(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    token = request.cookies.get("access_token")
-    if not token:
+    # Bearer header, not a cookie — frontend (Netlify) and backend (Render)
+    # are different sites, and cross-site cookies are unreliable across
+    # browsers (Safari/Chrome third-party-cookie restrictions block them
+    # outright regardless of SameSite=None) — see lib/api.js on the frontend.
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not authenticated")
+    token = auth_header.removeprefix("Bearer ")
     payload = decode_access_token(token)
     user_id = payload.get("sub")
     if not user_id:
