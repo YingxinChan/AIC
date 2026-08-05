@@ -150,8 +150,13 @@ async def run_auto_swap(db: AsyncSession) -> dict:
                 trip.lat, trip.lng,
                 window_start.isoformat(), window_end.isoformat(),
             )
-        except Exception:
-            continue  # transient forecast failure — retried on the next scheduled run
+        except Exception as e:
+            # Previously silent — a run where every trip hit this (e.g. a
+            # sustained Open-Meteo 429) looked identical in the logs to a
+            # run that genuinely found no weather risk anywhere. Retried on
+            # the next scheduled run either way.
+            print(f"[auto_swap] trip {trip.id}: weather fetch failed, skipping — {e}", flush=True)
+            continue
 
         # Hourly rain data, used by RainRule to refine which activities on a
         # rainy day are actually affected (their time_slot overlaps a rainy
