@@ -124,16 +124,35 @@ def _summarize_sun_times(times: list[str], threshold_minutes: int = SUN_TIME_DRI
     return f"between {earliest} and {latest}"
 
 
+def _day_phrase(day_numbers: list[int]) -> tuple[str, str, str]:
+    """(comma-joined day list, "day"/"days", "that day"/"those days") for a
+    non-empty list of 1-indexed day numbers — the same pluralization used
+    across every rule-steering sentence below."""
+    day_list = ", ".join(str(n) for n in day_numbers)
+    day_word = "day" if len(day_numbers) == 1 else "days"
+    that_day = "that day" if len(day_numbers) == 1 else "those days"
+    return day_list, day_word, that_day
+
+
 async def _trip_rule_day_numbers(
     trip: Trip, db: AsyncSession
-) -> tuple[dict[str, list[int]], dict[int, str], dict[int, str], dict[int, str], float | None]:
-    """For each ACTIVE_RULES rule, which day numbers (1-indexed) within the
-    forecast horizon already trigger it — so generation can steer away from
-    planning a mismatched activity for those days directly, instead of
-    relying entirely on the auto-swap job to fix it afterward. Days beyond
-    the ~16-day forecast horizon never trigger a rule here (see is_climatology
-    handling below); those are exactly what the auto-swap job still handles
-    once they enter range (or if the forecast changes after generation).
+) -> tuple[dict[str, list[int]], dict[int, str], dict[int, str], dict[int, str], float | None, set[int]]:
+    """For each ACTIVE_RULES rule, which day numbers (1-indexed) trigger it —
+    so generation can steer away from planning a mismatched activity for
+    those days directly, instead of relying entirely on the auto-swap job to
+    fix it afterward. Every rule runs against every day, in-horizon or not —
+    each rule's own day_triggers() already handles a climatology day safely:
+    RainRule substitutes rain_chance for heavy_rain_warning (see weather_rules
+    .RainRule), while FogRule/ExtremeUVRule naturally never fire since
+    visibility_km/uv_level are absent/"Unknown" on climatology days (Open-
+    Meteo's Archive API has no historical visibility or UV data at all).
+    WindRule/ExtremeHeatRule/ExtremeColdRule/BeachSafetyRule read fields
+    (wind_level, temp_min/max, beach_safety_level) climatology genuinely
+    computes as real historical averages, so they fire the same way on
+    either source. The last return value (`climatology_days`) tells the
+    caller which day numbers came from climatology, so it can phrase those
+    differently — a historical average deserves softer wording than a live
+    forecast, not the same sentence.
 
     Also returns a day_number -> human-readable rainy-hour-window mapping
     (e.g. "between 08:00 and 11:00"), populated only for heavy-rain (not
@@ -154,23 +173,18 @@ async def _trip_rule_day_numbers(
     with no sunrise/sunset) is simply absent from both dicts rather than
     raising.
 
-    Finally, returns the trip's average expected temperature (mean of every
+    Also returns the trip's average expected temperature (mean of every
     known temp_max/temp_min across the *entire* trip range, not just the
     forecast horizon) — get_weather_prediction() already blends real forecast
     days with historical-climatology days for anything beyond the horizon
     (see weather_service.py), so a far-future trip planned entirely beyond
     real forecast range still gets a historically-informed "expect ~X°C"
-    signal instead of no seasonal context at all. Climatology days are
-    excluded from rule_day_numbers/rain_windows above (`is_climatology`
-    guard) — a historical average isn't a live prediction, and e.g. a hot
-    destination's historical mean could otherwise spuriously trigger
-    ExtremeHeatRule the same way a real forecast would — but their real
-    computed temps still count toward the average.
+    signal instead of no seasonal context at all.
     """
     if trip.lat == 0.0 and trip.lng == 0.0:
         coords = geocoding_service.geocode(trip.destination)
         if not coords:
-            return {}, {}, {}, {}, None
+            return {}, {}, {}, {}, None, set()
         trip.lat, trip.lng = coords
         await db.commit()
 
@@ -182,14 +196,14 @@ async def _trip_rule_day_numbers(
     # below wants every day of the trip, not just the in-horizon portion.
     window_end = trip.end_date
     if window_start > window_end:
-        return {}, {}, {}, {}, None
+        return {}, {}, {}, {}, None, set()
 
     try:
         forecast_days = get_weather_prediction(
             trip.lat, trip.lng, window_start.isoformat(), window_end.isoformat()
         )
     except Exception:
-        return {}, {}, {}, {}, None  # a weather fetch failure shouldn't block itinerary generation
+        return {}, {}, {}, {}, None, set()  # a weather fetch failure shouldn't block itinerary generation
 
     # Hourly data has no climatology equivalent (Open-Meteo doesn't offer
     # historical hourly detail here) and is only used for rain-window
@@ -217,6 +231,7 @@ async def _trip_rule_day_numbers(
     sunrise_by_day: dict[int, str] = {}
     sunset_by_day: dict[int, str] = {}
     known_temps: list[float] = []
+    climatology_days: set[int] = set()
     for forecast_day in forecast_days:
         day_number = (date.fromisoformat(forecast_day["date"]) - trip.start_date).days + 1
 
@@ -226,11 +241,18 @@ async def _trip_rule_day_numbers(
             sunrise_by_day[day_number] = sunrise
             sunset_by_day[day_number] = sunset
 
-        if not forecast_day.get("is_climatology"):
-            for rule in ACTIVE_RULES:
-                if rule.day_triggers(forecast_day):
-                    rule_day_numbers[rule.id].append(day_number)
+        if forecast_day.get("is_climatology"):
+            climatology_days.add(day_number)
 
+        for rule in ACTIVE_RULES:
+            if rule.day_triggers(forecast_day):
+                rule_day_numbers[rule.id].append(day_number)
+
+        # Hourly rain-window refinement only ever applies to a real forecast
+        # day — hourly data has no climatology equivalent, and climatology's
+        # rain_chance-triggered days (see RainRule.day_triggers) get their
+        # own historical-wording sentence in generate_itinerary() instead.
+        if not forecast_day.get("is_climatology"):
             is_heavy_rain_day = (
                 forecast_day.get("heavy_rain_warning")
                 and forecast_day.get("weather_code") not in RainRule.THUNDERSTORM_CODES
@@ -254,6 +276,7 @@ async def _trip_rule_day_numbers(
         sunrise_by_day,
         sunset_by_day,
         avg_temp,
+        climatology_days,
     )
 
 
@@ -316,7 +339,9 @@ async def generate_itinerary(trip_id: int, db: AsyncSession, user_id: int) -> di
 
     content = f'Plan a {num_days}-day {destination} itinerary for the trip "{trip.name}".'
 
-    rule_day_numbers, rain_windows, sunrise_by_day, sunset_by_day, avg_temp = await _trip_rule_day_numbers(trip, db)
+    rule_day_numbers, rain_windows, sunrise_by_day, sunset_by_day, avg_temp, climatology_days = (
+        await _trip_rule_day_numbers(trip, db)
+    )
     for rule in ACTIVE_RULES:
         day_numbers = rule_day_numbers.get(rule.id, [])
         if not day_numbers:
@@ -335,12 +360,15 @@ async def generate_itinerary(trip_id: int, db: AsyncSession, user_id: int) -> di
             #
             # Days with a known specific rainy-hour window (rain_windows)
             # get their own sentence so Claude can schedule around it
-            # directly; the rest (thunderstorm days, or heavy-rain days
-            # where hourly data wasn't available) keep the original
-            # whole-day wording, unchanged from before targeted rules or
-            # hourly refinement existed.
+            # directly; real-forecast days without one (thunderstorm days,
+            # or heavy-rain days where hourly data wasn't available) keep
+            # the original whole-day wording, unchanged from before
+            # targeted rules or hourly refinement existed; climatology-
+            # triggered days (rain_chance, not a live warning) get their own
+            # softer historical wording instead of either.
             windowed_days = [d for d in day_numbers if d in rain_windows]
-            blanket_days = [d for d in day_numbers if d not in rain_windows]
+            blanket_days = [d for d in day_numbers if d not in rain_windows and d not in climatology_days]
+            historical_days = [d for d in day_numbers if d in climatology_days]
 
             for day_number in windowed_days:
                 content += (
@@ -350,21 +378,39 @@ async def generate_itinerary(trip_id: int, db: AsyncSession, user_id: int) -> di
                 )
 
             if blanket_days:
-                day_list = ", ".join(str(n) for n in blanket_days)
-                day_word = "day" if len(blanket_days) == 1 else "days"
-                that_day = "that day" if len(blanket_days) == 1 else "those days"
+                day_list, day_word, that_day = _day_phrase(blanket_days)
                 content += (
                     f' Heavy rain is already forecast for {day_word} {day_list} of this trip — '
                     f'plan only indoor activities for {that_day}, not outdoor ones.'
                 )
+
+            if historical_days:
+                day_list, day_word, that_day = _day_phrase(historical_days)
+                content += (
+                    f' {day_word.capitalize()} {day_list} of this trip (beyond the real forecast '
+                    f'range) has historically been rainy around this time of year at this '
+                    f'destination — consider planning only indoor activities for {that_day}, or '
+                    f'keeping a flexible backup, if possible.'
+                )
         else:
-            day_list = ", ".join(str(n) for n in day_numbers)
-            day_word = "day" if len(day_numbers) == 1 else "days"
-            that_day = "that day" if len(day_numbers) == 1 else "those days"
-            content += (
-                f' {day_word.capitalize()} {day_list} may not be suitable for '
-                f'{rule.avoid_phrase} — avoid planning those for {that_day} if possible.'
-            )
+            real_days = [d for d in day_numbers if d not in climatology_days]
+            historical_days = [d for d in day_numbers if d in climatology_days]
+
+            if real_days:
+                day_list, day_word, that_day = _day_phrase(real_days)
+                content += (
+                    f' {day_word.capitalize()} {day_list} may not be suitable for '
+                    f'{rule.avoid_phrase} — avoid planning those for {that_day} if possible.'
+                )
+
+            if historical_days:
+                day_list, day_word, that_day = _day_phrase(historical_days)
+                content += (
+                    f' {day_word.capitalize()} {day_list} of this trip (beyond the real forecast '
+                    f'range) has historically not been ideal for {rule.avoid_phrase} around this '
+                    f'time of year at this destination — consider avoiding planning those for '
+                    f'{that_day} if possible.'
+                )
 
     if sunset_by_day:
         sunrise_desc = _summarize_sun_times(list(sunrise_by_day.values()))

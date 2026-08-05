@@ -134,6 +134,36 @@ def test_rain_rule_is_blanket_ignores_activity_tags():
     assert rule.evaluate(day, tagged) is not None
 
 
+def test_rain_rule_day_triggers_uses_rain_chance_for_climatology_days():
+    """day_triggers() (used by itinerary_service.py's pre-generation
+    steering, not evaluate()'s auto-swap path) substitutes rain_chance for
+    heavy_rain_warning on a climatology day, since climatology never
+    populates heavy_rain_warning at all."""
+    rule = RainRule()
+    at_threshold = {"is_climatology": True, "rain_chance": rule.CLIMATOLOGY_RAIN_CHANCE_THRESHOLD}
+    below_threshold = {"is_climatology": True, "rain_chance": rule.CLIMATOLOGY_RAIN_CHANCE_THRESHOLD - 1}
+    no_data = {"is_climatology": True, "rain_chance": None}
+    assert rule.day_triggers(at_threshold) is True
+    assert rule.day_triggers(below_threshold) is False
+    assert rule.day_triggers(no_data) is False
+
+
+def test_rain_rule_day_triggers_ignores_rain_chance_for_real_forecast_days():
+    """A real forecast day with a coincidental rain_chance value (shouldn't
+    normally happen, but the field isn't exclusive to climatology) must
+    still be judged on heavy_rain_warning/weather_code, not rain_chance."""
+    rule = RainRule()
+    day = {"is_climatology": False, "heavy_rain_warning": False, "rain_chance": 90}
+    assert rule.day_triggers(day) is False
+
+
+def test_rain_rule_reason_uses_historical_wording_for_climatology_days():
+    rule = RainRule()
+    reason = rule.reason({"is_climatology": True, "rain_chance": 65})
+    assert "historically" in reason.lower()
+    assert "65" in reason
+
+
 def test_active_rules_includes_rain_rule():
     assert any(isinstance(rule, RainRule) for rule in ACTIVE_RULES)
 

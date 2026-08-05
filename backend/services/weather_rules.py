@@ -77,11 +77,26 @@ class RainRule(WeatherRiskRule):
     # thunderstorm (see evaluate() below) — thunderstorm stays a whole-day
     # blanket signal regardless of hourly data.
     HOURLY_RAIN_PROBABILITY_THRESHOLD = 60  # TODO: confirm with team
+    # Climatology has no continuous-timeline heavy_rain_warning (see
+    # climatology_service.py's _summarize_climatology_rows — it's always
+    # None there) — rain_chance (% of the last 10 years' days with >=1mm
+    # rain around this date) is the closest available substitute for a
+    # climatology day, used only by day_triggers()/reason() below (which
+    # itinerary_service.py's pre-generation steering calls directly).
+    # evaluate() is untouched — auto_swap_service.py never fetches
+    # climatology days, so it never sees is_climatology at all.
+    # TODO: confirm with team.
+    CLIMATOLOGY_RAIN_CHANCE_THRESHOLD = 60
 
     def day_triggers(self, forecast_day: dict) -> bool:
+        if forecast_day.get("is_climatology"):
+            rain_chance = forecast_day.get("rain_chance")
+            return rain_chance is not None and rain_chance >= self.CLIMATOLOGY_RAIN_CHANCE_THRESHOLD
         return bool(forecast_day.get("heavy_rain_warning")) or forecast_day.get("weather_code") in self.THUNDERSTORM_CODES
 
     def reason(self, forecast_day: dict) -> str:
+        if forecast_day.get("is_climatology"):
+            return f"Historically rainy around this time of year ({forecast_day.get('rain_chance')}% of days)"
         if forecast_day.get("heavy_rain_warning"):
             return f"Heavy rain expected ({forecast_day['heavy_rain_probability']}% chance)"
         return "Thunderstorm expected"

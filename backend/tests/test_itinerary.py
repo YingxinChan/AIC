@@ -909,6 +909,111 @@ def test_generate_itinerary_fetches_weather_for_far_future_trips_too(auth_client
     assert "average around" not in prompt
 
 
+def test_generate_itinerary_climatology_day_triggers_heat_steering_with_historical_wording(auth_client, monkeypatch):
+    """Unlike the all-None placeholder above, climatology computes a real
+    historical temp_max — ExtremeHeatRule should now fire for it, but with
+    softer "historically" wording distinct from a real forecast's, not the
+    real-forecast sentence."""
+    mock_client = _mock_claude(monkeypatch)
+    monkeypatch.setattr("services.trips_service.geocoding_service.geocode", lambda destination: LONDON_COORDS)
+    far_day = (TODAY + timedelta(days=60)).isoformat()
+    trip_id = _create_trip(auth_client, start=far_day, end=far_day)
+
+    monkeypatch.setattr(
+        "services.itinerary_service.get_weather_prediction",
+        lambda lat, lon, start, end: [
+            {"date": far_day, "is_climatology": True, "temp_max": 38.0, "temp_min": 25.0},
+        ],
+    )
+    monkeypatch.setattr("services.itinerary_service.get_hourly_weather", MagicMock())
+
+    auth_client.post(f"/api/trips/{trip_id}/itinerary/generate")
+
+    prompt = mock_client.messages.create.call_args.kwargs["messages"][0]["content"]
+    assert "historically not been ideal" in prompt
+    assert "strenuous outdoor activities" in prompt
+    assert "Day 1 may not be suitable for" not in prompt  # not the real-forecast wording
+
+
+def test_generate_itinerary_climatology_rain_chance_triggers_historical_rain_wording(auth_client, monkeypatch):
+    mock_client = _mock_claude(monkeypatch)
+    monkeypatch.setattr("services.trips_service.geocoding_service.geocode", lambda destination: LONDON_COORDS)
+    far_day = (TODAY + timedelta(days=60)).isoformat()
+    trip_id = _create_trip(auth_client, start=far_day, end=far_day)
+
+    monkeypatch.setattr(
+        "services.itinerary_service.get_weather_prediction",
+        lambda lat, lon, start, end: [
+            {"date": far_day, "is_climatology": True, "rain_chance": 75, "temp_max": None, "temp_min": None},
+        ],
+    )
+    monkeypatch.setattr("services.itinerary_service.get_hourly_weather", MagicMock())
+
+    auth_client.post(f"/api/trips/{trip_id}/itinerary/generate")
+
+    prompt = mock_client.messages.create.call_args.kwargs["messages"][0]["content"]
+    assert "historically been rainy" in prompt
+    assert "Heavy rain is already forecast" not in prompt
+
+
+def test_generate_itinerary_climatology_day_below_rain_threshold_and_missing_fog_uv_data_stays_silent(
+    auth_client, monkeypatch,
+):
+    """rain_chance below the climatology threshold, and no visibility_km/
+    uv_level at all (Open-Meteo's Archive API has neither) — no rain, fog,
+    or UV sentence should appear, only wind/heat/cold/beach are ever
+    steerable from climatology."""
+    mock_client = _mock_claude(monkeypatch)
+    monkeypatch.setattr("services.trips_service.geocoding_service.geocode", lambda destination: LONDON_COORDS)
+    far_day = (TODAY + timedelta(days=60)).isoformat()
+    trip_id = _create_trip(auth_client, start=far_day, end=far_day)
+
+    monkeypatch.setattr(
+        "services.itinerary_service.get_weather_prediction",
+        lambda lat, lon, start, end: [
+            {"date": far_day, "is_climatology": True, "rain_chance": 30,
+             "temp_max": 20.0, "temp_min": 10.0, "wind_level": "Calm"},
+        ],
+    )
+    monkeypatch.setattr("services.itinerary_service.get_hourly_weather", MagicMock())
+
+    auth_client.post(f"/api/trips/{trip_id}/itinerary/generate")
+
+    prompt = mock_client.messages.create.call_args.kwargs["messages"][0]["content"]
+    assert "rainy" not in prompt.lower()
+    assert "viewpoint" not in prompt.lower()  # FogRule's avoid_phrase
+    assert "sun-exposed" not in prompt.lower()  # ExtremeUVRule's avoid_phrase
+
+
+def test_generate_itinerary_mixes_real_and_historical_rain_wording_correctly(auth_client, monkeypatch):
+    """A trip straddling the horizon with a real heavy-rain day and a
+    climatology rain_chance day should get both sentences, each with the
+    right wording for its own source — not conflated into one."""
+    mock_client = _mock_claude(monkeypatch)
+    monkeypatch.setattr("services.trips_service.geocoding_service.geocode", lambda destination: LONDON_COORDS)
+    trip_id = _create_trip(
+        auth_client, start=TODAY.isoformat(), end=(TODAY + timedelta(days=61)).isoformat(),
+    )
+
+    monkeypatch.setattr(
+        "services.itinerary_service.get_weather_prediction",
+        lambda lat, lon, start, end: [
+            {"date": TODAY.isoformat(), "is_climatology": False, "heavy_rain_warning": True,
+             "heavy_rain_probability": 85.0, "temp_max": 18.0, "temp_min": 10.0},
+            {"date": (TODAY + timedelta(days=61)).isoformat(), "is_climatology": True,
+             "rain_chance": 80, "temp_max": None, "temp_min": None},
+        ],
+    )
+    monkeypatch.setattr("services.itinerary_service.get_hourly_weather", lambda lat, lon, start, end: [])
+
+    auth_client.post(f"/api/trips/{trip_id}/itinerary/generate")
+
+    prompt = mock_client.messages.create.call_args.kwargs["messages"][0]["content"]
+    assert "Heavy rain is already forecast for day 1" in prompt
+    assert "historically been rainy" in prompt
+    assert "62" in prompt  # day number for the climatology-sourced day
+
+
 def test_generate_itinerary_succeeds_even_when_weather_fetch_fails(auth_client, monkeypatch):
     _mock_claude(monkeypatch)
     monkeypatch.setattr("services.trips_service.geocoding_service.geocode", lambda destination: LONDON_COORDS)
