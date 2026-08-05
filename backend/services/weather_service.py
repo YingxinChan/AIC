@@ -118,8 +118,23 @@ def _get_forecast_days(lat: float, lon: float, start_date: str, end_date: str) -
 
     hourly = forecast["hourly"]
 
+    # predictor.predict() returns, for each row, the model's probability of
+    # heavy rain on the FOLLOWING day (see ml/scripts/train_lgbm.py's
+    # heavy_rain_day1 target — trained on rain_day1 = shift(-1), i.e.
+    # tomorrow's rain given today's conditions). So predictions[i] belongs
+    # with day i+1, not day i — attaching it to day i (as if it were that
+    # day's own probability) mixed tomorrow's risk into today's flood/
+    # beach/hiking calculations below, which all otherwise use day i's own
+    # rain/wind/temp. Day 0 (today) has no day -1 features to have derived
+    # a prediction from, so it gets a neutral no-signal default instead of
+    # reusing its own next-day prediction (which would silently be the same
+    # leak in the other direction) — RainRule's raw rain_mm/weather_code
+    # checks still catch a rainy or stormy today regardless.
+    NO_ML_SIGNAL = {"heavy_rain_probability": 0.0, "heavy_rain_warning": False}
+
     results = [ ]
-    for i, prediction in enumerate(predictions):
+    for i in range(len(features)):
+        prediction = predictions[i - 1] if i > 0 else NO_ML_SIGNAL
 
         day = {
             "date": features.iloc[i]["date"].strftime("%Y-%m-%d"),

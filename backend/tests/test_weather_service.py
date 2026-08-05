@@ -11,7 +11,9 @@
 from datetime import date, timedelta
 from unittest.mock import patch
 
-from services.weather_service import get_weather_prediction, FORECAST_HORIZON_DAYS
+import pandas as pd
+
+from services.weather_service import get_weather_prediction, _get_forecast_days, FORECAST_HORIZON_DAYS
 
 
 def _forecast_day(d: date) -> dict:
@@ -99,4 +101,73 @@ def test_climatology_failure_does_not_take_out_the_forecast_portion():
     # the climatology portion blew up.
     assert len(result) == 2
     assert all(not d["is_climatology"] for d in result)
-    
+
+
+class _FakePredictor:
+    """predict() returns, for row i, the model's probability of heavy rain
+    on day i+1 (see ml/scripts/train_lgbm.py's heavy_rain_day1 target) —
+    exactly what the real WeatherPredictor does, just with fixed values so
+    the test can assert on which day each prediction ends up attached to."""
+    def __init__(self, predictions):
+        self._predictions = predictions
+
+    def predict(self, features_df):
+        return self._predictions
+
+
+def _fake_features(n_days: int) -> pd.DataFrame:
+    today = pd.Timestamp(date.today())
+    return pd.DataFrame({
+        "date": [today + timedelta(days=i) for i in range(n_days)],
+        "weather_code": [1] * n_days,
+        "temp_min": [10.0] * n_days,
+        "temp_max": [20.0] * n_days,
+        "rain": [0.0] * n_days,
+        "wind": [5.0] * n_days,
+        "visibility": [10000.0] * n_days,
+        "sunrise": ["06:00 AM"] * n_days,
+        "sunset": ["08:00 PM"] * n_days,
+        "uv_index": [3.0] * n_days,
+        "feels_like_temp": [18.0] * n_days,
+        "temp": [15.0] * n_days,
+        "snowfall": [0.0] * n_days,
+        "max_hourly_rain": [0.0] * n_days,
+    })
+
+
+def test_forecast_days_attach_each_prediction_to_the_day_it_actually_predicts():
+    """predictor.predict()'s row i is a prediction FOR day i+1 (trained on
+    today's conditions to predict tomorrow's heavy rain) — not for day i
+    itself. Regression test for the bug where day i was shown its own
+    next-day prediction as if it described day i's own risk, which then
+    fed into that day's flood/beach/hiking calculations alongside day i's
+    real, same-day rain/wind/temp."""
+    features = _fake_features(3)
+    predictions = [
+        {"heavy_rain_probability": 11.0, "heavy_rain_warning": True},   # predicts day 1
+        {"heavy_rain_probability": 22.0, "heavy_rain_warning": False},  # predicts day 2
+        {"heavy_rain_probability": 33.0, "heavy_rain_warning": True},   # predicts day 3 (not in output)
+    ]
+
+    with patch("services.weather_service.get_forecast") as mock_get_forecast, \
+         patch("services.weather_service.build_features", return_value=features), \
+         patch("services.weather_service.get_predictor", return_value=_FakePredictor(predictions)):
+        mock_get_forecast.return_value = {
+            "utc_offset_seconds": 0,
+            "hourly": {"time": [], "uv_index": []},
+        }
+        results = _get_forecast_days(1.0, 1.0, date.today().isoformat(), (date.today() + timedelta(days=2)).isoformat())
+
+    assert len(results) == 3
+    # Day 0 (today) has no prior day's features to have derived a
+    # prediction from — neutral default, not its own next-day prediction.
+    assert results[0]["heavy_rain_probability"] == 0.0
+    assert results[0]["heavy_rain_warning"] is False
+    # Day 1 gets predictions[0] (computed from day 0's features).
+    assert results[1]["heavy_rain_probability"] == 11.0
+    assert results[1]["heavy_rain_warning"] is True
+    # Day 2 gets predictions[1] (computed from day 1's features) — NOT
+    # predictions[2], which describes a day beyond this range.
+    assert results[2]["heavy_rain_probability"] == 22.0
+    assert results[2]["heavy_rain_warning"] is False
+
