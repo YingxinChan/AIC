@@ -836,3 +836,104 @@ def top_rule_id(scores: dict[str, float]) -> str | None:
         return None
     top_name, _ = contributing[0]
     return _METRIC_TO_RULE_ID.get(top_name)
+
+
+# ---------------------------------------------------------------------------
+# Revert thresholds — one "good" check per metric name that can appear in
+# Activity.swap_score_trace["scores"], used by auto_swap_service.py to
+# decide whether a previously-swapped activity's specific triggering
+# metric(s) have recovered. Deliberately stricter than the inverse of the
+# swap tier above (see good_cold/good_heat below), and checked per
+# contributing metric independently — a stacked swap (e.g. cold + wind
+# together) only reverts once EVERY metric that contributed at swap time is
+# independently good again, not just a recomputed combined score. Each
+# check resolves the same hourly-refined effective value score_activity()
+# itself would use (via the _effective_*() helpers above), not the raw
+# whole-day forecast_day field, so a revert decision is checked against the
+# exact same figure the original swap decision would be re-run against.
+# ---------------------------------------------------------------------------
+
+def good_rain(forecast_day: dict, activity=None, hourly: list[dict] | None = None) -> bool:
+    """Clear of score_rain()'s heavy tier (RainRule no longer fires) AND
+    below its light tier (rain_mm < 10) — anything at or above the light
+    tier is still a nonzero rain score, not "good"."""
+    if _rain_rule.evaluate(forecast_day, activity, hourly=hourly):
+        return False
+    rain_mm = forecast_day.get("rain_mm")
+    return rain_mm is not None and rain_mm < 10
+
+
+def good_cold(forecast_day: dict, activity=None, hourly: list[dict] | None = None) -> bool:
+    """Strictly above _score_cold_from_temp_min's own advisory floor (-5) —
+    at exactly -5 it still scores 50 (advisory), so this can't be >=."""
+    temp_min = _effective_temp_min(forecast_day, activity, hourly)
+    return temp_min is not None and temp_min > -5
+
+
+def good_heat(forecast_day: dict, activity=None, hourly: list[dict] | None = None) -> bool:
+    """Strictly below _score_heat_from_temp_max's own advisory floor (30) —
+    at exactly 30 it still scores 50 (advisory), so this can't be <=."""
+    temp_max = _effective_temp_max(forecast_day, activity, hourly)
+    return temp_max is not None and temp_max < 30
+
+
+def good_uv(forecast_day: dict, activity=None, hourly: list[dict] | None = None) -> bool:
+    uv_index_value = _effective_uv_index(forecast_day, activity, hourly)
+    if uv_index_value is None:
+        return False
+    return uv_level(uv_index_value) not in {"High", "Very High", "Extreme"}
+
+
+def good_wind(forecast_day: dict, activity=None, hourly: list[dict] | None = None) -> bool:
+    wind_speed = _effective_wind_speed(forecast_day, activity, hourly)
+    if wind_speed is None:
+        return False
+    return wind_level(wind_speed) not in {"Strong", "Very Strong"}
+
+
+def good_beach(forecast_day: dict, activity=None, hourly: list[dict] | None = None) -> bool:
+    """No hourly refinement — mirrors score_beach itself, which reads
+    beach_safety_level straight off forecast_day (see _SCORERS above)."""
+    return forecast_day.get("beach_safety_level") in {"Good", "Excellent"}
+
+
+def good_fog_safety(forecast_day: dict, activity=None, hourly: list[dict] | None = None) -> bool:
+    visibility_m = _effective_visibility_m(forecast_day, activity, hourly)
+    return visibility_m is not None and visibility_m >= 1000
+
+
+def good_fog_scenic(forecast_day: dict, activity=None, hourly: list[dict] | None = None) -> bool:
+    visibility_m = _effective_visibility_m(forecast_day, activity, hourly)
+    return visibility_m is not None and visibility_m >= 10000
+
+
+_GOOD_CHECKS = {
+    "rain": good_rain,
+    "cold": good_cold,
+    "heat": good_heat,
+    "uv": good_uv,
+    "wind": good_wind,
+    "beach": good_beach,
+    "fog_safety": good_fog_safety,
+    "fog_scenic": good_fog_scenic,
+}
+
+
+def contributing_metrics_recovered(
+    scores_at_swap: dict[str, float] | None,
+    forecast_day: dict,
+    activity=None,
+    hourly: list[dict] | None = None,
+) -> bool:
+    """True only if every metric that actually contributed (score > 0) at
+    swap time is independently back in its own "good" band on the current
+    forecast. An unknown metric name or an empty contributing set is
+    treated conservatively as "not recovered" — never guess a revert."""
+    contributing = [name for name, score in (scores_at_swap or {}).items() if score > 0]
+    if not contributing:
+        return False
+    for name in contributing:
+        check = _GOOD_CHECKS.get(name)
+        if check is None or not check(forecast_day, activity, hourly):
+            return False
+    return True

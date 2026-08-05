@@ -114,6 +114,12 @@ async def apply_swap(
     # exactly these metrics rather than re-deriving "why" from swap_reason's
     # free-text sentence.
     activity.swap_score_trace = score_trace
+    # Stashed before being overwritten below — original_lat/lng have no
+    # other backup (unlike name/location, which this function never
+    # touches), so a later revert_activity() call needs these to restore
+    # the map pin.
+    activity.original_lat = activity.lat
+    activity.original_lng = activity.lng
     # The map pin (lat/lng) has no separate pre/post-swap field — it always
     # reflects the activity's current plan, so it must move to the
     # alternative's coordinates here or it silently keeps pointing at the
@@ -124,4 +130,28 @@ async def apply_swap(
     # the pre-swap original. Claude can pick indoor OR a different outdoor
     # spot (see the system prompt above) — it must not be assumed indoor.
     activity.type = alternate["type"]
+    await db.commit()
+
+
+async def revert_activity(db: AsyncSession, activity: Activity) -> None:
+    """Undo a previous auto-swap once the weather that caused it has
+    cleared (see auto_swap_service._check_revert). name/location were never
+    touched by apply_swap, so they're already the original plan — only
+    lat/lng/type (overwritten in place above with no other backup) need
+    restoring here."""
+    activity.is_swapped = False
+    activity.alternate_name = ""
+    activity.alternate_location = ""
+    activity.swap_reason = ""
+    activity.swap_score_trace = None
+    if activity.original_lat is not None:
+        activity.lat = activity.original_lat
+    if activity.original_lng is not None:
+        activity.lng = activity.original_lng
+    activity.original_lat = None
+    activity.original_lng = None
+    # Only outdoor activities are ever swap-eligible (see
+    # auto_swap_service.run_auto_swap's Activity.type == "outdoor" filter),
+    # so the pre-swap type is always known without needing its own backup.
+    activity.type = "outdoor"
     await db.commit()

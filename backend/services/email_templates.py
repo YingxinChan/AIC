@@ -133,11 +133,35 @@ def _tip_row_text(t: dict) -> str:
     return f"- {t['trip_name']} ({day}): {t['name']} at {t['location']} — {t['reason']} — Tip: {t['tip']}"
 
 
-def swap_digest_email(swaps: list[dict], tips: list[dict] | None = None) -> tuple[str, str]:
-    """Combines this run's swaps and fixed-activity tips into one digest
-    email per user — never two emails for the same run. `tips` is optional
-    (defaults to none) so existing callers passing just `swaps` still work."""
+def _reverted_row_html(r: dict) -> str:
+    day = _format_day(r["day_date"])
+    trip_name = escape(r["trip_name"], quote=False)
+    restored_name = escape(r["restored_name"], quote=False)
+    restored_location = escape(r["restored_location"], quote=False)
+    return f'''<tr>
+      <td style="padding:16px 0; border-bottom:1px solid #f3f4f6;">
+        <p style="margin:0 0 8px; font-size:12px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.03em; font-family:{FONT_STACK};">{trip_name} &middot; {day}</p>
+        <p style="margin:0; font-size:14px; font-weight:600; color:#111827; font-family:{FONT_STACK};">{restored_name}</p>
+        <p style="margin:2px 0 0; font-size:12px; color:#6b7280; font-family:{FONT_STACK};">{restored_location}</p>
+        <p style="margin:8px 0 0; font-size:12px; color:#15803d; font-family:{FONT_STACK};">&#9989; Forecast improved — we've switched back to your original plan.</p>
+      </td>
+    </tr>'''
+
+
+def _reverted_row_text(r: dict) -> str:
+    day = _format_day(r["day_date"])
+    return f"- {r['trip_name']} ({day}): back to {r['restored_name']} at {r['restored_location']} — forecast improved"
+
+
+def swap_digest_email(
+    swaps: list[dict], tips: list[dict] | None = None, reverted: list[dict] | None = None
+) -> tuple[str, str]:
+    """Combines this run's swaps, fixed-activity tips, and reverts back to
+    the original plan into one digest email per user — never more than one
+    email for the same run. `tips`/`reverted` are optional (default to none)
+    so existing callers passing just `swaps` still work."""
     tips = tips or []
+    reverted = reverted or []
 
     sections_html = []
     sections_text = []
@@ -167,7 +191,23 @@ def swap_digest_email(swaps: list[dict], tips: list[dict] | None = None) -> tupl
             "Weather tips for your trip:\n\n" + "\n".join(_tip_row_text(t) for t in tips)
         )
 
-    heading = "Your itinerary was updated for weather" if swaps else "Weather tips for your upcoming trip"
+    if reverted:
+        rows = "".join(_reverted_row_html(r) for r in reverted)
+        sections_html.append(f"""
+          <p style="margin:24px 0 16px; font-size:14px; color:#374151; line-height:1.6; font-family:{FONT_STACK};">
+            Good news — the forecast improved, so these plans are back to normal:
+          </p>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">{rows}</table>
+        """)
+        sections_text.append(
+            "Good news — the forecast improved for these plans:\n\n"
+            + "\n".join(_reverted_row_text(r) for r in reverted)
+        )
+
+    if swaps or reverted:
+        heading = "Your itinerary was updated for weather"
+    else:
+        heading = "Weather tips for your upcoming trip"
 
     body_html = "".join(sections_html)
     text = "\n\n".join(sections_text)

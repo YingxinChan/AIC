@@ -29,6 +29,13 @@ class Activity(Base):
     # see auto_swap_service.py) or for an activity never swapped.
     swap_score_trace: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
 
+    # Pre-swap lat/lng, stashed by swap_service.apply_swap() before it moves
+    # lat/lng to the alternate's coordinates (which have no other backup —
+    # unlike name/location, which apply_swap never touches). None for an
+    # activity never swapped; cleared back to None on revert.
+    original_lat: Mapped[float | None] = mapped_column(Float, nullable=True)
+    original_lng: Mapped[float | None] = mapped_column(Float, nullable=True)
+
     # Comma-separated subset of {"view_dependent", "wind_exposed",
     # "strenuous_outdoor", "beach"} — tagged by Claude at generation time,
     # read by services/weather_rules.py's targeted rules to decide which
