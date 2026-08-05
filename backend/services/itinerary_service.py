@@ -622,7 +622,7 @@ async def _tag_weather_sensitivity(name: str, location: str, activity_type: str,
     if not settings.anthropic_api_key:
         return []
     try:
-        client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+        client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key, timeout=30.0)
         response = await client.messages.create(
             model=MODEL,
             max_tokens=128,

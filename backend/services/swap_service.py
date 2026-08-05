@@ -66,7 +66,7 @@ async def find_alternative_activity(
             f'Do not suggest any of those — pick something different.'
         )
 
-    client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+    client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key, timeout=30.0)
     response = await client.messages.create(
         model=MODEL,
         max_tokens=512,

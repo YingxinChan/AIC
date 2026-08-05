@@ -13,7 +13,15 @@ engine = create_async_engine(
     pool_recycle=300,
     # Supabase uses pgbouncer in transaction mode — asyncpg prepared statements are not
     # supported. statement_cache_size=0 disables them; jit=off avoids related pgbouncer bugs.
-    connect_args={"server_settings": {"jit": "off"}, "statement_cache_size": 0}
+    # timeout/command_timeout: without these, asyncpg has no bound on how long it'll wait
+    # to establish a connection or finish a query — a stalled network path (seen in practice
+    # from GitHub Actions' runners) would hang indefinitely instead of failing fast.
+    connect_args={
+        "server_settings": {"jit": "off"},
+        "statement_cache_size": 0,
+        "timeout": 10,
+        "command_timeout": 30,
+    }
 )
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
