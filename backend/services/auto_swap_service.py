@@ -184,12 +184,17 @@ async def run_auto_swap(db: AsyncSession) -> dict:
             activities_by_date.setdefault(activity.day_date.isoformat(), []).append(activity)
 
         # Fixed activities in the same window get a tip instead of a swap
-        # (see run_auto_swap's docstring) — not filtered to type=="outdoor"
-        # since a fixed indoor activity just won't match any rule in
-        # practice, no need to assume that structurally.
+        # (see run_auto_swap's docstring). Filtered to type=="outdoor" —
+        # unlike a swapped activity (whose `type` can flip to its alternate's
+        # type post-swap), a *fixed* activity's `type` is never mutated, so
+        # this reliably means "genuinely indoors": score_activity()'s rain
+        # and fog_safety checks are blanket (not gated by weather_sensitivity
+        # tag), so without this filter a fixed indoor museum visit would
+        # still get a "bring an umbrella" tip on a rainy day.
         fixed_activities_result = await db.execute(
             select(Activity).where(
                 Activity.trip_id == trip.id,
+                Activity.type == "outdoor",
                 Activity.is_fixed.is_(True),
                 Activity.day_date >= window_start,
                 Activity.day_date <= window_end,

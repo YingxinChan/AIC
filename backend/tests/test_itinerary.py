@@ -1207,6 +1207,46 @@ def test_update_activity_does_not_reset_swap_state_when_unrelated_fields_change(
     assert activity["alternate_name"] == "Science Museum"
 
 
+def test_update_activity_does_not_reset_swap_state_when_name_location_resubmitted_unchanged(
+    auth_client, monkeypatch,
+):
+    """The edit-activity form always submits name/location pre-filled with
+    the currently-displayed value (the alternate, if swapped) — even when
+    the user only meant to change something else, like the time slot. That
+    shouldn't be treated as a rename just because the keys are present in
+    the request; only an *actual* change to what's displayed should reset
+    swap state."""
+    trip_id, activity_id = _generate_one_activity(auth_client, monkeypatch)
+
+    async def _mark_swapped():
+        async with _TestSessionLocal() as db:
+            result = await db.execute(select(Activity).where(Activity.id == activity_id))
+            activity = result.scalar_one()
+            activity.is_swapped = True
+            activity.alternate_name = "Science Museum"
+            activity.alternate_location = "Exhibition Road"
+            activity.swap_reason = "Heavy rain expected (80% chance)"
+            await db.commit()
+    asyncio.run(_mark_swapped())
+
+    response = auth_client.patch(
+        f"/api/trips/{trip_id}/itinerary/activities/{activity_id}",
+        json={
+            "name": "Science Museum", "location": "Exhibition Road",
+            "lat": 51.4978, "lng": -0.1746, "time_slot": "14:00 - 16:00",
+        },
+    )
+    assert response.status_code == 200
+
+    activity = next(
+        a for day in response.json()["days"] for a in day["activities"] if a["id"] == activity_id
+    )
+    assert activity["time_slot"] == "14:00 - 16:00"
+    assert activity["is_swapped"] is True
+    assert activity["alternate_name"] == "Science Museum"
+    assert activity["swap_reason"] == "Heavy rain expected (80% chance)"
+
+
 def _mock_tag_claude(monkeypatch, tags=None):
     """Mocks the same anthropic client create_activity()'s tagging call
     uses, returning the {"weather_sensitivity": [...]} shape (not

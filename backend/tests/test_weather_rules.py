@@ -23,6 +23,7 @@ from services.weather_rules import (
     score_rain,
     score_uv,
     score_wind,
+    should_revert,
     top_rule_id,
 )
 
@@ -377,6 +378,46 @@ def test_score_activity_moderate_rain_stacks_with_another_moderate_risk():
     assert result["scores"]["beach"] == 50
     assert result["combined"] == 75.0
     assert result["adjusted"] >= SWAP_THRESHOLD
+
+
+def test_should_revert_does_not_revert_when_two_other_metrics_still_stack_past_threshold():
+    """Swapped for rain (dominant, 90). Rain has since cleared, but this
+    same strenuous_outdoor activity's heat (50) and UV (50) — each merely
+    advisory alone — now combine to 50 + 0.5*50 = 75, over SWAP_THRESHOLD.
+    Reverting anyway would walk it straight into a currently swap-worthy
+    compound risk, just not the one it was originally swapped for — the
+    same stacking rule that can create a swap must be honored when
+    deciding whether it's safe to undo one."""
+    activity = Activity(
+        trip_id=1, day_date=date.today(), name="Hill Run", type="outdoor",
+        time_slot="10:00 - 12:00", weather_sensitivity="strenuous_outdoor",
+    )
+    scores_at_swap = {"rain": 90}
+    forecast_day = {
+        "heavy_rain_warning": False, "rain_mm": 2,  # rain: cleared (good_rain True)
+        "temp_max": 32,   # heat: advisory (50) alone
+        "uv_index": 7,    # uv: "High" -> advisory (50) alone
+        "visibility_m": 15000,
+    }
+    assert should_revert(scores_at_swap, forecast_day, activity, today=date.today()) is False
+
+
+def test_should_revert_reverts_when_remaining_metrics_stay_below_threshold_even_combined():
+    """Same shape as the stacking case above, but heat/UV are mild enough
+    that even combined they stay under SWAP_THRESHOLD — revert should
+    proceed."""
+    activity = Activity(
+        trip_id=1, day_date=date.today(), name="Hill Run", type="outdoor",
+        time_slot="10:00 - 12:00", weather_sensitivity="strenuous_outdoor",
+    )
+    scores_at_swap = {"rain": 90}
+    forecast_day = {
+        "heavy_rain_warning": False, "rain_mm": 2,
+        "temp_max": 20,   # heat: 0
+        "uv_index": 3,    # uv: 0
+        "visibility_m": 15000,
+    }
+    assert should_revert(scores_at_swap, forecast_day, activity, today=date.today()) is True
 
 
 def test_score_fog_safety_boundaries_use_meters_not_km():
