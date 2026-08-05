@@ -1,0 +1,35 @@
+name: Weather check (auto-swap + digest emails)
+
+# Replaces the Celery Beat schedule in backend/core/celery.py — running an
+# always-on Celery worker/scheduler isn't free on any mainstream host, but
+# this same "run_auto_swap + email the results" logic already has a
+# standalone entry point (backend/scripts/trigger_weather_check.py) that
+# needs no Celery/Redis at all. A scheduled GitHub Actions run gets the same
+# every-3-hours behavior at zero cost.
+on:
+  schedule:
+    - cron: "0 */3 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  weather-check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r requirements.txt
+
+      - run: python scripts/trigger_weather_check.py
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
