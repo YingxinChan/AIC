@@ -7,7 +7,11 @@ Usage: python scripts/debug_db_ping.py
 """
 
 import asyncio
+import os
+import sys
 import time
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from core.database import AsyncSessionLocal
 from sqlalchemy import text
