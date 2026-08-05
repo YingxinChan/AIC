@@ -25,9 +25,6 @@ class ItineraryDayOut(BaseModel):
 class ItineraryOut(BaseModel):
     days: list[ItineraryDayOut]
 
-class SwapRequest(BaseModel):
-    swap_to: str  # "indoor" | "outdoor"
-
 class UpdateActivityRequest(BaseModel):
     day_date: date | None = None
     time_slot: str | None = None

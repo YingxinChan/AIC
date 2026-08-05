@@ -64,6 +64,12 @@ def test_get_itinerary_404_for_missing_trip(auth_client):
     assert response.status_code == 404
 
 
+def test_get_itinerary_404_for_another_users_trip(auth_client, other_auth_client):
+    trip_id = _create_trip(auth_client)
+    response = other_auth_client.get(f"/api/trips/{trip_id}/itinerary/")
+    assert response.status_code == 404
+
+
 def test_get_itinerary_not_generated_yet(auth_client):
     trip_id = _create_trip(auth_client)
     response = auth_client.get(f"/api/trips/{trip_id}/itinerary/")
@@ -1029,24 +1035,6 @@ def test_generate_itinerary_succeeds_even_when_weather_fetch_fails(auth_client, 
     assert "days" in response.json()
 
 
-def test_swap_activity_returns_stub(auth_client):
-    trip_id = _create_trip(auth_client)
-    response = auth_client.patch(
-        f"/api/trips/{trip_id}/itinerary/activities/1/swap",
-        json={"swap_to": "indoor"},
-    )
-    assert response.status_code == 200
-    assert response.json()["status"] == "not_implemented"
-
-
-def test_swap_activity_404_for_missing_trip(auth_client):
-    response = auth_client.patch(
-        "/api/trips/999999/itinerary/activities/1/swap",
-        json={"swap_to": "indoor"},
-    )
-    assert response.status_code == 404
-
-
 def _generate_one_activity(auth_client, monkeypatch, **trip_kwargs):
     """Generate a real itinerary via the API and return (trip_id, activity_id)
     for its single activity — a real, owned row to PATCH against."""
@@ -1076,6 +1064,28 @@ def test_update_activity_404_for_missing_activity(auth_client, monkeypatch):
         f"/api/trips/{trip_id}/itinerary/activities/999999", json={"name": "New Name"},
     )
     assert response.status_code == 404
+
+
+def test_update_activity_404_for_another_users_activity(auth_client, other_auth_client, monkeypatch):
+    trip_id, activity_id = _generate_one_activity(auth_client, monkeypatch)
+    response = other_auth_client.patch(
+        f"/api/trips/{trip_id}/itinerary/activities/{activity_id}", json={"name": "Hijacked Activity"},
+    )
+    assert response.status_code == 404
+    # Confirm it wasn't silently applied despite the 404.
+    itinerary = auth_client.get(f"/api/trips/{trip_id}/itinerary/").json()
+    names = [a["name"] for day in itinerary["days"] for a in day["activities"]]
+    assert "Hijacked Activity" not in names
+
+
+def test_delete_activity_404_for_another_users_activity(auth_client, other_auth_client, monkeypatch):
+    trip_id, activity_id = _generate_one_activity(auth_client, monkeypatch)
+    response = other_auth_client.delete(f"/api/trips/{trip_id}/itinerary/activities/{activity_id}")
+    assert response.status_code == 404
+    # Confirm it still exists for its real owner.
+    itinerary = auth_client.get(f"/api/trips/{trip_id}/itinerary/").json()
+    activity_ids = [a["id"] for day in itinerary["days"] for a in day["activities"]]
+    assert activity_id in activity_ids
 
 
 def test_update_activity_edits_day_time_name_location_and_fixed(auth_client, monkeypatch):

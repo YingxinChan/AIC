@@ -38,14 +38,25 @@ def client():
     return TestClient(app)
 
 
-@pytest.fixture
-def auth_client():
+def _new_auth_client():
     c = TestClient(app)
     email = f"test+{uuid.uuid4()}@example.com"
     response = c.post("/api/auth/register", json={"email": email, "password": "testpass123"})
     token = response.cookies.get("access_token")
     c.cookies.set("access_token", token)
     return c
+
+
+@pytest.fixture
+def auth_client():
+    return _new_auth_client()
+
+
+@pytest.fixture
+def other_auth_client():
+    """A second, independently-registered user — for asserting that one
+    user's trips/activities are invisible/unmodifiable to another user."""
+    return _new_auth_client()
 
 
 def pytest_sessionfinish(session, exitstatus):

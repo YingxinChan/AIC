@@ -72,6 +72,34 @@ def test_delete_trip_404_when_not_found(auth_client):
     response = auth_client.delete("/api/trips/999999")
     assert response.status_code == 404
 
+def test_get_trip_404_for_another_users_trip(auth_client, other_auth_client):
+    create = auth_client.post("/api/trips/", json={
+        "name": "Summer Trip", "start_date": "2026-08-01", "end_date": "2026-08-07"
+    })
+    trip_id = create.json()["id"]
+    response = other_auth_client.get(f"/api/trips/{trip_id}")
+    assert response.status_code == 404
+
+def test_update_trip_404_for_another_users_trip(auth_client, other_auth_client):
+    create = auth_client.post("/api/trips/", json={
+        "name": "Summer Trip", "start_date": "2026-08-01", "end_date": "2026-08-07"
+    })
+    trip_id = create.json()["id"]
+    response = other_auth_client.patch(f"/api/trips/{trip_id}", json={"name": "Hijacked Trip"})
+    assert response.status_code == 404
+    # Confirm it wasn't silently applied despite the 404.
+    assert auth_client.get(f"/api/trips/{trip_id}").json()["name"] == "Summer Trip"
+
+def test_delete_trip_404_for_another_users_trip(auth_client, other_auth_client):
+    create = auth_client.post("/api/trips/", json={
+        "name": "Summer Trip", "start_date": "2026-08-01", "end_date": "2026-08-07"
+    })
+    trip_id = create.json()["id"]
+    response = other_auth_client.delete(f"/api/trips/{trip_id}")
+    assert response.status_code == 404
+    # Confirm it still exists for its real owner.
+    assert auth_client.get(f"/api/trips/{trip_id}").status_code == 200
+
 def test_delete_trip_with_generated_activities_returns_204(auth_client, monkeypatch):
     # Regression test: deleting a trip that already has AI-generated activities
     # used to 500 with a ForeignKeyViolationError since activities.trip_id had

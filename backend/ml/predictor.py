@@ -33,6 +33,18 @@ class WeatherPredictor:
         # Get date before drop column
         dates = features_df["date"].copy()
 
+        # Check for missing features — must run before the features_df[...]
+        # indexing below, which would otherwise raise its own raw KeyError
+        # first, so this friendlier message never actually surfaced.
+        missing = [
+            f for f in self.selected_features
+            if f not in features_df.columns
+        ]
+        if missing:
+            raise ValueError(
+                f"Missing features: {missing}"
+            )
+
         # Ensure feature order matches training
         features_df = features_df[self.selected_features]
 
@@ -48,16 +60,6 @@ class WeatherPredictor:
                 "heavy_rain_probability": round(float(probability) * 100, 2),
                 "heavy_rain_warning": bool(warning)
             })
-
-        # Check for missing features
-        missing = [
-            f for f in self.selected_features
-            if f not in features_df.columns
-        ]
-        if missing:
-            raise ValueError(
-                f"Missing features: {missing}"
-            )
 
         return results
 

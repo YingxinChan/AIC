@@ -692,12 +692,6 @@ async def delete_activity(trip_id: int, activity_id: int, db: AsyncSession, user
     return await get_itinerary(trip_id, db, user_id)
 
 
-async def swap_activity(trip_id: int, activity_id: int, swap_to: str, db: AsyncSession, user_id: int) -> dict:
-    await _get_owned_trip(db, trip_id, user_id)
-    # STUB — replace with real swap logic once weather-triggered swaps are built
-    return {"status": "not_implemented", "data": {}}
-
-
 async def _get_owned_trip(db: AsyncSession, trip_id: int, user_id: int) -> Trip:
     result = await db.execute(select(Trip).where(Trip.id == trip_id, Trip.user_id == user_id))
     trip = result.scalar_one_or_none()
