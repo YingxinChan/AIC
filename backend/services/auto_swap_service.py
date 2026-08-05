@@ -10,10 +10,10 @@ from services.time_slot import parse_time_slot
 from services.weather_rules import (
     ADVISORY_THRESHOLD,
     SWAP_THRESHOLD,
-    contributing_metrics_recovered,
     describe_scores,
     describe_tip,
     score_activity,
+    should_revert,
     top_rule_id,
 )
 from services.weather_service import (
@@ -66,18 +66,20 @@ def _hours_until_activity(activity: Activity, now: datetime) -> float:
 
 
 def _check_revert(forecast_day: dict, activity: Activity, hourly: list[dict] | None) -> bool:
-    """A swap reverts once every metric that actually contributed at swap
-    time is independently good again (see
-    weather_rules.contributing_metrics_recovered). Legacy fallback: rows
-    swapped before rain was folded into the scoring engine (see
-    weather_rules.score_rain) never got a score_trace at all — treat those
-    as a synthetic single-metric "rain" trace so they still revert via
-    weather_rules.good_rain instead of never reverting."""
+    """A swap reverts once its dominant original cause is independently
+    good again AND no metric applicable to this activity — including one
+    that had nothing to do with the original swap — has since become
+    independently strong enough to justify a swap on its own (see
+    weather_rules.should_revert). Legacy fallback: rows swapped before rain
+    was folded into the scoring engine (see weather_rules.score_rain) never
+    got a score_trace at all — treat those as a synthetic single-metric
+    "rain" trace so they still revert via weather_rules.good_rain instead
+    of never reverting."""
     scores_at_swap = (
         {"rain": 1} if activity.swap_score_trace is None
         else activity.swap_score_trace.get("scores", {})
     )
-    return contributing_metrics_recovered(scores_at_swap, forecast_day, activity, hourly)
+    return should_revert(scores_at_swap, forecast_day, activity, hourly)
 
 
 async def run_auto_swap(db: AsyncSession) -> dict:

@@ -544,23 +544,26 @@ def test_auto_swap_reverts_when_the_contributing_metric_recovers(auth_client, mo
     assert activity.type == "outdoor"
 
 
-def test_auto_swap_does_not_revert_stacked_swap_while_only_some_metrics_recovered(auth_client, monkeypatch):
-    """wind + beach both contributed at swap time (combined 70). Wind alone
-    clearing shouldn't be enough — beach safety is still Moderate, so the
-    swap should stay in place."""
+def test_auto_swap_does_not_revert_when_a_different_metric_has_since_gone_strong_bad(auth_client, monkeypatch):
+    """The activity was swapped for fog alone (dominant, and only original
+    contributor). Fog has cleared, but UV — which had nothing to do with
+    the original swap (it was fine back then, so never even appeared in
+    swap_score_trace) — has since spiked to Extreme, which alone would
+    justify a swap. Reverting anyway would walk this activity straight
+    into a different, currently-active risk, so it must stay swapped."""
     trip_id = _create_trip_ending(auth_client, monkeypatch, days=5)
     far_out_day = TODAY + timedelta(days=3)
     activity_id = _add_activity(
-        trip_id, "indoor", name="Beach Windsurfing", day_date=far_out_day, time_slot="12:00 - 14:00",
-        weather_sensitivity="wind_exposed,beach", is_swapped=True,
-        alternate_name="Aquarium", alternate_location="County Hall",
-        swap_score_trace={"scores": {"fog_safety": 0, "wind": 50, "beach": 40}, "combined": 70, "adjusted": 70},
-        lat=51.5033, lng=-0.1195, original_lat=51.5, original_lng=-0.14,
+        trip_id, "indoor", name="Primrose Hill Viewpoint", day_date=far_out_day, time_slot="12:00 - 14:00",
+        weather_sensitivity="view_dependent,strenuous_outdoor", is_swapped=True,
+        alternate_name="British Museum", alternate_location="Great Russell St",
+        swap_score_trace={"scores": {"fog_safety": 0, "fog_scenic": 80}, "combined": 80, "adjusted": 80},
+        lat=51.5194, lng=-0.1270, original_lat=51.5364, original_lng=-0.1565,
     )
     _mock_weather(monkeypatch, forecast=[{
         "date": far_out_day.isoformat(), "heavy_rain_warning": False, "heavy_rain_probability": 2.0,
-        "wind_speed": 15,  # buckets to "Moderate" via ml.risk_calculator.wind_level() — recovered
-        "beach_safety_level": "Moderate",  # still not good
+        "visibility_m": 12000,  # fog_scenic's dominant cause: clearly recovered (>= 10000)
+        "uv_index": 12,         # "Extreme" via ml.risk_calculator.uv_level() — independently swap-worthy
     }])
     _mock_hourly_weather(monkeypatch)
 
@@ -570,6 +573,38 @@ def test_auto_swap_does_not_revert_stacked_swap_while_only_some_metrics_recovere
     assert our_reverts == []
     activity = _get_activity(activity_id)
     assert activity.is_swapped is True
+
+
+def test_auto_swap_reverts_when_dominant_metric_clears_even_if_a_secondary_one_is_merely_advisory(
+    auth_client, monkeypatch,
+):
+    """wind (dominant, 75) + cold (secondary, 50) both contributed at swap
+    time. Only the dominant metric needs to fully clear — a secondary
+    contributor left at a merely-advisory level (not independently strong
+    enough to justify a swap on its own) doesn't block the revert."""
+    trip_id = _create_trip_ending(auth_client, monkeypatch, days=5)
+    far_out_day = TODAY + timedelta(days=3)
+    activity_id = _add_activity(
+        trip_id, "indoor", name="Thames Boat Tour", day_date=far_out_day, time_slot="12:00 - 14:00",
+        weather_sensitivity="wind_exposed,strenuous_outdoor", is_swapped=True,
+        alternate_name="Aquarium", alternate_location="County Hall",
+        swap_score_trace={"scores": {"fog_safety": 0, "wind": 75, "cold": 50}, "combined": 100, "adjusted": 100},
+        lat=51.5033, lng=-0.1195, original_lat=51.5, original_lng=-0.14,
+    )
+    _mock_weather(monkeypatch, forecast=[{
+        "date": far_out_day.isoformat(), "heavy_rain_warning": False, "heavy_rain_probability": 2.0,
+        "wind_speed": 5,      # Calm — the dominant cause, clearly recovered
+        "temp_min": -7,       # still mildly cold (scores 50, advisory) but not independently swap-worthy (<70)
+    }])
+    _mock_hourly_weather(monkeypatch)
+
+    result = _run_auto_swap()
+    our_reverts = [r for r in result["reverted"] if r["trip_id"] == trip_id]
+
+    assert len(our_reverts) == 1
+    assert our_reverts[0]["activity_id"] == activity_id
+    activity = _get_activity(activity_id)
+    assert activity.is_swapped is False
 
 
 def test_auto_swap_does_not_revert_within_24h_commit_window(auth_client, monkeypatch):

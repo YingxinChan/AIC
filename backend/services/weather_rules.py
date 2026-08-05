@@ -840,17 +840,19 @@ def top_rule_id(scores: dict[str, float]) -> str | None:
 
 # ---------------------------------------------------------------------------
 # Revert thresholds — one "good" check per metric name that can appear in
-# Activity.swap_score_trace["scores"], used by auto_swap_service.py to
-# decide whether a previously-swapped activity's specific triggering
-# metric(s) have recovered. Deliberately stricter than the inverse of the
-# swap tier above (see good_cold/good_heat below), and checked per
-# contributing metric independently — a stacked swap (e.g. cold + wind
-# together) only reverts once EVERY metric that contributed at swap time is
-# independently good again, not just a recomputed combined score. Each
-# check resolves the same hourly-refined effective value score_activity()
-# itself would use (via the _effective_*() helpers above), not the raw
-# whole-day forecast_day field, so a revert decision is checked against the
-# exact same figure the original swap decision would be re-run against.
+# Activity.swap_score_trace["scores"], used by should_revert() below (via
+# auto_swap_service.py) to decide whether a previously-swapped activity's
+# dominant triggering metric has recovered. Deliberately stricter than the
+# inverse of the swap tier above (see good_cold/good_heat below) — e.g.
+# heat's revert bar is temp_max < 30, not <= 30, since 30 itself still
+# scores 50 (advisory). Each check resolves the same hourly-refined
+# effective value score_activity() itself would use (via the _effective_*()
+# helpers above), not the raw whole-day forecast_day field, so a revert
+# decision is checked against the exact same figure the original swap
+# decision would be re-run against. should_revert() additionally re-runs
+# score_activity() fresh to make sure no OTHER metric — including one that
+# had nothing to do with the original swap — has independently become
+# strong enough to justify a swap on its own in the meantime.
 # ---------------------------------------------------------------------------
 
 def good_rain(forecast_day: dict, activity=None, hourly: list[dict] | None = None) -> bool:
@@ -919,21 +921,43 @@ _GOOD_CHECKS = {
 }
 
 
-def contributing_metrics_recovered(
+def should_revert(
     scores_at_swap: dict[str, float] | None,
     forecast_day: dict,
     activity=None,
     hourly: list[dict] | None = None,
 ) -> bool:
-    """True only if every metric that actually contributed (score > 0) at
-    swap time is independently back in its own "good" band on the current
-    forecast. An unknown metric name or an empty contributing set is
-    treated conservatively as "not recovered" — never guess a revert."""
-    contributing = [name for name, score in (scores_at_swap or {}).items() if score > 0]
+    """True when the swap's dominant (worst-scoring) original cause is
+    independently good again AND no metric applicable to this activity —
+    including ones that had nothing to do with the original swap — is
+    currently strong enough on its own (fresh score >= SWAP_THRESHOLD) to
+    justify a swap by itself.
+
+    The second half matters because an activity's applicable metrics don't
+    change over its lifetime (they're gated by the static
+    weather_sensitivity tag), but their SCORES do as the forecast updates —
+    a metric that was fine at swap time (score 0, so absent from
+    _contributing_metrics below) can have turned dangerous by the time
+    revert is checked. Only re-checking the original cause would miss that
+    entirely (e.g. a scenic swap's fog clears, but this same activity's UV
+    has since gone Extreme) — score_activity() is re-run fresh here so
+    every applicable metric gets a current reading, not just the frozen
+    ones from swap time.
+
+    An unknown dominant metric name or an empty contributing set is treated
+    conservatively as "not recovered" — never guess a revert."""
+    contributing = _contributing_metrics(scores_at_swap or {})
     if not contributing:
         return False
-    for name in contributing:
-        check = _GOOD_CHECKS.get(name)
-        if check is None or not check(forecast_day, activity, hourly):
-            return False
-    return True
+    dominant_metric, _ = contributing[0]
+
+    good_check = _GOOD_CHECKS.get(dominant_metric)
+    if good_check is None or not good_check(forecast_day, activity, hourly):
+        return False
+
+    fresh = score_activity(forecast_day, activity, hourly)
+    return all(
+        score < SWAP_THRESHOLD
+        for name, score in fresh["scores"].items()
+        if name != dominant_metric
+    )
