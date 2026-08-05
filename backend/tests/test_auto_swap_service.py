@@ -207,6 +207,57 @@ def test_auto_swap_excludes_activities_swapped_earlier_in_the_same_run(auth_clie
     assert "British Museum" in calls_in_order[1].kwargs["exclude_names"]
 
 
+def test_auto_swap_updates_planned_names_when_a_revert_happens_mid_run(auth_client, monkeypatch):
+    """A revert earlier in the same run shouldn't leave the exclusion list
+    stale for a swap later in that same run: the reverted activity's old
+    alternate is no longer scheduled anywhere (should stop being excluded),
+    and its restored original plan is active again (should start being
+    excluded, so nothing else in this run gets suggested the exact same
+    name)."""
+    trip_id = _create_trip_ending(auth_client, monkeypatch, days=6)
+    revert_day = TODAY + timedelta(days=3)
+    # Close enough (<=2 days out, horizon_factor 0.9) that heavy rain's raw
+    # 90 still clears SWAP_THRESHOLD (70) once horizon-decayed (81) — a
+    # farther-out day would decay below threshold and never swap at all,
+    # which isn't what this test is checking.
+    swap_day = TODAY + timedelta(days=2)
+    reverting_id = _add_activity(
+        trip_id, "indoor", name="Hyde Park Walk", day_date=revert_day, time_slot="12:00 - 14:00",
+        weather_sensitivity="strenuous_outdoor", is_swapped=True,
+        alternate_name="British Museum", alternate_location="Great Russell St",
+        swap_reason="Extreme cold expected (around -12°C) — unsafe for extended outdoor exertion",
+        swap_score_trace={"scores": {"fog_safety": 0, "cold": 80}, "combined": 80, "adjusted": 80},
+        lat=51.5194, lng=-0.1270,
+        original_lat=51.5073, original_lng=-0.1657,
+    )
+    swapping_id = _add_activity(
+        trip_id, "outdoor", name="Regent's Park Picnic", day_date=swap_day,
+    )
+    _mock_weather(monkeypatch, forecast=[
+        {
+            "date": revert_day.isoformat(), "heavy_rain_warning": False, "heavy_rain_probability": 2.0,
+            "temp_min": 5, "temp_max": 15,
+        },
+        {
+            "date": swap_day.isoformat(), "heavy_rain_warning": True, "heavy_rain_probability": 80.0,
+        },
+    ])
+    _mock_hourly_weather(monkeypatch)
+    mock_find = _mock_find_alternative(monkeypatch)
+
+    result = _run_auto_swap()
+
+    assert any(r["activity_id"] == reverting_id for r in result["reverted"])
+    call = next(c for c in mock_find.call_args_list if c.args[0].id == swapping_id)
+    # "Hyde Park Walk" is active again post-revert — must be excluded so
+    # this later swap can't collide with it.
+    assert "Hyde Park Walk" in call.kwargs["exclude_names"]
+    # "British Museum" is no longer scheduled anywhere post-revert — a
+    # stale exclusion here would just be dead weight, but its absence
+    # confirms the set was actually updated rather than only ever grown.
+    assert "British Museum" not in call.kwargs["exclude_names"]
+
+
 def test_auto_swap_targeted_rule_only_swaps_the_tagged_activity(auth_client, monkeypatch):
     """Two outdoor activities scheduled the same foggy day — only the one
     tagged view_dependent should get swapped; the untagged one is unaffected

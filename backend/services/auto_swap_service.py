@@ -267,6 +267,14 @@ async def run_auto_swap(db: AsyncSession) -> dict:
                 previous_alternate_name = activity.alternate_name
                 previous_alternate_location = activity.alternate_location
                 await swap_service.revert_activity(db, activity)
+                # Keep planned_names in sync with this revert — its old
+                # alternate is no longer scheduled anywhere, and its
+                # restored original plan is active again, so a later swap
+                # in this same run shouldn't be able to suggest either the
+                # stale name (already gone) or the now-active one (would
+                # collide with this activity itself).
+                planned_names.discard(previous_alternate_name)
+                planned_names.add(activity.name)
                 reverted.append({
                     "trip_id": trip.id,
                     "activity_id": activity.id,

@@ -170,7 +170,7 @@ def swap_digest_email(
         rows = "".join(_swap_row_html(s) for s in swaps)
         sections_html.append(f"""
           <p style="margin:0 0 16px; font-size:14px; color:#374151; line-height:1.6; font-family:{FONT_STACK};">
-            The forecast means we've swapped the affected outdoor plans for indoor alternatives:
+            The forecast means we've swapped these plans for better-suited alternatives:
           </p>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0">{rows}</table>
         """)
