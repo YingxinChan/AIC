@@ -65,7 +65,11 @@ def get_forecast(lat: float, lon: float, start_date: str = None, end_date: str =
         f"&timezone=auto"
     )
 
-    response = requests.get(url)
+    # No timeout here would let a slow/stalled Open-Meteo response hang this
+    # call (and everything waiting on it — a live API request, or the
+    # scheduled weather-check job) indefinitely, since requests has no
+    # default timeout of its own.
+    response = requests.get(url, timeout=10)
     if response.status_code != 200:
         raise Exception(f"Request failed with status code {response.status_code}")
 
