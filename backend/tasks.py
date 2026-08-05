@@ -14,6 +14,6 @@ def check_weather_swaps():
 async def _check_weather_swaps():
     async with AsyncSessionLocal() as db:
         result = await run_auto_swap(db)
-        if result["swapped"] or result["tips"]:
-            await send_swap_digest_emails(db, result["swapped"], result["tips"])
+        if result["swapped"] or result["tips"] or result["reverted"]:
+            await send_swap_digest_emails(db, result["swapped"], result["tips"], result["reverted"])
         return result

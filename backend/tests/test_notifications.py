@@ -163,10 +163,10 @@ def _create_trip(
     return response.json()["id"], start_date
 
 
-def _run_digest(swapped, tips=None):
+def _run_digest(swapped, tips=None, reverted=None):
     async def _inner():
         async with _TestSessionLocal() as db:
-            return await send_swap_digest_emails(db, swapped, tips)
+            return await send_swap_digest_emails(db, swapped, tips, reverted)
     return asyncio.run(_inner())
 
 
@@ -377,6 +377,19 @@ def _tip(trip_id, activity_id, day_date="2026-08-01", name="Beach Day", location
     }
 
 
+def _reverted(
+    trip_id, activity_id, day_date="2026-08-01",
+    restored_name="Hyde Park Walk", restored_location="Hyde Park",
+    previous_alternate_name="British Museum", previous_alternate_location="Great Russell St",
+):
+    return {
+        "trip_id": trip_id, "activity_id": activity_id, "day_date": day_date,
+        "restored_name": restored_name, "restored_location": restored_location,
+        "previous_alternate_name": previous_alternate_name,
+        "previous_alternate_location": previous_alternate_location,
+    }
+
+
 def test_send_tip_only_digest_sends_an_email(
     auth_client,
     monkeypatch,
@@ -538,3 +551,94 @@ def test_combined_swap_and_tip_digest_sends_one_email(
     body = mock_send.call_args.args[2]
     assert "British Museum" in body
     assert "Beach Day" in body
+
+
+def test_send_reverted_only_digest_sends_an_email(
+    auth_client,
+    monkeypatch,
+):
+    trip_id, trip_start_date = _create_trip(
+        auth_client,
+        monkeypatch,
+    )
+
+    mock_send = MagicMock(
+        return_value={"status": "sent"}
+    )
+    monkeypatch.setattr(
+        "services.notifications_service.email_service.send_email",
+        mock_send,
+    )
+
+    results = _run_digest(
+        [],
+        reverted=[
+            _reverted(
+                trip_id,
+                1,
+                day_date=trip_start_date.isoformat(),
+            )
+        ],
+    )
+
+    assert len(results) == 1
+    assert results[0]["status"] == "sent"
+
+    subject = mock_send.call_args.args[1]
+    assert "updated" in subject.lower()
+
+    body = mock_send.call_args.args[2]
+    assert "Hyde Park Walk" in body
+    assert "forecast improved" in body.lower()
+
+
+def test_combined_swap_tip_and_reverted_digest_sends_one_email(
+    auth_client,
+    monkeypatch,
+):
+    trip_id, trip_start_date = _create_trip(
+        auth_client,
+        monkeypatch,
+    )
+
+    mock_send = MagicMock(
+        return_value={"status": "sent"}
+    )
+    monkeypatch.setattr(
+        "services.notifications_service.email_service.send_email",
+        mock_send,
+    )
+
+    day_date = trip_start_date.isoformat()
+
+    results = _run_digest(
+        [
+            _swap(
+                trip_id,
+                1,
+                day_date,
+            )
+        ],
+        tips=[
+            _tip(
+                trip_id,
+                2,
+                day_date=day_date,
+            )
+        ],
+        reverted=[
+            _reverted(
+                trip_id,
+                3,
+                day_date=day_date,
+            )
+        ],
+    )
+
+    assert len(results) == 1
+    mock_send.assert_called_once()
+
+    body = mock_send.call_args.args[2]
+    assert "British Museum" in body
+    assert "Beach Day" in body
+    assert "Hyde Park Walk" in body

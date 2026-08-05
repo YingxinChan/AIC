@@ -29,21 +29,38 @@ def _create_trip(auth_client, monkeypatch):
 
 def _add_activity(
     trip_id, activity_type, is_swapped=False, name="Hyde Park Walk", day_date=TODAY, weather_sensitivity="",
-    time_slot="10:00 - 12:00", is_fixed=False,
+    time_slot="10:00 - 12:00", is_fixed=False, alternate_name="", alternate_location="",
+    swap_reason="", swap_score_trace=None, lat=51.5073, lng=-0.1657, original_lat=None, original_lng=None,
 ):
     async def _inner():
         async with _TestSessionLocal() as db:
             activity = Activity(
                 trip_id=trip_id, day_date=day_date, name=name, type=activity_type,
                 time_slot=time_slot, location="Hyde Park", is_swapped=is_swapped,
-                lat=51.5073, lng=-0.1657,  # Hyde Park's real coordinates
+                lat=lat, lng=lng,  # defaults to Hyde Park's real coordinates
                 weather_sensitivity=weather_sensitivity, is_fixed=is_fixed,
+                alternate_name=alternate_name, alternate_location=alternate_location,
+                swap_reason=swap_reason, swap_score_trace=swap_score_trace,
+                original_lat=original_lat, original_lng=original_lng,
             )
             db.add(activity)
             await db.commit()
             await db.refresh(activity)
             return activity.id
     return asyncio.run(_inner())
+
+
+def _create_trip_ending(auth_client, monkeypatch, days):
+    """Like _create_trip, but with a longer window — needed for revert tests
+    whose activity must sit comfortably >=24h out (the default _create_trip
+    trip only spans TODAY..TODAY+1, too short for that)."""
+    monkeypatch.setattr("services.trips_service.geocoding_service.geocode", lambda destination: LONDON_COORDS)
+    response = auth_client.post("/api/trips/", json={
+        "name": "Test Trip",
+        "start_date": TODAY.isoformat(),
+        "end_date": (TODAY + timedelta(days=days)).isoformat(),
+    })
+    return response.json()["id"]
 
 
 def _get_activity(activity_id):
@@ -479,3 +496,246 @@ def test_auto_swap_cold_and_heat_use_temp_min_max_directly(auth_client, monkeypa
     assert len(our_swaps) == 1
     assert our_swaps[0]["activity_id"] == activity_id
     assert "cold" in our_swaps[0]["reason"].lower()
+
+
+# ---------------------------------------------------------------------------
+# Revert — undoing a previous auto-swap once the weather that caused it
+# clears. All these activities are seeded already-swapped (is_swapped=True,
+# alternate_*/swap_score_trace/original_lat/lng populated) to simulate a
+# prior run, rather than going through a real swap first.
+# ---------------------------------------------------------------------------
+
+def test_auto_swap_reverts_when_the_contributing_metric_recovers(auth_client, monkeypatch):
+    trip_id = _create_trip_ending(auth_client, monkeypatch, days=5)
+    far_out_day = TODAY + timedelta(days=3)
+    activity_id = _add_activity(
+        trip_id, "indoor", name="Hyde Park Walk", day_date=far_out_day, time_slot="12:00 - 14:00",
+        weather_sensitivity="strenuous_outdoor", is_swapped=True,
+        alternate_name="British Museum", alternate_location="Great Russell St",
+        swap_reason="Extreme cold expected (around -12°C) — unsafe for extended outdoor exertion",
+        swap_score_trace={"scores": {"fog_safety": 0, "cold": 80}, "combined": 80, "adjusted": 80},
+        lat=51.5194, lng=-0.1270,  # currently at the alternate's coordinates
+        original_lat=51.5073, original_lng=-0.1657,  # Hyde Park's real coordinates
+    )
+    _mock_weather(monkeypatch, forecast=[{
+        "date": far_out_day.isoformat(), "heavy_rain_warning": False, "heavy_rain_probability": 2.0,
+        "temp_min": 5, "temp_max": 15,
+    }])
+    _mock_hourly_weather(monkeypatch)
+
+    result = _run_auto_swap()
+    our_reverts = [r for r in result["reverted"] if r["trip_id"] == trip_id]
+
+    assert len(our_reverts) == 1
+    assert our_reverts[0]["activity_id"] == activity_id
+    assert our_reverts[0]["restored_name"] == "Hyde Park Walk"
+    assert our_reverts[0]["restored_location"] == "Hyde Park"
+    assert our_reverts[0]["previous_alternate_name"] == "British Museum"
+
+    activity = _get_activity(activity_id)
+    assert activity.is_swapped is False
+    assert activity.alternate_name == ""
+    assert activity.alternate_location == ""
+    assert activity.swap_reason == ""
+    assert activity.swap_score_trace is None
+    assert (activity.lat, activity.lng) == (51.5073, -0.1657)
+    assert activity.original_lat is None
+    assert activity.original_lng is None
+    assert activity.type == "outdoor"
+
+
+def test_auto_swap_does_not_revert_when_a_different_metric_has_since_gone_strong_bad(auth_client, monkeypatch):
+    """The activity was swapped for fog alone (dominant, and only original
+    contributor). Fog has cleared, but UV — which had nothing to do with
+    the original swap (it was fine back then, so never even appeared in
+    swap_score_trace) — has since spiked to Extreme, which alone would
+    justify a swap. Reverting anyway would walk this activity straight
+    into a different, currently-active risk, so it must stay swapped."""
+    trip_id = _create_trip_ending(auth_client, monkeypatch, days=5)
+    far_out_day = TODAY + timedelta(days=3)
+    activity_id = _add_activity(
+        trip_id, "indoor", name="Primrose Hill Viewpoint", day_date=far_out_day, time_slot="12:00 - 14:00",
+        weather_sensitivity="view_dependent,strenuous_outdoor", is_swapped=True,
+        alternate_name="British Museum", alternate_location="Great Russell St",
+        swap_score_trace={"scores": {"fog_safety": 0, "fog_scenic": 80}, "combined": 80, "adjusted": 80},
+        lat=51.5194, lng=-0.1270, original_lat=51.5364, original_lng=-0.1565,
+    )
+    _mock_weather(monkeypatch, forecast=[{
+        "date": far_out_day.isoformat(), "heavy_rain_warning": False, "heavy_rain_probability": 2.0,
+        "visibility_m": 12000,  # fog_scenic's dominant cause: clearly recovered (>= 10000)
+        "uv_index": 12,         # "Extreme" via ml.risk_calculator.uv_level() — independently swap-worthy
+    }])
+    _mock_hourly_weather(monkeypatch)
+
+    result = _run_auto_swap()
+    our_reverts = [r for r in result["reverted"] if r["trip_id"] == trip_id]
+
+    assert our_reverts == []
+    activity = _get_activity(activity_id)
+    assert activity.is_swapped is True
+
+
+def test_auto_swap_reverts_when_dominant_metric_clears_even_if_a_secondary_one_is_merely_advisory(
+    auth_client, monkeypatch,
+):
+    """wind (dominant, 75) + cold (secondary, 50) both contributed at swap
+    time. Only the dominant metric needs to fully clear — a secondary
+    contributor left at a merely-advisory level (not independently strong
+    enough to justify a swap on its own) doesn't block the revert."""
+    trip_id = _create_trip_ending(auth_client, monkeypatch, days=5)
+    far_out_day = TODAY + timedelta(days=3)
+    activity_id = _add_activity(
+        trip_id, "indoor", name="Thames Boat Tour", day_date=far_out_day, time_slot="12:00 - 14:00",
+        weather_sensitivity="wind_exposed,strenuous_outdoor", is_swapped=True,
+        alternate_name="Aquarium", alternate_location="County Hall",
+        swap_score_trace={"scores": {"fog_safety": 0, "wind": 75, "cold": 50}, "combined": 100, "adjusted": 100},
+        lat=51.5033, lng=-0.1195, original_lat=51.5, original_lng=-0.14,
+    )
+    _mock_weather(monkeypatch, forecast=[{
+        "date": far_out_day.isoformat(), "heavy_rain_warning": False, "heavy_rain_probability": 2.0,
+        "wind_speed": 5,      # Calm — the dominant cause, clearly recovered
+        "temp_min": -7,       # still mildly cold (scores 50, advisory) but not independently swap-worthy (<70)
+    }])
+    _mock_hourly_weather(monkeypatch)
+
+    result = _run_auto_swap()
+    our_reverts = [r for r in result["reverted"] if r["trip_id"] == trip_id]
+
+    assert len(our_reverts) == 1
+    assert our_reverts[0]["activity_id"] == activity_id
+    activity = _get_activity(activity_id)
+    assert activity.is_swapped is False
+
+
+def test_auto_swap_does_not_revert_within_24h_commit_window(auth_client, monkeypatch):
+    """Even with clearly-good weather, an activity happening today (well
+    inside the 24h commit window) should not be flipped back — avoids
+    last-minute flip-flopping."""
+    trip_id = _create_trip(auth_client, monkeypatch)
+    activity_id = _add_activity(
+        trip_id, "indoor", name="Long Hike", day_date=TODAY, time_slot="00:00 - 01:00",
+        weather_sensitivity="strenuous_outdoor", is_swapped=True,
+        alternate_name="Science Museum", alternate_location="Exhibition Rd",
+        swap_score_trace={"scores": {"fog_safety": 0, "heat": 80}, "combined": 80, "adjusted": 80},
+        lat=51.4978, lng=-0.1746, original_lat=51.5073, original_lng=-0.1657,
+    )
+    _mock_weather(monkeypatch, forecast=[{
+        "date": TODAY.isoformat(), "heavy_rain_warning": False, "heavy_rain_probability": 2.0,
+        "temp_min": 10, "temp_max": 20,  # clearly good — but too close to matter
+    }])
+    _mock_hourly_weather(monkeypatch)
+
+    result = _run_auto_swap()
+    our_reverts = [r for r in result["reverted"] if r["trip_id"] == trip_id]
+
+    assert our_reverts == []
+    activity = _get_activity(activity_id)
+    assert activity.is_swapped is True
+
+
+def test_auto_swap_reverts_a_rain_caused_swap_when_rain_clears(auth_client, monkeypatch):
+    """Rain-caused swaps have swap_score_trace=None (rain isn't part of the
+    scoring engine) — revert falls back to re-checking RainRule directly."""
+    trip_id = _create_trip_ending(auth_client, monkeypatch, days=5)
+    far_out_day = TODAY + timedelta(days=3)
+    activity_id = _add_activity(
+        trip_id, "indoor", name="Hyde Park Walk", day_date=far_out_day, time_slot="12:00 - 14:00",
+        is_swapped=True, alternate_name="British Museum", alternate_location="Great Russell St",
+        swap_score_trace=None,
+        lat=51.5194, lng=-0.1270, original_lat=51.5073, original_lng=-0.1657,
+    )
+    _mock_weather(monkeypatch, forecast=[{
+        "date": far_out_day.isoformat(), "heavy_rain_warning": False, "heavy_rain_probability": 5.0,
+        "rain_mm": 0,
+    }])
+    _mock_hourly_weather(monkeypatch)
+
+    result = _run_auto_swap()
+    our_reverts = [r for r in result["reverted"] if r["trip_id"] == trip_id]
+
+    assert len(our_reverts) == 1
+    assert our_reverts[0]["activity_id"] == activity_id
+    activity = _get_activity(activity_id)
+    assert activity.is_swapped is False
+    assert (activity.lat, activity.lng) == (51.5073, -0.1657)
+
+
+def test_auto_swap_does_not_revert_rain_caused_swap_while_still_raining(auth_client, monkeypatch):
+    trip_id = _create_trip_ending(auth_client, monkeypatch, days=5)
+    far_out_day = TODAY + timedelta(days=3)
+    activity_id = _add_activity(
+        trip_id, "indoor", name="Hyde Park Walk", day_date=far_out_day, time_slot="12:00 - 14:00",
+        is_swapped=True, alternate_name="British Museum", alternate_location="Great Russell St",
+        swap_score_trace=None,
+        lat=51.5194, lng=-0.1270, original_lat=51.5073, original_lng=-0.1657,
+    )
+    _mock_weather(monkeypatch, forecast=[{
+        "date": far_out_day.isoformat(), "heavy_rain_warning": True, "heavy_rain_probability": 75.0,
+    }])
+    _mock_hourly_weather(monkeypatch)
+
+    result = _run_auto_swap()
+    our_reverts = [r for r in result["reverted"] if r["trip_id"] == trip_id]
+
+    assert our_reverts == []
+    activity = _get_activity(activity_id)
+    assert activity.is_swapped is True
+
+
+def test_auto_swap_revert_never_touches_a_fixed_activity(auth_client, monkeypatch):
+    """Defensive: is_fixed activities never get auto-swapped in the first
+    place, but a user could mark one is_fixed after it was already swapped
+    (via the manual-edit endpoint) — the revert pass must still leave it
+    alone, same as the swap pass does."""
+    trip_id = _create_trip_ending(auth_client, monkeypatch, days=5)
+    far_out_day = TODAY + timedelta(days=3)
+    activity_id = _add_activity(
+        trip_id, "indoor", name="Hyde Park Walk", day_date=far_out_day, time_slot="12:00 - 14:00",
+        weather_sensitivity="strenuous_outdoor", is_swapped=True, is_fixed=True,
+        alternate_name="British Museum", alternate_location="Great Russell St",
+        swap_score_trace={"scores": {"fog_safety": 0, "cold": 80}, "combined": 80, "adjusted": 80},
+        lat=51.5194, lng=-0.1270, original_lat=51.5073, original_lng=-0.1657,
+    )
+    _mock_weather(monkeypatch, forecast=[{
+        "date": far_out_day.isoformat(), "heavy_rain_warning": False, "heavy_rain_probability": 2.0,
+        "temp_min": 5, "temp_max": 15,
+    }])
+    _mock_hourly_weather(monkeypatch)
+
+    result = _run_auto_swap()
+    our_reverts = [r for r in result["reverted"] if r["trip_id"] == trip_id]
+
+    assert our_reverts == []
+    activity = _get_activity(activity_id)
+    assert activity.is_swapped is True
+
+
+def test_auto_swap_revert_is_idempotent_within_a_single_run_and_across_runs(auth_client, monkeypatch):
+    trip_id = _create_trip_ending(auth_client, monkeypatch, days=5)
+    far_out_day = TODAY + timedelta(days=3)
+    activity_id = _add_activity(
+        trip_id, "indoor", name="Hyde Park Walk", day_date=far_out_day, time_slot="12:00 - 14:00",
+        weather_sensitivity="strenuous_outdoor", is_swapped=True,
+        alternate_name="British Museum", alternate_location="Great Russell St",
+        swap_score_trace={"scores": {"fog_safety": 0, "cold": 80}, "combined": 80, "adjusted": 80},
+        lat=51.5194, lng=-0.1270, original_lat=51.5073, original_lng=-0.1657,
+    )
+    _mock_weather(monkeypatch, forecast=[{
+        "date": far_out_day.isoformat(), "heavy_rain_warning": False, "heavy_rain_probability": 2.0,
+        "temp_min": 5, "temp_max": 15,
+    }])
+    _mock_hourly_weather(monkeypatch)
+    mock_find = _mock_find_alternative(monkeypatch)
+
+    first = _run_auto_swap()
+    second = _run_auto_swap()
+
+    assert len([r for r in first["reverted"] if r["trip_id"] == trip_id]) == 1
+    assert len([r for r in second["reverted"] if r["trip_id"] == trip_id]) == 0
+    # Weather is still good, so it also shouldn't be swapped right back.
+    assert [s for s in second["swapped"] if s["trip_id"] == trip_id] == []
+    calls_for_our_activity = [c for c in mock_find.call_args_list if c.args[0].id == activity_id]
+    assert calls_for_our_activity == []
+
+    activity = _get_activity(activity_id)
+    assert activity.is_swapped is False

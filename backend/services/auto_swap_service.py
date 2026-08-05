@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,12 +6,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from models.activity import Activity
 from models.trip import Trip
 from services import geocoding_service, swap_service
+from services.time_slot import parse_time_slot
 from services.weather_rules import (
     ADVISORY_THRESHOLD,
     SWAP_THRESHOLD,
     describe_scores,
     describe_tip,
     score_activity,
+    should_revert,
     top_rule_id,
 )
 from services.weather_service import (
@@ -50,6 +52,36 @@ def _evaluate_activity(forecast_day: dict, activity: Activity, hourly: list[dict
     }
 
 
+def _hours_until_activity(activity: Activity, now: datetime) -> float:
+    """Hours from `now` to the activity's start, using the same time_slot
+    parsing already used elsewhere for hourly rain/fog refinement. An
+    unparseable time_slot conservatively falls back to midnight (hour 0) —
+    this can only ever shrink hours_until, never inflate it, so it errs
+    toward skipping a revert rather than allowing one too close to the
+    activity."""
+    window = parse_time_slot(activity.time_slot)
+    start_hour = window[0] if window else 0
+    activity_start = datetime.combine(activity.day_date, time(hour=start_hour))
+    return (activity_start - now).total_seconds() / 3600
+
+
+def _check_revert(forecast_day: dict, activity: Activity, hourly: list[dict] | None) -> bool:
+    """A swap reverts once its dominant original cause is independently
+    good again AND no metric applicable to this activity — including one
+    that had nothing to do with the original swap — has since become
+    independently strong enough to justify a swap on its own (see
+    weather_rules.should_revert). Legacy fallback: rows swapped before rain
+    was folded into the scoring engine (see weather_rules.score_rain) never
+    got a score_trace at all — treat those as a synthetic single-metric
+    "rain" trace so they still revert via weather_rules.good_rain instead
+    of never reverting."""
+    scores_at_swap = (
+        {"rain": 1} if activity.swap_score_trace is None
+        else activity.swap_score_trace.get("scores", {})
+    )
+    return should_revert(scores_at_swap, forecast_day, activity, hourly)
+
+
 async def run_auto_swap(db: AsyncSession) -> dict:
     """Re-check weather for upcoming/active trips and auto-swap outdoor
     activities affected by a combined rain/cold/heat/UV/fog/wind/
@@ -60,11 +92,17 @@ async def run_auto_swap(db: AsyncSession) -> dict:
     swap, same as a *fixed* activity affected by anything at or above the
     advisory threshold.
 
+    Also reverts a previously-swapped activity once the weather that caused
+    it clears — see _check_revert — but only once it's at least 24h out (no
+    flip-flopping right before the activity happens).
+
     Safe to call repeatedly (e.g. on a Celery Beat schedule, or manually for
     testing) — Activity.is_swapped is the idempotency guard, so an
-    already-swapped activity is never re-evaluated or re-notified.
+    already-swapped activity is never re-evaluated or re-notified, and a
+    freshly-reverted activity only becomes swap-eligible again on the next
+    scheduled run.
 
-    Returns {"swapped": [...], "tips": [...]}:
+    Returns {"swapped": [...], "tips": [...], "reverted": [...]}:
     - "swapped": {trip_id, activity_id, rule_id, reason, rain_mm, day_date,
       original_name, original_location, alternate_name, alternate_location}
       for activities swapped during this run.
@@ -75,11 +113,15 @@ async def run_auto_swap(db: AsyncSession) -> dict:
       tip may repeat on each scheduled check until the day passes or the
       forecast improves; accepted trade-off since tips are non-destructive,
       unlike a swap.
+    - "reverted": {trip_id, activity_id, day_date, restored_name,
+      restored_location, previous_alternate_name, previous_alternate_location}
+      for activities reverted back to their original plan during this run.
 
-    Both are consumed by notifications_service.send_swap_digest_emails to
-    build the per-user digest email.
+    All three are consumed by notifications_service.send_swap_digest_emails
+    to build the per-user digest email.
     """
     today = date.today()
+    now = datetime.now()
     horizon = today + timedelta(days=FORECAST_HORIZON_DAYS)
 
     result = await db.execute(select(Trip).where(Trip.end_date >= today))
@@ -87,6 +129,7 @@ async def run_auto_swap(db: AsyncSession) -> dict:
 
     swapped = []
     tips = []
+    reverted = []
     for trip in trips:
         if trip.lat == 0.0 and trip.lng == 0.0:
             coords = geocoding_service.geocode(trip.destination)
@@ -156,6 +199,24 @@ async def run_auto_swap(db: AsyncSession) -> dict:
         for activity in fixed_activities_result.scalars().all():
             fixed_activities_by_date.setdefault(activity.day_date.isoformat(), []).append(activity)
 
+        # Already-swapped, non-fixed activities in the same window — checked
+        # for a possible revert below. Snapshotted from the DB before the
+        # forecast_day loop runs, same as activities_by_date above, so an
+        # activity reverted mid-run can't also be picked up as a fresh swap
+        # candidate in this same run.
+        revert_result = await db.execute(
+            select(Activity).where(
+                Activity.trip_id == trip.id,
+                Activity.is_swapped.is_(True),
+                Activity.is_fixed.is_(False),
+                Activity.day_date >= window_start,
+                Activity.day_date <= window_end,
+            )
+        )
+        revert_candidates_by_date: dict[str, list[Activity]] = {}
+        for activity in revert_result.scalars().all():
+            revert_candidates_by_date.setdefault(activity.day_date.isoformat(), []).append(activity)
+
         # Everything actually happening elsewhere on this trip right now — the
         # current plan for a day is its alternate_name once swapped, not the
         # original name. Passed to find_alternative_activity so it doesn't
@@ -189,6 +250,27 @@ async def run_auto_swap(db: AsyncSession) -> dict:
                         "name": activity.name,
                         "location": activity.location,
                     })
+
+            # Revert candidates checked before new swaps below — reuses the
+            # same forecast_day/hourly_for_day already fetched for this
+            # trip, no extra weather API call.
+            for activity in revert_candidates_by_date.get(forecast_day["date"], []):
+                if _hours_until_activity(activity, now) < 24:
+                    continue  # inside the commit window — don't flip-flop this close to the activity
+                if not _check_revert(forecast_day, activity, hourly_for_day):
+                    continue
+                previous_alternate_name = activity.alternate_name
+                previous_alternate_location = activity.alternate_location
+                await swap_service.revert_activity(db, activity)
+                reverted.append({
+                    "trip_id": trip.id,
+                    "activity_id": activity.id,
+                    "day_date": activity.day_date.isoformat(),
+                    "restored_name": activity.name,
+                    "restored_location": activity.location,
+                    "previous_alternate_name": previous_alternate_name,
+                    "previous_alternate_location": previous_alternate_location,
+                })
 
             day_activities = activities_by_date.get(forecast_day["date"])
             if not day_activities:
@@ -248,4 +330,4 @@ async def run_auto_swap(db: AsyncSession) -> dict:
                 except Exception:
                     continue  # one bad Claude call shouldn't abort the rest of the batch
 
-    return {"swapped": swapped, "tips": tips}
+    return {"swapped": swapped, "tips": tips, "reverted": reverted}

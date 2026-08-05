@@ -37,19 +37,26 @@ async def send_test_email(db: AsyncSession, user_id: int) -> dict:
     )
 
 
-async def send_swap_digest_emails(db: AsyncSession, swapped: list[dict], tips: list[dict] | None = None) -> list[dict]:
+async def send_swap_digest_emails(
+    db: AsyncSession,
+    swapped: list[dict],
+    tips: list[dict] | None = None,
+    reverted: list[dict] | None = None,
+) -> list[dict]:
     """Send one combined digest email per affected user summarizing this
-    run's weather-triggered swaps and any fixed-activity tips, respecting
-    their email_enabled preference. `swapped` and `tips` are the two
-    collections run_auto_swap() returns. Whether a swap happened at all is
-    already gated by the scoring engine's own confidence check (see
+    run's weather-triggered swaps, any fixed-activity tips, and any reverts
+    back to the original plan, respecting their email_enabled preference.
+    `swapped`, `tips`, and `reverted` are the three collections
+    run_auto_swap() returns. Whether a swap happened at all is already
+    gated by the scoring engine's own confidence check (see
     services/weather_rules.py's horizon_factor decay) — nothing here
-    re-filters which swaps are "worth" notifying about."""
+    re-filters which swaps/reverts are "worth" notifying about."""
     tips = tips or []
-    if not swapped and not tips:
+    reverted = reverted or []
+    if not swapped and not tips and not reverted:
         return []
 
-    trip_ids = {s["trip_id"] for s in swapped} | {t["trip_id"] for t in tips}
+    trip_ids = {s["trip_id"] for s in swapped} | {t["trip_id"] for t in tips} | {r["trip_id"] for r in reverted}
     trips_result = await db.execute(select(Trip).where(Trip.id.in_(trip_ids)))
     trip_by_id = {t.id: t for t in trips_result.scalars().all()}
 
@@ -67,24 +74,32 @@ async def send_swap_digest_emails(db: AsyncSession, swapped: list[dict], tips: l
             continue
         by_user_tips.setdefault(trip.user_id, []).append({**t, "trip_name": trip.name})
 
+    by_user_reverted: dict[int, list[dict]] = {}
+    for r in reverted:
+        trip = trip_by_id.get(r["trip_id"])
+        if trip is None:
+            continue
+        by_user_reverted.setdefault(trip.user_id, []).append({**r, "trip_name": trip.name})
+
     results = []
-    for user_id in set(by_user_swaps) | set(by_user_tips):
+    for user_id in set(by_user_swaps) | set(by_user_tips) | set(by_user_reverted):
         prefs = await get_preferences(db, user_id)
         if not prefs["email_enabled"]:
             continue
 
         user_swaps = by_user_swaps.get(user_id, [])
         user_tips = by_user_tips.get(user_id, [])
+        user_reverted = by_user_reverted.get(user_id, [])
 
         user = await db.get(User, user_id)
         if user is None:
             continue
 
         subject = (
-            "SmartTrip AI: itinerary updated for weather" if user_swaps
+            "SmartTrip AI: itinerary updated for weather" if (user_swaps or user_reverted)
             else "SmartTrip AI: weather tips for your trip"
         )
-        html, text = email_templates.swap_digest_email(user_swaps, user_tips)
+        html, text = email_templates.swap_digest_email(user_swaps, user_tips, user_reverted)
         result = await asyncio.to_thread(
             email_service.send_email, user.email, subject, html, text,
         )
