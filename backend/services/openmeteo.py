@@ -1,7 +1,38 @@
 # Run: python services/openmeteo.py
 
+import threading
+import time
+
 import requests
 from datetime import date, datetime, timedelta
+
+# Render's free tier (and other shared-IP hosts) can share Open-Meteo's rate
+# limit with unrelated traffic on the same outbound IP, so a 429 there isn't
+# necessarily this app's own call volume — a short retry-with-backoff rides
+# out that kind of transient throttling instead of failing the request outright.
+MAX_RETRIES = 3
+BACKOFF_SECONDS = 1
+
+# get_weather_prediction() and get_hourly_weather() both call get_forecast()
+# for the same lat/lon/date range on every itinerary page load (one for the
+# ML prediction, one for the raw hourly data), doubling Open-Meteo call
+# volume for identical data. A short-TTL cache collapses that pair into one
+# real request. Correctness-wise a race just costs an extra call, never
+# stale/wrong data, so a simple lock (not per-key) is enough.
+_forecast_cache: dict[tuple, tuple[float, dict]] = {}
+_forecast_cache_lock = threading.Lock()
+FORECAST_CACHE_TTL_SECONDS = 30
+
+
+def _get_with_retry(url: str, timeout: float | None = None) -> requests.Response:
+    for attempt in range(MAX_RETRIES):
+        response = requests.get(url, timeout=timeout)
+        if response.status_code != 429 or attempt == MAX_RETRIES - 1:
+            return response
+        retry_after = response.headers.get("Retry-After")
+        delay = float(retry_after) if retry_after else BACKOFF_SECONDS * (2 ** attempt)
+        time.sleep(delay)
+    return response
 
 
 def resolve_date_range(start_date: str = None, end_date: str = None) -> tuple[date, date]:
@@ -19,6 +50,14 @@ def get_forecast(lat: float, lon: float, start_date: str = None, end_date: str =
     start, end = resolve_date_range(start_date, end_date)
     start_date = start.isoformat()
     end_date = end.isoformat()
+
+    cache_key = (lat, lon, start_date, end_date)
+    with _forecast_cache_lock:
+        cached = _forecast_cache.get(cache_key)
+        if cached is not None:
+            cached_at, cached_data = cached
+            if time.monotonic() - cached_at < FORECAST_CACHE_TTL_SECONDS:
+                return cached_data
 
     # Hourly forecasted variables
     hourly = ",".join([
@@ -69,12 +108,12 @@ def get_forecast(lat: float, lon: float, start_date: str = None, end_date: str =
     # call (and everything waiting on it — a live API request, or the
     # scheduled weather-check job) indefinitely, since requests has no
     # default timeout of its own.
-    response = requests.get(url, timeout=10)
+    response = _get_with_retry(url, timeout=10)
     if response.status_code != 200:
         raise Exception(f"Request failed with status code {response.status_code}")
 
     data = response.json()
-    return {
+    result = {
         "latitude": lat,
         "longitude": lon,
         "hourly": data["hourly"],
@@ -84,6 +123,11 @@ def get_forecast(lat: float, lon: float, start_date: str = None, end_date: str =
         # above actually mean in absolute (UTC) terms.
         "utc_offset_seconds": data.get("utc_offset_seconds", 0),
     }
+
+    with _forecast_cache_lock:
+        _forecast_cache[cache_key] = (time.monotonic(), result)
+
+    return result
 
 
 def get_historical_forecast(lat: float, lon: float, start_date: str, end_date: str):
@@ -110,7 +154,7 @@ def get_historical_forecast(lat: float, lon: float, start_date: str, end_date: s
         f"&timezone=GMT"
     )
 
-    response = requests.get(url,timeout=10,)
+    response = _get_with_retry(url, timeout=10)
     if response.status_code != 200:
         raise Exception(f"Historical request failed with status code {response.status_code}")
 
