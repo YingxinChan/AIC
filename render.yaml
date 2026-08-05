@@ -1,0 +1,34 @@
+# Render "Blueprint" — lets Render read this file and pre-fill the build/
+# start commands instead of typing them into the dashboard by hand.
+# Use "New +" -> "Blueprint" on Render and point it at this repo.
+#
+# Secrets (DATABASE_URL, SECRET_KEY, GMAIL_USER, GMAIL_APP_PASSWORD,
+# OPENWEATHER_API_KEY, ANTHROPIC_API_KEY, CORS_ORIGINS) are deliberately
+# NOT listed here — Render Blueprints don't store real secret values in the
+# repo. Set those in the Render dashboard after the first deploy (Environment
+# tab on the created service).
+services:
+  - type: web
+    name: climago-backend
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: GMAIL_USER
+        sync: false
+      - key: GMAIL_APP_PASSWORD
+        sync: false
+      - key: OPENWEATHER_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
