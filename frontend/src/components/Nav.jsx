@@ -14,7 +14,7 @@ export default function Nav() {
           <span className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
             <Plane size={16} className="text-white" />
           </span>
-          SmartTrip<span className="text-indigo-600">AI</span>
+          Clima<span className="text-indigo-600">Go</span>
         </Link>
         <div className="flex items-center gap-2 text-sm">
           <Link

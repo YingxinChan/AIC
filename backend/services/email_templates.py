@@ -40,7 +40,7 @@ def _wrap(heading: str, body_html: str) -> str:
           <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px; width:100%; background-color:#ffffff; border-radius:12px; overflow:hidden; border:1px solid #e5e7eb;">
             <tr>
               <td style="background-color:#4f46e5; background-image:linear-gradient(135deg,#4f46e5,#7c3aed); padding:24px 32px;">
-                <span style="color:#ffffff; font-size:18px; font-weight:700; font-family:{FONT_STACK};">SmartTrip AI</span>
+                <span style="color:#ffffff; font-size:18px; font-weight:700; font-family:{FONT_STACK};">ClimaGo</span>
               </td>
             </tr>
             <tr>
@@ -51,7 +51,7 @@ def _wrap(heading: str, body_html: str) -> str:
             </tr>
             <tr>
               <td style="padding:20px 32px; background-color:#f9fafb; border-top:1px solid #e5e7eb;">
-                <p style="margin:0; font-size:12px; color:#9ca3af; font-family:{FONT_STACK};">You're receiving this because you have an active trip on SmartTrip AI.</p>
+                <p style="margin:0; font-size:12px; color:#9ca3af; font-family:{FONT_STACK};">You're receiving this because you have an active trip on ClimaGo.</p>
               </td>
             </tr>
           </table>
@@ -63,7 +63,7 @@ def _wrap(heading: str, body_html: str) -> str:
 
 
 def test_email() -> tuple[str, str]:
-    text = "This is a test email from SmartTrip AI — if you're reading this, notifications are working!"
+    text = "This is a test email from ClimaGo — if you're reading this, notifications are working!"
     html = _wrap(
         "Test email",
         f'<p style="margin:0; font-size:14px; color:#374151; line-height:1.6; font-family:{FONT_STACK};">{text}</p>',

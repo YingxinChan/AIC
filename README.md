@@ -1,4 +1,4 @@
-# SmartTrip AI
+# ClimaGo
 
 A travel itinerary planner that adapts to weather forecasts — suggesting indoor/outdoor activity swaps when conditions change, with flight recommendations included. MVP scope is London only.
 
