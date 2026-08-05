@@ -1,0 +1,28 @@
+name: Debug DB ping
+
+# Temporary diagnostic for the weather-check workflow hanging with no output
+# on GitHub Actions despite an instant local connection to the same DB with
+# the same connect_args/timeouts. Isolates whether the hang is at the DB
+# connection step itself (this workflow alone) or somewhere later in
+# trigger_weather_check.py's pipeline. Delete once root-caused.
+on:
+  workflow_dispatch: {}
+
+jobs:
+  db-ping:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r requirements.txt
+
+      - run: timeout 60 python scripts/debug_db_ping.py
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
