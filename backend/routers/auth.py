@@ -12,7 +12,11 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 async def register(body: RegisterRequest, response: Response, db: AsyncSession = Depends(get_db)):
     user = await auth_service.register_user(db, body.email, body.password)
     token = create_access_token(user.id, user.email)
-    response.set_cookie(key="access_token", value=token, httponly=True, samesite="lax", secure=True)
+    # samesite="none" is required for the cookie to be sent on cross-site
+    # requests — frontend (Netlify) and backend (Render) are on different
+    # domains, and browsers withhold samesite="lax" cookies on cross-site
+    # fetch/XHR calls (only same-site or top-level navigations get them).
+    response.set_cookie(key="access_token", value=token, httponly=True, samesite="none", secure=True)
     return {"user": {"id": user.id, "email": user.email, "created_at": user.created_at,}}
 
 
@@ -20,13 +24,13 @@ async def register(body: RegisterRequest, response: Response, db: AsyncSession =
 async def login(body: LoginRequest, response: Response, db: AsyncSession = Depends(get_db)):
     user = await auth_service.login_user(db, body.email, body.password)
     token = create_access_token(user.id, user.email)
-    response.set_cookie(key="access_token", value=token, httponly=True, samesite="lax", secure=True)
+    response.set_cookie(key="access_token", value=token, httponly=True, samesite="none", secure=True)
     return {"user": {"id": user.id, "email": user.email, "created_at": user.created_at,}}
 
 
 @router.post("/logout", status_code=204)
 async def logout(response: Response):
-    response.delete_cookie("access_token")
+    response.delete_cookie("access_token", samesite="none", secure=True)
 
 
 @router.get("/me", response_model=AuthOut)
