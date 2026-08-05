@@ -644,6 +644,18 @@ def _horizon_factor(days_until: int) -> float:
     return 0.5
 
 
+def _combine_scores(scores: dict[str, float]) -> float:
+    """max_score + 0.5*second_highest_score, the stacking rule shared by
+    score_activity() (combining every currently-applicable metric) and
+    should_revert() (recombining the metrics still active after the
+    dominant original cause clears) — kept in one place so a revert can't
+    silently use different math than the swap decision it's undoing."""
+    nonzero = sorted((v for v in scores.values() if v > 0), reverse=True)
+    if not nonzero:
+        return 0
+    return min(nonzero[0] + 0.5 * (nonzero[1] if len(nonzero) > 1 else 0), 100)
+
+
 def score_activity(
     forecast_day: dict,
     activity,
@@ -664,7 +676,17 @@ def score_activity(
     describe_scores()/describe_tip() can quote the same figures that
     triggered each score, not the whole-day forecast, which can look calm
     even when a dip specific to the activity's own time_slot is what
-    actually scored it."""
+    actually scored it.
+
+    Note: `activity.type` is NOT a reliable "is this fundamentally an
+    outdoor activity" signal here — a swapped activity's `type` reflects
+    its *current* (alternate) type, which can be "indoor" even though
+    weather_sensitivity/scoring still needs to evaluate the *original*
+    outdoor activity's conditions (e.g. for should_revert()'s fresh
+    re-score). Callers that need an "is this activity genuinely,
+    permanently indoor" check (e.g. fixed activities, which are never
+    mutated by a swap) must filter on activity.type themselves before
+    calling in, rather than this function gating on it internally."""
     effective_visibility_m = _effective_visibility_m(forecast_day, activity, hourly)
     scores: dict[str, float] = {
         "rain": score_rain(forecast_day, activity, hourly),
@@ -698,11 +720,7 @@ def score_activity(
             else:
                 scores[name] = _SCORERS[name](forecast_day)
 
-    nonzero = sorted((v for v in scores.values() if v > 0), reverse=True)
-    if nonzero:
-        combined = min(nonzero[0] + 0.5 * (nonzero[1] if len(nonzero) > 1 else 0), 100)
-    else:
-        combined = 0
+    combined = _combine_scores(scores)
 
     today = today or date.today()
     days_until = max(0, (activity.day_date - today).days) if activity else 0
@@ -941,23 +959,35 @@ def should_revert(
     forecast_day: dict,
     activity=None,
     hourly: list[dict] | None = None,
+    today: date | None = None,
 ) -> bool:
     """True when the swap's dominant (worst-scoring) original cause is
-    independently good again AND no metric applicable to this activity —
-    including ones that had nothing to do with the original swap — is
-    currently strong enough on its own (fresh score >= SWAP_THRESHOLD) to
-    justify a swap by itself.
+    independently good again AND the OTHER currently-applicable metrics —
+    including ones that had nothing to do with the original swap — don't
+    still combine (via the same max + 0.5*second_highest stacking rule
+    score_activity() itself uses) to a swap-worthy score. Deliberately
+    compares the raw combined score, NOT horizon-decayed — this is a "how
+    dangerous is it right now" check, not a "how confident are we, this far
+    out" check (that's what horizon_factor is for on the original swap
+    decision); discounting a currently-severe remaining risk just because
+    the activity is a few days out would be exactly backwards for deciding
+    whether it's safe to revert today.
 
-    The second half matters because an activity's applicable metrics don't
-    change over its lifetime (they're gated by the static
-    weather_sensitivity tag), but their SCORES do as the forecast updates —
-    a metric that was fine at swap time (score 0, so absent from
+    Recombining (not just re-checking each one individually) matters
+    because the stacking rule is exactly what could have gotten this
+    activity swapped in the first place: two metrics that were each merely
+    advisory at swap time (e.g. heat 50 + UV 50) reach 50 + 0.5*50 = 75,
+    over SWAP_THRESHOLD, even though neither alone would. Checking each
+    remaining metric only against SWAP_THRESHOLD in isolation — as if
+    stacking didn't exist — would let a revert walk this activity straight
+    into a combined risk that's swap-worthy right now, just for a different
+    reason than the one it was originally swapped for. Metrics don't change
+    which apply to an activity over its lifetime (they're gated by the
+    static weather_sensitivity tag), but their SCORES do as the forecast
+    updates — a metric that was fine at swap time (score 0, so absent from
     _contributing_metrics below) can have turned dangerous by the time
-    revert is checked. Only re-checking the original cause would miss that
-    entirely (e.g. a scenic swap's fog clears, but this same activity's UV
-    has since gone Extreme) — score_activity() is re-run fresh here so
-    every applicable metric gets a current reading, not just the frozen
-    ones from swap time.
+    revert is checked, which is also why score_activity() is re-run fresh
+    here rather than only re-checking the frozen swap-time trace.
 
     An unknown dominant metric name or an empty contributing set is treated
     conservatively as "not recovered" — never guess a revert."""
@@ -970,9 +1000,8 @@ def should_revert(
     if good_check is None or not good_check(forecast_day, activity, hourly):
         return False
 
-    fresh = score_activity(forecast_day, activity, hourly)
-    return all(
-        score < SWAP_THRESHOLD
-        for name, score in fresh["scores"].items()
-        if name != dominant_metric
-    )
+    fresh = score_activity(forecast_day, activity, hourly, today=today)
+    remaining_scores = {
+        name: score for name, score in fresh["scores"].items() if name != dominant_metric
+    }
+    return _combine_scores(remaining_scores) < SWAP_THRESHOLD

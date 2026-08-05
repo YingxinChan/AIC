@@ -583,7 +583,18 @@ async def update_activity(
     # Editing name/location replaces "the current plan" — a stale swap
     # record layered on top of a freshly-edited activity would show a
     # strikethrough/alternate for something the user just deliberately set.
-    identity_changed = "name" in data or "location" in data
+    # Compared against what's currently *displayed* (the alternate, if
+    # swapped) rather than just checking whether the key is present — the
+    # edit-activity form always submits name/location pre-filled with the
+    # current value, even when the user only changed something else (day,
+    # time, is_fixed), so presence alone would wipe a real swap on every
+    # unrelated edit.
+    current_name = activity.alternate_name if activity.is_swapped else activity.name
+    current_location = activity.alternate_location if activity.is_swapped else activity.location
+    identity_changed = (
+        ("name" in data and data["name"] != current_name)
+        or ("location" in data and data["location"] != current_location)
+    )
     if identity_changed and activity.is_swapped:
         activity.is_swapped = False
         activity.alternate_name = ""

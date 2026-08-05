@@ -349,6 +349,24 @@ def test_auto_swap_generates_a_tip_for_a_fixed_activity_on_a_rainy_day(auth_clie
     mock_find.assert_not_called()
 
 
+def test_auto_swap_does_not_tip_a_fixed_indoor_activity_on_a_rainy_day(auth_client, monkeypatch):
+    """Rain/fog_safety are blanket checks (not gated by weather_sensitivity
+    tag), so without a type=="outdoor" filter a fixed indoor activity would
+    get a nonsensical "bring an umbrella" tip for weather that can't affect
+    it — e.g. a museum visit is unaffected by rain."""
+    trip_id = _create_trip(auth_client, monkeypatch)
+    fixed_id = _add_activity(trip_id, "indoor", name="Museum Visit", is_fixed=True)
+    _mock_weather(monkeypatch)
+    _mock_hourly_weather(monkeypatch)
+    mock_find = _mock_find_alternative(monkeypatch)
+
+    result = _run_auto_swap()
+    our_tips = [t for t in result["tips"] if t["trip_id"] == trip_id]
+
+    assert our_tips == []
+    mock_find.assert_not_called()
+
+
 def test_auto_swap_fixed_activity_tip_respects_weather_sensitivity_tag(auth_client, monkeypatch):
     """Fixed activities go through the same targeted-rule tag check as
     swappable ones — an untagged fixed activity shouldn't get a fog tip."""
