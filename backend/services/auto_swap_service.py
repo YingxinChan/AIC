@@ -126,11 +126,13 @@ async def run_auto_swap(db: AsyncSession) -> dict:
 
     result = await db.execute(select(Trip).where(Trip.end_date >= today))
     trips = result.scalars().all()
+    print(f"[auto_swap] checking {len(trips)} trip(s)...", flush=True)
 
     swapped = []
     tips = []
     reverted = []
     for trip in trips:
+        print(f"[auto_swap] trip {trip.id} ({trip.destination})...", flush=True)
         if trip.lat == 0.0 and trip.lng == 0.0:
             coords = geocoding_service.geocode(trip.destination)
             if not coords:
@@ -321,9 +323,11 @@ async def run_auto_swap(db: AsyncSession) -> dict:
                     original_name = activity.name
                     original_location = activity.location
 
+                    print(f"[auto_swap] trip {trip.id} activity {activity.id}: asking Claude for an alternative...", flush=True)
                     alternate = await swap_service.find_alternative_activity(
                         activity, trip, reason, exclude_names=list(planned_names)
                     )
+                    print(f"[auto_swap] trip {trip.id} activity {activity.id}: got alternative", flush=True)
                     await swap_service.apply_swap(
                         db, activity, alternate, reason, evaluation["score_trace"]
                     )
