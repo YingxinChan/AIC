@@ -1,7 +1,27 @@
 from datetime import date
 from html import escape
 
+from core.config import settings
+
 FONT_STACK = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+
+
+def _cta_html(text: str) -> str:
+    # Always the site root, not a deep link to a specific trip/page — every
+    # route is login-gated anyway (see frontend's ProtectedRoute), so a deep
+    # link buys nothing but the extra work of picking one when a digest can
+    # span several trips.
+    return f'''<table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0 0;">
+      <tr>
+        <td style="border-radius:8px; background-color:#4f46e5;">
+          <a href="{settings.frontend_url}" style="display:inline-block; padding:10px 20px; font-size:14px; font-weight:600; color:#ffffff; text-decoration:none; font-family:{FONT_STACK};">{escape(text, quote=False)} &rarr;</a>
+        </td>
+      </tr>
+    </table>'''
+
+
+def _cta_text(text: str) -> str:
+    return f"{text}: {settings.frontend_url}"
 
 # Matches services.weather_rules.ACTIVE_RULES' rule ids, and (via
 # _METRIC_TO_RULE_ID) the swap-scoring engine's metric names too — both
@@ -21,6 +41,23 @@ RULE_ICONS = {
 
 def _rule_icon(rule_id: str | None) -> str:
     return RULE_ICONS.get(rule_id, "☔")
+
+
+# Icon keys for daily_summary_email's point-form highlights — Claude is
+# constrained to these keys via daily_summary_service.SUMMARY_SCHEMA's enum
+# (imports this dict rather than duplicating the key list), same reasoning
+# as RULE_ICONS above: a model-produced key is validated by the JSON schema,
+# a model-produced emoji character isn't.
+SUMMARY_ICONS = {
+    "temperature": "🌡️",
+    "rain": "☔",
+    "wind": "💨",
+    "uv": "☀️",
+    "clothing": "👕",
+    "activity": "🥾",
+    "beach": "🏖️",
+    "tip": "💡",
+}
 
 
 def _format_day(day_date: str) -> str:
@@ -153,6 +190,54 @@ def _reverted_row_text(r: dict) -> str:
     return f"- {r['trip_name']} ({day}): back to {r['restored_name']} at {r['restored_location']} — forecast improved"
 
 
+def _summary_point_html(point: dict) -> str:
+    icon = SUMMARY_ICONS.get(point.get("icon"), "💡")
+    text = escape(point["text"], quote=False)
+    return f'''<tr>
+      <td style="padding:10px 0; border-bottom:1px solid #f3f4f6;">
+        <table role="presentation" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="vertical-align:top; width:28px; font-size:16px; font-family:{FONT_STACK};">{icon}</td>
+            <td style="vertical-align:top; font-size:14px; color:#374151; line-height:1.5; font-family:{FONT_STACK};">{text}</td>
+          </tr>
+        </table>
+      </td>
+    </tr>'''
+
+
+def _summary_point_text(point: dict) -> str:
+    icon = SUMMARY_ICONS.get(point.get("icon"), "💡")
+    return f"{icon} {point['text']}"
+
+
+def daily_summary_email(trip, weather_day: dict, summary_points: list[dict]) -> tuple[str, str]:
+    """One email per ongoing trip, sent daily (see daily_summary_service.py)
+    — the day's headline condition/temperature, then Claude's point-form
+    highlights (summary_points, each {"icon", "text"} — see
+    daily_summary_service.SUMMARY_SCHEMA) each on their own icon + text row,
+    rather than one paragraph of prose."""
+    destination = escape(trip.destination, quote=False)
+    day = _format_day(weather_day["date"])
+    condition = escape(str(weather_day.get("condition", "")), quote=False)
+    temp_min = weather_day.get("temp_min")
+    temp_max = weather_day.get("temp_max")
+    rows = "".join(_summary_point_html(p) for p in summary_points)
+
+    body_html = f"""
+      <p style="margin:0 0 4px; font-size:12px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.03em; font-family:{FONT_STACK};">{destination} &middot; {day}</p>
+      <p style="margin:0 0 16px; font-size:16px; font-weight:600; color:#111827; font-family:{FONT_STACK};">{condition}, {temp_min}&deg;&ndash;{temp_max}&deg;C</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">{rows}</table>
+      {_cta_html("View your itinerary")}
+    """
+    text = (
+        f"{destination} ({day}): {condition}, {temp_min}-{temp_max}°C\n\n"
+        + "\n".join(_summary_point_text(p) for p in summary_points)
+        + f"\n\n{_cta_text('View your itinerary')}"
+    )
+
+    return _wrap(f"Today's weather in {trip.destination}", body_html), text
+
+
 def swap_digest_email(
     swaps: list[dict], tips: list[dict] | None = None, reverted: list[dict] | None = None
 ) -> tuple[str, str]:
@@ -209,6 +294,6 @@ def swap_digest_email(
     else:
         heading = "Weather tips for your upcoming trip"
 
-    body_html = "".join(sections_html)
-    text = "\n\n".join(sections_text)
+    body_html = "".join(sections_html) + _cta_html("View your trips")
+    text = "\n\n".join(sections_text) + f"\n\n{_cta_text('View your trips')}"
     return _wrap(heading, body_html), text

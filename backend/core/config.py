@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     gmail_app_password: str = ""
     openweather_api_key: str = ""
     anthropic_api_key: str = ""
+    # Linked from notification emails ("View your itinerary" / "View your
+    # trips") so the traveler can jump straight to the relevant page instead
+    # of navigating there themselves. Defaults to local dev; production sets
+    # this to the deployed Netlify URL (see .github/workflows/*.yml).
+    frontend_url: str = "http://localhost:5173"
 
     model_config = SettingsConfigDict(
         env_file=BASE_DIR / ".env",
