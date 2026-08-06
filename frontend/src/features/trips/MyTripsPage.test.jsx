@@ -48,6 +48,23 @@ test('shows a friendly empty state when the user has no trips', async () => {
   expect(await screen.findByText(/no trips yet/i)).toBeInTheDocument()
 })
 
+test('shows a destination photo background on trip cards, case-insensitively, falling back to the gradient for an unmapped city', async () => {
+  getTrips.mockResolvedValue([
+    { id: 1, name: 'A', destination: 'paris', start_date: '2026-08-01', end_date: '2026-08-07' },
+    { id: 2, name: 'B', destination: 'Nowhereville', start_date: '2026-09-01', end_date: '2026-09-07' },
+  ])
+  renderPage()
+
+  const parisCard = (await screen.findByText('A')).closest('a')
+  const parisPhoto = parisCard.querySelector('div')
+  expect(parisPhoto.style.backgroundImage).toContain('/images/destinations/paris.jpg')
+
+  const unmappedCard = screen.getByText('B').closest('a')
+  const unmappedPhoto = unmappedCard.querySelector('div')
+  expect(unmappedPhoto.style.backgroundImage).toBe('')
+  expect(unmappedPhoto.className).toContain('from-indigo-400')
+})
+
 test('renders every trip as a card with name, dates, status, and a link to its itinerary page', async () => {
   getTrips.mockResolvedValue([
     { id: 1, name: 'Summer Trip', destination: 'Tokyo', start_date: '2020-01-01', end_date: '2020-01-07' },

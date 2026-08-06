@@ -67,3 +67,24 @@ test('shows an error message when fetching trips fails', async () => {
   renderPage()
   expect(await screen.findByText(/something went wrong/i)).toBeInTheDocument()
 })
+
+// Regression test: the Recent Trips cards here were left on the flat
+// gradient placeholder when the destination-photo background was added to
+// MyTripsPage/ItineraryPage — this card renders from the same shared
+// destinationImages.js map, so it should get the same treatment.
+test('shows a destination photo background on Recent Trips cards, case-insensitively, falling back to the gradient for an unmapped city', async () => {
+  getTrips.mockResolvedValue([
+    { id: 1, name: 'A', destination: 'paris', start_date: '2026-08-01', end_date: '2026-08-07' },
+    { id: 2, name: 'B', destination: 'Nowhereville', start_date: '2026-09-01', end_date: '2026-09-07' },
+  ])
+  renderPage()
+
+  const parisCard = (await screen.findByText('A')).closest('a')
+  const parisPhoto = parisCard.querySelector('div')
+  expect(parisPhoto.style.backgroundImage).toContain('/images/destinations/paris.jpg')
+
+  const unmappedCard = screen.getByText('B').closest('a')
+  const unmappedPhoto = unmappedCard.querySelector('div')
+  expect(unmappedPhoto.style.backgroundImage).toBe('')
+  expect(unmappedPhoto.className).toContain('from-indigo-400')
+})

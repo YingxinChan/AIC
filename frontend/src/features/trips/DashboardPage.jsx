@@ -4,6 +4,7 @@ import ErrorMessage from '../../components/ErrorMessage'
 import { useTrips } from './useTrips'
 import { tripStatus, STATUS_STYLES } from './tripStatus'
 import { capitalize } from '../../lib/format'
+import { findDestinationImage } from './destinationImages'
 import planeWing from '../../assets/dashboard-plane-wing.jpg'
 
 const RECENT_TRIPS_PREVIEW_COUNT = 2
@@ -83,13 +84,28 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {recentTrips.map((trip) => {
               const status = tripStatus(trip)
+              const cardImage = findDestinationImage(trip.destination)
               return (
                 <Link
                   key={trip.id}
                   to={`/trips/${trip.id}`}
                   className="block bg-white rounded-xl border border-gray-200 overflow-hidden hover:border-indigo-300 transition-colors"
                 >
-                  <div className="h-36 bg-gradient-to-br from-indigo-400 to-purple-400" />
+                  <div
+                    className={`h-36 ${cardImage ? '' : 'bg-gradient-to-br from-indigo-400 to-purple-400'} ${cardImage && cardImage.fit !== 'contain' ? 'bg-cover' : ''}`}
+                    style={
+                      cardImage
+                        ? cardImage.fit === 'contain'
+                          ? {
+                              backgroundImage: `url(${cardImage.url}), linear-gradient(to bottom right, #818cf8, #c084fc)`,
+                              backgroundSize: 'contain, cover',
+                              backgroundPosition: `${cardImage.position}, center`,
+                              backgroundRepeat: 'no-repeat, no-repeat',
+                            }
+                          : { backgroundImage: `url(${cardImage.url})`, backgroundPosition: cardImage.position }
+                        : undefined
+                    }
+                  />
                   <div className="p-4">
                     <p className="font-semibold text-gray-900">{capitalize(trip.name)}</p>
                     <p className="flex items-center gap-1.5 text-sm text-gray-500 mt-1">
