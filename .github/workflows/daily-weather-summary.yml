@@ -1,18 +1,18 @@
-name: Weather check (auto-swap + digest emails)
+name: Daily weather summary email
 
-# Replaces the Celery Beat schedule in backend/core/celery.py — running an
-# always-on Celery worker/scheduler isn't free on any mainstream host, but
-# this same "run_auto_swap + email the results" logic already has a
-# standalone entry point (backend/scripts/trigger_weather_check.py) that
-# needs no Celery/Redis at all. A scheduled GitHub Actions run gets the same
-# every-3-hours behavior at zero cost.
+# Separate from weather-check.yml's every-3-hours swap check — this sends
+# one AI-generated weather summary per ongoing trip, once a day. Fixed 9am
+# UTC for every trip regardless of destination: neither Trip nor User has a
+# timezone field today, so trip-local time would need a schema migration —
+# not worth it for the 25-city Europe-only MVP (UTC to UTC+3, so at most a
+# few hours of local drift from a "real" 9am).
 on:
   schedule:
-    - cron: "0 */3 * * *"
+    - cron: "0 9 * * *"
   workflow_dispatch: {}
 
 jobs:
-  weather-check:
+  daily-weather-summary:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -26,7 +26,7 @@ jobs:
 
       - run: pip install -r requirements.txt
 
-      - run: python scripts/trigger_weather_check.py
+      - run: python scripts/send_daily_weather_summary.py
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
