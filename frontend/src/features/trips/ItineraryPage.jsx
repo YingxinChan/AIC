@@ -21,6 +21,7 @@ import { capitalize } from '../../lib/format'
 import { splitTimeSlot, joinTimeSlot } from '../../lib/timeSlot'
 import { getForecast, getHourlyForecast } from '../weather/weatherApi'
 import { getPendingReview, clearPendingReview } from '../../lib/pendingReview'
+import { findDestinationImage } from './destinationImages'
 
 // --- SECTION 1: HELPER FUNCTIONS ---
 
@@ -191,57 +192,12 @@ const RISK_BREAKDOWN_DECIMALS = {
   'Heavy Rain Probability': 2,
 }
 
-// Hero header photo backgrounds (see Hero Header below) — all 25 supported
-// cities (see CLAUDE.md) now have one. Falls back to the flat indigo/purple
-// gradient if a destination is somehow missing from this map. All local
-// assets (public/images/destinations/) — AI-generated, provided by the
-// project owner, as wide aerial/panorama establishing shots (landmark
-// prominent but with margin around it, not a tight close-up) at various
-// wide aspect ratios (~1.8:1 up to ~5.6:1) — all wider than a standard
-// photo and close to or wider than this banner's own ~3:1 shape, so
-// 'center' needs little to no vertical crop for any of them. An optional
-// `fit: 'contain'` is supported (see Hero Header below) for a photo whose
-// subject can't survive any crop at all (e.g. a tight close-up of one tall
-// structure) — not needed by any of these.
-const DESTINATION_HERO_IMAGES = {
-  Amsterdam: { url: '/images/destinations/amsterdam.jpg', position: 'center' },
-  Athens: { url: '/images/destinations/athens.jpg', position: 'center' },
-  Barcelona: { url: '/images/destinations/barcelona.jpg', position: 'center' },
-  Berlin: { url: '/images/destinations/berlin.jpg', position: 'center' },
-  Bruges: { url: '/images/destinations/bruges.jpg', position: 'center' },
-  Brussels: { url: '/images/destinations/brussels.jpg', position: 'center' },
-  Budapest: { url: '/images/destinations/budapest.jpg', position: 'center' },
-  Copenhagen: { url: '/images/destinations/copenhagen.jpg', position: 'center' },
-  Dublin: { url: '/images/destinations/dublin.jpg', position: 'center' },
-  Edinburgh: { url: '/images/destinations/edinburgh.jpg', position: 'center' },
-  Florence: { url: '/images/destinations/florence.jpg', position: 'center' },
-  Istanbul: { url: '/images/destinations/istanbul.jpg', position: 'center' },
-  Krakow: { url: '/images/destinations/krakow.jpg', position: 'center' },
-  Lisbon: { url: '/images/destinations/lisbon.jpg', position: 'center' },
-  London: { url: '/images/destinations/london.jpg', position: 'center' },
-  Madrid: { url: '/images/destinations/madrid.jpg', position: 'center' },
-  Milan: { url: '/images/destinations/milan.jpg', position: 'center' },
-  Munich: { url: '/images/destinations/munich.jpg', position: 'center' },
-  Oslo: { url: '/images/destinations/oslo.jpg', position: 'center' },
-  Paris: { url: '/images/destinations/paris.jpg', position: 'center' },
-  Prague: { url: '/images/destinations/prague.jpg', position: 'center' },
-  Rome: { url: '/images/destinations/rome.jpg', position: 'center' },
-  Venice: { url: '/images/destinations/venice.jpg', position: 'center' },
-  Vienna: { url: '/images/destinations/vienna.jpg', position: 'center' },
-  Zurich: { url: '/images/destinations/zurich.jpg', position: 'center' },
-}
-
-// trip.destination is free-typed text (see NewTripPage's plain input, no
-// fixed city list enforced) — a straight DESTINATION_HERO_IMAGES[destination]
-// lookup silently missed any trip saved with different casing than the
-// object keys above (e.g. "amsterdam" saved instead of "Amsterdam"), even
-// though the file existed. Case-insensitive lookup instead.
-const findDestinationImage = (destination) => {
-  if (!destination) return null
-  const normalized = destination.trim().toLowerCase()
-  const key = Object.keys(DESTINATION_HERO_IMAGES).find(k => k.toLowerCase() === normalized)
-  return key ? DESTINATION_HERO_IMAGES[key] : null
-}
+// Hero header photo backgrounds (see Hero Header below) — see
+// destinationImages.js for the shared map/lookup (also used by
+// MyTripsPage and DashboardPage's trip cards). An optional `fit: 'contain'`
+// is supported (see Hero Header below) for a photo whose subject can't
+// survive any crop at all (e.g. a tight close-up of one tall structure) —
+// not currently used by any of the 25 supported cities.
 
 // Visibility has no backend-supplied level (unlike UV/wind), so it's
 // classified here using the same Good/Moderate/Poor vocabulary Beach Safety
@@ -1093,7 +1049,7 @@ export default function ItineraryPage() {
             // h-96 (not h-72) when there's a photo — a taller banner needs
             // less bg-cover zoom to fill its width, so more of the photo's
             // height survives the crop. Each photo has its own tuned
-            // backgroundPosition (see DESTINATION_HERO_IMAGES above).
+            // backgroundPosition (see destinationImages.js).
             // fit:'contain' photos (see above) layer the photo over the
             // same indigo/purple gradient as the no-photo fallback, so the
             // letterboxed gap reads as intentional, not a rendering bug.
