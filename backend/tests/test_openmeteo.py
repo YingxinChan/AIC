@@ -1,12 +1,14 @@
 # Run: python -m pytest tests/test_openmeteo.py
 #
-# Covers the two additions made after Open-Meteo started 429ing from Render's
-# shared-IP outbound traffic: retrying a 429 instead of failing immediately,
-# and caching get_forecast() so the prediction/hourly endpoints' identical
-# back-to-back calls collapse into one real request.
+# Covers the additions made after Open-Meteo started 429ing from Render's
+# shared-IP outbound traffic: retrying a 429 or a timeout/connection error
+# instead of failing immediately, and caching get_forecast() so the
+# prediction/hourly endpoints' identical back-to-back calls collapse into one
+# real request.
 
 from unittest.mock import Mock, patch
 
+import requests
 import services.openmeteo as openmeteo
 from services.openmeteo import get_forecast
 
@@ -56,6 +58,30 @@ def test_gives_up_after_max_retries_on_persistent_429():
             assert False, "expected an exception for a non-200 response"
         except Exception as e:
             assert "429" in str(e)
+
+    assert mock_get.call_count == openmeteo.MAX_RETRIES
+
+
+def test_retries_on_timeout_then_succeeds():
+    responses = [requests.exceptions.Timeout(), _response(200, _forecast_json())]
+    with patch("services.openmeteo.requests.get", side_effect=responses) as mock_get, \
+         patch("services.openmeteo.time.sleep") as mock_sleep:
+        result = get_forecast(1.0, 2.0, "2026-08-08", "2026-08-10")
+
+    assert mock_get.call_count == 2
+    assert mock_sleep.call_count == 1
+    assert result["utc_offset_seconds"] == 3600
+
+
+def test_gives_up_after_max_retries_on_persistent_timeout():
+    responses = [requests.exceptions.Timeout() for _ in range(openmeteo.MAX_RETRIES)]
+    with patch("services.openmeteo.requests.get", side_effect=responses) as mock_get, \
+         patch("services.openmeteo.time.sleep"):
+        try:
+            get_forecast(1.0, 2.0, "2026-08-08", "2026-08-10")
+            assert False, "expected the Timeout to propagate"
+        except requests.exceptions.Timeout:
+            pass
 
     assert mock_get.call_count == openmeteo.MAX_RETRIES
 

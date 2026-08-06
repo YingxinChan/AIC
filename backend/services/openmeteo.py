@@ -10,6 +10,9 @@ from datetime import date, datetime, timedelta
 # limit with unrelated traffic on the same outbound IP, so a 429 there isn't
 # necessarily this app's own call volume — a short retry-with-backoff rides
 # out that kind of transient throttling instead of failing the request outright.
+# A plain timeout/connection error gets the same treatment: Open-Meteo's free
+# tier has no latency SLA, so a slow response is at least as likely as an
+# outright rejection, and both are equally worth one more attempt.
 MAX_RETRIES = 3
 BACKOFF_SECONDS = 1
 
@@ -26,7 +29,13 @@ FORECAST_CACHE_TTL_SECONDS = 30
 
 def _get_with_retry(url: str, timeout: float | None = None) -> requests.Response:
     for attempt in range(MAX_RETRIES):
-        response = requests.get(url, timeout=timeout)
+        try:
+            response = requests.get(url, timeout=timeout)
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
+            if attempt == MAX_RETRIES - 1:
+                raise
+            time.sleep(BACKOFF_SECONDS * (2 ** attempt))
+            continue
         if response.status_code != 429 or attempt == MAX_RETRIES - 1:
             return response
         retry_after = response.headers.get("Retry-After")
