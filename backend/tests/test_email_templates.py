@@ -3,7 +3,7 @@ from services import email_templates
 
 def test_test_email_returns_html_and_text():
     html, text = email_templates.test_email()
-    assert "ClimaGo" in html
+    assert "Navia" in html
     assert "<html>" in html.lower()
     assert "notifications are working" in text
     assert "<" not in text  # plain-text part has no markup

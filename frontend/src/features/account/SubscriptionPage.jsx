@@ -55,7 +55,7 @@ export default function SubscriptionPage() {
           </h1>
 
           <p className="mt-3 text-gray-500">
-            Choose how long you would like to use ClimaGo.
+            Choose how long you would like to use Navia.
           </p>
         </header>
 
@@ -123,7 +123,7 @@ export default function SubscriptionPage() {
         </div>
 
         <p className="mt-8 text-center text-sm text-gray-400">
-          All plans include the same core ClimaGo features. Only the access
+          All plans include the same core Navia features. Only the access
           period differs.
         </p>
       </section>
