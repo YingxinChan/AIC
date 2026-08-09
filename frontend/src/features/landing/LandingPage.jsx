@@ -44,7 +44,7 @@ export default function LandingPage() {
             <div className="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center">
               <Plane size={18} className="text-white" />
             </div>
-            <span className="font-bold text-gray-900 text-lg">Clima<span className="text-indigo-600">Go</span></span>
+            <span className="font-bold text-gray-900 text-lg">Nav<span className="text-indigo-600">ia</span></span>
           </div>
           <Link
             to="/login"
@@ -70,7 +70,7 @@ export default function LandingPage() {
             <span className="text-indigo-300">trips with AI</span>
           </h1>
           <p className="mt-6 max-w-xl text-gray-300 text-lg">
-            ClimaGo builds your ideal daily itinerary perfectly synced with hourly weather forecasts, ensuring rain never ruins your plans.
+            Navia builds your ideal daily itinerary perfectly synced with hourly weather forecasts, ensuring rain never ruins your plans.
           </p>
           <Link
             to="/register"
@@ -101,7 +101,7 @@ export default function LandingPage() {
       <section className="max-w-6xl mx-auto px-4 pb-20">
         <div className="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-2xl px-8 py-14 text-center text-white">
           <h2 className="text-3xl font-bold">Ready to plan your next adventure?</h2>
-          <p className="mt-2 text-indigo-100">Join thousands of travelers using ClimaGo.</p>
+          <p className="mt-2 text-indigo-100">Join thousands of travelers using Navia.</p>
           <Link
             to="/register"
             className="mt-6 inline-block bg-white text-indigo-700 px-6 py-3 rounded-full text-sm font-semibold hover:bg-indigo-50 transition-colors"

@@ -33,7 +33,7 @@ async def send_test_email(db: AsyncSession, user_id: int) -> dict:
     user = await db.get(User, user_id)
     html, text = email_templates.test_email()
     return await asyncio.to_thread(
-        email_service.send_email, user.email, "ClimaGo test email", html, text,
+        email_service.send_email, user.email, "Navia test email", html, text,
     )
 
 
@@ -96,8 +96,8 @@ async def send_swap_digest_emails(
             continue
 
         subject = (
-            "ClimaGo: itinerary updated for weather" if (user_swaps or user_reverted)
-            else "ClimaGo: weather tips for your trip"
+            "Navia: itinerary updated for weather" if (user_swaps or user_reverted)
+            else "Navia: weather tips for your trip"
         )
         html, text = email_templates.swap_digest_email(user_swaps, user_tips, user_reverted)
         result = await asyncio.to_thread(

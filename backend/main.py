@@ -8,7 +8,7 @@ from routers import auth, trips, itinerary, weather, flights, notifications
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="ClimaGo", version="0.1.0")
+app = FastAPI(title="Navia", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
