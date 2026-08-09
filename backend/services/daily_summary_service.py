@@ -125,7 +125,7 @@ async def send_daily_summaries(db: AsyncSession) -> list[dict]:
         if user is None:
             continue
 
-        subject = f"ClimaGo: today's weather in {trip.destination}"
+        subject = f"Navia: today's weather in {trip.destination}"
         html, text = email_templates.daily_summary_email(trip, weather_day, summary_points)
         send_result = await asyncio.to_thread(email_service.send_email, user.email, subject, html, text)
         results.append({"trip_id": trip.id, "user_id": trip.user_id, **send_result})
