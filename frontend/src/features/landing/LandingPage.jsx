@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Plane, Thermometer, MapPin, Zap, Globe, Briefcase, ArrowRight } from 'lucide-react'
 import heroImage from '../../assets/hero-amalfi-coast.jpg'
+import logo from '../../assets/logo.png'
 
 const FEATURES = [
   {
@@ -41,8 +42,8 @@ export default function LandingPage() {
       <header className="border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center">
-              <Plane size={18} className="text-white" />
+            <div className="w-9 h-9 rounded-lg overflow-hidden flex items-center justify-center">
+              <img src={logo} alt="Navia" className="w-full h-full object-cover" />
             </div>
             <span className="font-bold text-gray-900 text-lg">Nav<span className="text-indigo-600">ia</span></span>
           </div>

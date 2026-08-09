@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Plane } from 'lucide-react'
+import logo from '../../assets/logo.png'
 import { login } from './authApi'
 import { useAuth } from './useAuth'
 import ErrorMessage from '../../components/ErrorMessage'
@@ -44,8 +44,8 @@ export default function LoginPage() {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
       <div className="flex flex-col items-center text-center mb-6">
-        <div className="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center mb-4">
-          <Plane size={22} className="text-white" />
+        <div className="w-12 h-12 rounded-xl overflow-hidden flex items-center justify-center mb-4">
+          <img src={logo} alt="Navia" className="w-full h-full object-cover" />
         </div>
         <h1 className="text-xl font-bold text-gray-900">Welcome back</h1>
         <p className="text-sm text-gray-500 mt-1">Sign in to plan your weather-synced itinerary</p>

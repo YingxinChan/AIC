@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Plane, Home, Briefcase, User } from 'lucide-react'
+import { Home, Briefcase, User } from 'lucide-react'
+import logo from '../assets/logo.png'
 
 export default function Nav() {
   const { pathname } = useLocation()
@@ -11,8 +12,8 @@ export default function Nav() {
     <nav className="bg-white border-b border-gray-200">
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
         <Link to="/dashboard" className="flex items-center gap-2 font-bold text-gray-900 text-lg">
-          <span className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
-            <Plane size={16} className="text-white" />
+          <span className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
+            <img src={logo} alt="Navia" className="w-full h-full object-cover" />
           </span>
           <span>Nav<span className="text-indigo-600">ia</span></span>
         </Link>
