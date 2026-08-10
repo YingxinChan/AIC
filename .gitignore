@@ -15,6 +15,9 @@ dist/
 # OS
 .DS_Store
 
+# Local project context, not shared via git
+CLAUDE.md
+
 # CatBoost training logs
 catboost_info/
 
