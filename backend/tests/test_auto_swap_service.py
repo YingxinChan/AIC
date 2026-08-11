@@ -611,6 +611,10 @@ def test_auto_swap_reverts_when_the_contributing_metric_recovers(auth_client, mo
     assert activity.original_lat is None
     assert activity.original_lng is None
     assert activity.type == "outdoor"
+    assert activity.is_reverted is True
+    assert activity.reverted_at is not None
+    assert activity.revert_reason == "cold conditions improved"
+    assert activity.revert_score is not None
 
 
 def test_auto_swap_does_not_revert_when_a_different_metric_has_since_gone_strong_bad(auth_client, monkeypatch):
@@ -644,13 +648,16 @@ def test_auto_swap_does_not_revert_when_a_different_metric_has_since_gone_strong
     assert activity.is_swapped is True
 
 
-def test_auto_swap_reverts_when_dominant_metric_clears_even_if_a_secondary_one_is_merely_advisory(
+def test_auto_swap_does_not_revert_when_a_secondary_metric_is_still_advisory(
     auth_client, monkeypatch,
 ):
     """wind (dominant, 75) + cold (secondary, 50) both contributed at swap
-    time. Only the dominant metric needs to fully clear — a secondary
-    contributor left at a merely-advisory level (not independently strong
-    enough to justify a swap on its own) doesn't block the revert."""
+    time. Wind (the dominant cause) fully clears, but cold is left at a
+    merely-advisory 50 — not swap-worthy on its own, but still tip-worthy
+    (the "weather tips" email fires at ADVISORY_THRESHOLD=40). Reverting
+    here would immediately re-trigger a tip email for the same activity on
+    the very next run, so the revert must be held back until cold clears
+    too, not just checked against the swap-worthy line."""
     trip_id = _create_trip_ending(auth_client, monkeypatch, days=5)
     far_out_day = TODAY + timedelta(days=3)
     activity_id = _add_activity(
@@ -663,17 +670,16 @@ def test_auto_swap_reverts_when_dominant_metric_clears_even_if_a_secondary_one_i
     _mock_weather(monkeypatch, forecast=[{
         "date": far_out_day.isoformat(), "heavy_rain_warning": False, "heavy_rain_probability": 2.0,
         "wind_speed": 5,      # Calm — the dominant cause, clearly recovered
-        "temp_min": -7,       # still mildly cold (scores 50, advisory) but not independently swap-worthy (<70)
+        "temp_min": -7,       # still mildly cold (scores 50, advisory) — still tip-worthy, must block revert
     }])
     _mock_hourly_weather(monkeypatch)
 
     result = _run_auto_swap()
     our_reverts = [r for r in result["reverted"] if r["trip_id"] == trip_id]
 
-    assert len(our_reverts) == 1
-    assert our_reverts[0]["activity_id"] == activity_id
+    assert our_reverts == []
     activity = _get_activity(activity_id)
-    assert activity.is_swapped is False
+    assert activity.is_swapped is True
 
 
 def test_auto_swap_does_not_revert_within_24h_commit_window(auth_client, monkeypatch):

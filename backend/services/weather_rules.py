@@ -960,48 +960,66 @@ def should_revert(
     activity=None,
     hourly: list[dict] | None = None,
     today: date | None = None,
-) -> bool:
-    """True when the swap's dominant (worst-scoring) original cause is
+) -> dict | None:
+    """Non-None when the swap's dominant (worst-scoring) original cause is
     independently good again AND the OTHER currently-applicable metrics —
     including ones that had nothing to do with the original swap — don't
     still combine (via the same max + 0.5*second_highest stacking rule
-    score_activity() itself uses) to a swap-worthy score. Deliberately
-    compares the raw combined score, NOT horizon-decayed — this is a "how
-    dangerous is it right now" check, not a "how confident are we, this far
-    out" check (that's what horizon_factor is for on the original swap
-    decision); discounting a currently-severe remaining risk just because
-    the activity is a few days out would be exactly backwards for deciding
-    whether it's safe to revert today.
+    score_activity() itself uses) to a score that's even tip-worthy.
+    Compared against ADVISORY_THRESHOLD, not SWAP_THRESHOLD: the tip check
+    elsewhere (run_auto_swap) fires on the full combined score reaching
+    ADVISORY_THRESHOLD, decayed by horizon_factor (<=1.0) — so a remaining
+    score anywhere in [ADVISORY_THRESHOLD, SWAP_THRESHOLD) would pass a
+    SWAP_THRESHOLD check here but is still guaranteed to be at or near
+    tip-worthy on the very next evaluation, reverting this activity
+    straight into an immediate "weather tips" email for itself. Comparing
+    against ADVISORY_THRESHOLD closes that gap. Deliberately compares the
+    raw combined score, NOT horizon-decayed — this is a "how dangerous is
+    it right now" check, not a "how confident are we, this far out" check
+    (that's what horizon_factor is for on the original swap decision);
+    discounting a currently-severe remaining risk just because the activity
+    is a few days out would be exactly backwards for deciding whether it's
+    safe to revert today. Since horizon_factor can only ever shrink a score
+    (<=1.0), a raw remaining score already below ADVISORY_THRESHOLD stays
+    below it once decayed, so this fully prevents the immediate-tip case.
 
     Recombining (not just re-checking each one individually) matters
     because the stacking rule is exactly what could have gotten this
     activity swapped in the first place: two metrics that were each merely
     advisory at swap time (e.g. heat 50 + UV 50) reach 50 + 0.5*50 = 75,
     over SWAP_THRESHOLD, even though neither alone would. Checking each
-    remaining metric only against SWAP_THRESHOLD in isolation — as if
-    stacking didn't exist — would let a revert walk this activity straight
-    into a combined risk that's swap-worthy right now, just for a different
-    reason than the one it was originally swapped for. Metrics don't change
-    which apply to an activity over its lifetime (they're gated by the
-    static weather_sensitivity tag), but their SCORES do as the forecast
-    updates — a metric that was fine at swap time (score 0, so absent from
+    remaining metric only against a threshold in isolation — as if stacking
+    didn't exist — would let a revert walk this activity straight into a
+    combined risk that's swap-worthy right now, just for a different reason
+    than the one it was originally swapped for. Metrics don't change which
+    apply to an activity over its lifetime (they're gated by the static
+    weather_sensitivity tag), but their SCORES do as the forecast updates —
+    a metric that was fine at swap time (score 0, so absent from
     _contributing_metrics below) can have turned dangerous by the time
     revert is checked, which is also why score_activity() is re-run fresh
     here rather than only re-checking the frozen swap-time trace.
 
     An unknown dominant metric name or an empty contributing set is treated
-    conservatively as "not recovered" — never guess a revert."""
+    conservatively as "not recovered" — never guess a revert.
+
+    Returns None when it should not revert. Returns
+    {"dominant_metric": str, "score_trace": dict} when it should — the
+    caller persists `score_trace` (this function's own fresh
+    score_activity() result, otherwise discarded) as Activity.revert_score,
+    and derives a human-readable revert reason from `dominant_metric`."""
     contributing = _contributing_metrics(scores_at_swap or {})
     if not contributing:
-        return False
+        return None
     dominant_metric, _ = contributing[0]
 
     good_check = _GOOD_CHECKS.get(dominant_metric)
     if good_check is None or not good_check(forecast_day, activity, hourly):
-        return False
+        return None
 
     fresh = score_activity(forecast_day, activity, hourly, today=today)
     remaining_scores = {
         name: score for name, score in fresh["scores"].items() if name != dominant_metric
     }
-    return _combine_scores(remaining_scores) < SWAP_THRESHOLD
+    if _combine_scores(remaining_scores) >= ADVISORY_THRESHOLD:
+        return None
+    return {"dominant_metric": dominant_metric, "score_trace": fresh}

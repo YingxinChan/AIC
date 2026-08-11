@@ -196,3 +196,35 @@ def test_apply_swap_keeps_type_outdoor_when_the_alternative_is_also_outdoor():
     asyncio.run(swap_service.apply_swap(AsyncMock(), activity, alternate, "Strong winds expected"))
 
     assert activity.type == "outdoor"
+
+
+def test_apply_swap_sets_swapped_at_and_clears_is_reverted():
+    activity = _activity(is_reverted=True)
+    alternate = {
+        "name": "British Museum", "location": "Great Russell St",
+        "lat": 51.5194, "lng": -0.1270, "type": "indoor",
+    }
+
+    asyncio.run(swap_service.apply_swap(AsyncMock(), activity, alternate, "Heavy rain expected"))
+
+    assert activity.swapped_at is not None
+    assert activity.is_reverted is False
+
+
+def test_revert_activity_sets_revert_audit_fields():
+    activity = _activity(
+        is_swapped=True, alternate_name="British Museum", alternate_location="Great Russell St",
+        swap_reason="Heavy rain expected", swap_score_trace={"scores": {"rain": 90}, "combined": 90, "adjusted": 90},
+        original_lat=51.5073, original_lng=-0.1657, lat=51.5194, lng=-0.1270, type="indoor",
+    )
+    score_trace = {"scores": {"cold": 20}, "combined": 20, "adjusted": 20}
+
+    asyncio.run(swap_service.revert_activity(AsyncMock(), activity, "rain conditions improved", score_trace))
+
+    assert activity.is_swapped is False
+    assert activity.is_reverted is True
+    assert activity.reverted_at is not None
+    assert activity.revert_reason == "rain conditions improved"
+    assert activity.revert_score == score_trace
+    assert (activity.lat, activity.lng) == (51.5073, -0.1657)
+    assert activity.type == "outdoor"

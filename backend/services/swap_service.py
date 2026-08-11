@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 
 import anthropic
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -114,6 +115,8 @@ async def apply_swap(
     # exactly these metrics rather than re-deriving "why" from swap_reason's
     # free-text sentence.
     activity.swap_score_trace = score_trace
+    activity.swapped_at = datetime.utcnow()
+    activity.is_reverted = False
     # Stashed before being overwritten below — original_lat/lng have no
     # other backup (unlike name/location, which this function never
     # touches), so a later revert_activity() call needs these to restore
@@ -133,17 +136,29 @@ async def apply_swap(
     await db.commit()
 
 
-async def revert_activity(db: AsyncSession, activity: Activity) -> None:
+async def revert_activity(
+    db: AsyncSession,
+    activity: Activity,
+    reason: str = "",
+    score_trace: dict | None = None,
+) -> None:
     """Undo a previous auto-swap once the weather that caused it has
     cleared (see auto_swap_service._check_revert). name/location were never
     touched by apply_swap, so they're already the original plan — only
     lat/lng/type (overwritten in place above with no other backup) need
-    restoring here."""
+    restoring here. `reason`/`score_trace` come from
+    weather_rules.should_revert()'s dominant_metric/score_trace, kept for
+    the same auditability reason apply_swap() keeps swap_reason/
+    swap_score_trace."""
     activity.is_swapped = False
     activity.alternate_name = ""
     activity.alternate_location = ""
     activity.swap_reason = ""
     activity.swap_score_trace = None
+    activity.reverted_at = datetime.utcnow()
+    activity.is_reverted = True
+    activity.revert_reason = reason
+    activity.revert_score = score_trace
     if activity.original_lat is not None:
         activity.lat = activity.original_lat
     if activity.original_lng is not None:

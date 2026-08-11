@@ -65,16 +65,18 @@ def _hours_until_activity(activity: Activity, now: datetime) -> float:
     return (activity_start - now).total_seconds() / 3600
 
 
-def _check_revert(forecast_day: dict, activity: Activity, hourly: list[dict] | None) -> bool:
+def _check_revert(forecast_day: dict, activity: Activity, hourly: list[dict] | None) -> dict | None:
     """A swap reverts once its dominant original cause is independently
     good again AND no metric applicable to this activity — including one
-    that had nothing to do with the original swap — has since become
-    independently strong enough to justify a swap on its own (see
-    weather_rules.should_revert). Legacy fallback: rows swapped before rain
-    was folded into the scoring engine (see weather_rules.score_rain) never
-    got a score_trace at all — treat those as a synthetic single-metric
-    "rain" trace so they still revert via weather_rules.good_rain instead
-    of never reverting."""
+    that had nothing to do with the original swap — has since become at
+    least tip-worthy on its own (see weather_rules.should_revert). Legacy
+    fallback: rows swapped before rain was folded into the scoring engine
+    (see weather_rules.score_rain) never got a score_trace at all — treat
+    those as a synthetic single-metric "rain" trace so they still revert
+    via weather_rules.good_rain instead of never reverting.
+
+    Returns None if it should not revert, else should_revert()'s
+    {"dominant_metric", "score_trace"} dict for the caller to persist."""
     scores_at_swap = (
         {"rain": 1} if activity.swap_score_trace is None
         else activity.swap_score_trace.get("scores", {})
@@ -269,11 +271,15 @@ async def run_auto_swap(db: AsyncSession) -> dict:
             for activity in revert_candidates_by_date.get(forecast_day["date"], []):
                 if _hours_until_activity(activity, now) < 24:
                     continue  # inside the commit window — don't flip-flop this close to the activity
-                if not _check_revert(forecast_day, activity, hourly_for_day):
+                revert_info = _check_revert(forecast_day, activity, hourly_for_day)
+                if revert_info is None:
                     continue
                 previous_alternate_name = activity.alternate_name
                 previous_alternate_location = activity.alternate_location
-                await swap_service.revert_activity(db, activity)
+                revert_reason = f"{revert_info['dominant_metric'].replace('_', ' ')} conditions improved"
+                await swap_service.revert_activity(
+                    db, activity, revert_reason, revert_info["score_trace"]
+                )
                 # Keep planned_names in sync with this revert — its old
                 # alternate is no longer scheduled anywhere, and its
                 # restored original plan is active again, so a later swap

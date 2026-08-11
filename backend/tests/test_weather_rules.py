@@ -399,12 +399,12 @@ def test_should_revert_does_not_revert_when_two_other_metrics_still_stack_past_t
         "uv_index": 7,    # uv: "High" -> advisory (50) alone
         "visibility_m": 15000,
     }
-    assert should_revert(scores_at_swap, forecast_day, activity, today=date.today()) is False
+    assert should_revert(scores_at_swap, forecast_day, activity, today=date.today()) is None
 
 
 def test_should_revert_reverts_when_remaining_metrics_stay_below_threshold_even_combined():
     """Same shape as the stacking case above, but heat/UV are mild enough
-    that even combined they stay under SWAP_THRESHOLD — revert should
+    that even combined they stay under ADVISORY_THRESHOLD — revert should
     proceed."""
     activity = Activity(
         trip_id=1, day_date=date.today(), name="Hill Run", type="outdoor",
@@ -417,7 +417,31 @@ def test_should_revert_reverts_when_remaining_metrics_stay_below_threshold_even_
         "uv_index": 3,    # uv: 0
         "visibility_m": 15000,
     }
-    assert should_revert(scores_at_swap, forecast_day, activity, today=date.today()) is True
+    result = should_revert(scores_at_swap, forecast_day, activity, today=date.today())
+    assert result is not None
+    assert result["dominant_metric"] == "rain"
+
+
+def test_should_revert_does_not_revert_when_remaining_metric_is_merely_advisory():
+    """Swapped for wind (dominant, 75). Wind has since calmed down (good_wind
+    True), but cold is left at 50 — merely advisory, not swap-worthy on its
+    own (would pass the old SWAP_THRESHOLD-based check). Reverting anyway
+    would immediately re-trigger a "weather tips" email for this same
+    activity on the very next evaluation, since the tip check fires at
+    ADVISORY_THRESHOLD — so should_revert must refuse to revert into this
+    gap too."""
+    activity = Activity(
+        trip_id=1, day_date=date.today(), name="Thames Boat Tour", type="outdoor",
+        time_slot="10:00 - 12:00", weather_sensitivity="wind_exposed,strenuous_outdoor",
+    )
+    scores_at_swap = {"wind": 75, "cold": 50}
+    forecast_day = {
+        "heavy_rain_warning": False, "rain_mm": 2,
+        "wind_speed": 5,   # wind: calm, clearly recovered
+        "temp_min": -7,    # cold: still 50 (advisory), not independently swap-worthy
+        "visibility_m": 15000,
+    }
+    assert should_revert(scores_at_swap, forecast_day, activity, today=date.today()) is None
 
 
 def test_score_fog_safety_boundaries_use_meters_not_km():

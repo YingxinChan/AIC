@@ -1,6 +1,6 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Any
-from sqlalchemy import JSON, String, Date, Boolean, Float, ForeignKey
+from sqlalchemy import JSON, String, Date, DateTime, Boolean, Float, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 from models.base import Base
 
@@ -49,3 +49,15 @@ class Activity(Base):
     # services/itinerary_service.py generate_itinerary() and
     # services/auto_swap_service.py run_auto_swap().
     is_fixed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+
+    # Revert-side counterparts to is_swapped/swap_reason/swap_score_trace
+    # above — track only the most recent swap/revert cycle (same
+    # latest-event-overwrites model already used for the swap fields, not a
+    # full history). is_reverted distinguishes "never touched" from "was
+    # swapped then reverted", since is_swapped=False alone can't tell those
+    # apart. Set by services/swap_service.py's apply_swap()/revert_activity().
+    swapped_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    reverted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    is_reverted: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    revert_reason: Mapped[str] = mapped_column(String(255), default="", server_default="")
+    revert_score: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)

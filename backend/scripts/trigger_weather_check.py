@@ -20,9 +20,9 @@ from services.notifications_service import send_swap_digest_emails
 async def main():
     async with AsyncSessionLocal() as db:
         result = await run_auto_swap(db)
-        swapped, tips = result["swapped"], result["tips"]
+        swapped, tips, reverted = result["swapped"], result["tips"], result["reverted"]
 
-        if not swapped and not tips:
+        if not swapped and not tips and not reverted:
             print("No swaps or tips triggered — no un-swapped/fixed outdoor activity is currently affected by any active weather condition.")
             return
 
@@ -36,7 +36,12 @@ async def main():
             for t in tips:
                 print(f"  trip {t['trip_id']}, activity {t['activity_id']}: {t['name']} — {t['reason']} — {t['tip']}")
 
-        email_results = await send_swap_digest_emails(db, swapped, tips)
+        if reverted:
+            print(f"Reverted {len(reverted)} activit{'y' if len(reverted) == 1 else 'ies'}:")
+            for r in reverted:
+                print(f"  trip {r['trip_id']}, activity {r['activity_id']}: {r['previous_alternate_name']} -> {r['restored_name']}")
+
+        email_results = await send_swap_digest_emails(db, swapped, tips, reverted)
 
     if not email_results:
         print("No digest emails sent (affected users have email notifications turned off, or below their rain threshold).")
