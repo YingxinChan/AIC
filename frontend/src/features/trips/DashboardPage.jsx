@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Plane, ArrowRight, Calendar, ChevronRight, Compass } from 'lucide-react'
+import { Plane, ArrowRight, Calendar, ChevronRight, Compass, Plus } from 'lucide-react'
 import ErrorMessage from '../../components/ErrorMessage'
 import Button from '../../components/Button'
 import Card from '../../components/Card'
@@ -34,13 +34,18 @@ function daysUntil(dateStr) {
   return Math.round((new Date(dateStr) - new Date(today)) / msPerDay)
 }
 
-// Soonest trip whose start date hasn't passed yet — used to swap the hero
-// from generic acquisition copy into "here's what's next" content, and to
-// drive the forecast-at-a-glance module. Past/completed trips never qualify,
-// even if they're the only trips the user has.
-function soonestUpcomingTrip(trips) {
+// A trip you're currently on beats a merely-future one — you're literally
+// traveling on it right now, more relevant than something next week — so
+// this checks for an ongoing trip first (via the same tripStatus() used
+// everywhere else) before falling back to the soonest future trip. Used to
+// swap the hero from generic acquisition copy into "here's what's up"
+// content, and to drive the forecast-at-a-glance module. Completed trips
+// never qualify either way.
+function pickFeaturedTrip(trips) {
+  const ongoing = trips.find((t) => tripStatus(t) === 'Ongoing')
+  if (ongoing) return ongoing
   const todayStr = new Date().toISOString().slice(0, 10)
-  const upcoming = trips.filter((t) => t.start_date && t.start_date >= todayStr)
+  const upcoming = trips.filter((t) => t.start_date && t.start_date > todayStr)
   if (!upcoming.length) return null
   return [...upcoming].sort((a, b) => a.start_date.localeCompare(b.start_date))[0]
 }
@@ -49,35 +54,36 @@ export default function DashboardPage() {
   const { trips, loading, error } = useTrips()
   const destinationCount = new Set(trips.map((t) => t.destination).filter(Boolean)).size
   const recentTrips = trips.slice(0, RECENT_TRIPS_PREVIEW_COUNT)
-  const upcomingTrip = useMemo(() => soonestUpcomingTrip(trips), [trips])
+  const featuredTrip = useMemo(() => pickFeaturedTrip(trips), [trips])
+  const isOngoing = Boolean(featuredTrip) && tripStatus(featuredTrip) === 'Ongoing'
 
   // Hero falls back to the generic "Plan a Trip" acquisition copy once we
   // know there's no upcoming trip to show instead (no trips at all, or every
   // trip is in the past). While trips are still loading, neither variant is
   // shown — see the skeleton branch below — so the hero never commits to the
   // wrong copy and then flashes to the other one a moment later.
-  const showGenericHero = !loading && !upcomingTrip
+  const showGenericHero = !loading && !featuredTrip
 
   const [forecastGlance, setForecastGlance] = useState(null)
   // 'idle' (no upcoming trip) | 'loading' | 'loaded' | 'failed'
   const [glanceStatus, setGlanceStatus] = useState('idle')
 
   useEffect(() => {
-    if (!upcomingTrip?.destination) {
+    if (!featuredTrip?.destination) {
       setGlanceStatus('idle')
       setForecastGlance(null)
       return
     }
     let cancelled = false
     setGlanceStatus('loading')
-    geocodeCity(upcomingTrip.destination)
+    geocodeCity(featuredTrip.destination)
       .then((coords) => {
         if (cancelled) return
         if (!coords) {
           setGlanceStatus('failed')
           return
         }
-        return getForecast(coords[0], coords[1], upcomingTrip.start_date, upcomingTrip.end_date).then((days) => {
+        return getForecast(coords[0], coords[1], featuredTrip.start_date, featuredTrip.end_date).then((days) => {
           if (cancelled) return
           setForecastGlance(Array.isArray(days) ? days.slice(0, GLANCE_DAY_COUNT) : [])
           setGlanceStatus('loaded')
@@ -88,18 +94,31 @@ export default function DashboardPage() {
         if (!cancelled) setGlanceStatus('failed')
       })
     return () => { cancelled = true }
-  }, [upcomingTrip?.destination, upcomingTrip?.start_date, upcomingTrip?.end_date])
+  }, [featuredTrip?.destination, featuredTrip?.start_date, featuredTrip?.end_date])
 
   // The forecast module only ever has something to show once there's a real
   // upcoming trip — while still loading trips, its skeleton still reserves
   // the layout's 1/3 column so nothing jumps once loading resolves.
-  const showForecastColumn = loading || Boolean(upcomingTrip)
+  const showForecastColumn = loading || Boolean(featuredTrip)
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="heading-1">Welcome back</h1>
-        <p className="text-body-sm text-ink-muted">Where are you heading next?</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="heading-1">Welcome back</h1>
+          <p className="text-body-sm text-ink-muted">Where are you heading next?</p>
+        </div>
+        {/* Page-level action, next to the title — same place a "+ New"
+            control lives on most dashboards (GitHub repos, Linear boards).
+            Plus rather than Plane so it doesn't echo the hero's own "View
+            Trip"/"Plan a Trip" icon and read as a second, confusable
+            version of the same action. Only shown once there's a hero
+            already covering the zero-trips case with its own CTA. */}
+        {!loading && trips.length > 0 && (
+          <Button to="/trips/new" variant="secondary" shape="pill" size="sm" className="shrink-0">
+            <Plus size={14} /> New Trip
+          </Button>
+        )}
       </div>
 
       <div className="grid lg:grid-cols-3 gap-4 items-start">
@@ -139,12 +158,12 @@ export default function DashboardPage() {
               </>
             ) : (
               <>
-                <p className="text-xs font-medium text-brand-200 mb-1">Your next adventure</p>
-                <h2 className="heading-2 text-white">{capitalize(upcomingTrip.destination)}</h2>
+                <p className="text-xs font-medium text-brand-200 mb-1">{isOngoing ? 'Your current trip' : 'Your next adventure'}</p>
+                <h2 className="heading-2 text-white">{capitalize(featuredTrip.destination)}</h2>
                 <p className="flex items-center gap-1.5 text-sm text-brand-100 mt-2">
-                  <Calendar size={14} /> {upcomingTrip.start_date} &rarr; {upcomingTrip.end_date}
+                  <Calendar size={14} /> {featuredTrip.start_date} &rarr; {featuredTrip.end_date}
                 </p>
-                <Button to={`/trips/${upcomingTrip.id}`} variant="onBrand" shape="pill" className="mt-5 w-fit">
+                <Button to={`/trips/${featuredTrip.id}`} variant="onBrand" shape="pill" className="mt-5 w-fit">
                   <Plane size={16} /> View Trip <ArrowRight size={14} />
                 </Button>
               </>
@@ -157,14 +176,16 @@ export default function DashboardPage() {
             <SkeletonForecastGlance />
           ) : (
             <Link
-              to={`/trips/${upcomingTrip.id}`}
+              to={`/trips/${featuredTrip.id}`}
               className="group min-h-[280px] flex flex-col justify-center gap-6 rounded-3xl border border-gray-200/80 shadow-bento hover:shadow-bento-hover hover:border-brand-200 transition-shadow bg-white p-6"
             >
               <div>
-                <p className="text-xs font-medium text-ink-muted">Your next trip's forecast at a glance</p>
-                <h3 className="font-display font-semibold text-ink text-lg mt-0.5">{capitalize(upcomingTrip.destination)}</h3>
+                <p className="text-xs font-medium text-ink-muted">{isOngoing ? "Your current trip's forecast at a glance" : "Your next trip's forecast at a glance"}</p>
+                <h3 className="font-display font-semibold text-ink text-lg mt-0.5">{capitalize(featuredTrip.destination)}</h3>
                 <p className="text-sm text-ink-muted mt-0.5">
-                  {daysUntil(upcomingTrip.start_date)} day{daysUntil(upcomingTrip.start_date) === 1 ? '' : 's'} until departure
+                  {isOngoing
+                    ? 'Enjoy your trip!'
+                    : `${daysUntil(featuredTrip.start_date)} day${daysUntil(featuredTrip.start_date) === 1 ? '' : 's'} until departure`}
                 </p>
               </div>
 

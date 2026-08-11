@@ -45,3 +45,17 @@ test('highlights My Trips as active on any /trips route, including a specific tr
   expect(screen.getByRole('link', { name: /my trips/i })).toHaveClass('bg-brand-50')
   expect(screen.getByRole('link', { name: /home/i })).not.toHaveClass('bg-brand-50')
 })
+
+// The creation form isn't "browsing your trips" — so My Trips shouldn't
+// light up there.
+test('does not highlight My Trips on the New Trip form', () => {
+  render(<MemoryRouter initialEntries={['/trips/new']}><Nav /></MemoryRouter>)
+  expect(screen.getByRole('link', { name: /my trips/i })).not.toHaveClass('bg-brand-50')
+})
+
+// Nor on its nested flight-select sub-route — still part of the same
+// creation flow, not the trip list.
+test('does not highlight My Trips on the New Trip flow\'s flight-select sub-route', () => {
+  render(<MemoryRouter initialEntries={['/trips/new/flights/outbound']}><Nav /></MemoryRouter>)
+  expect(screen.getByRole('link', { name: /my trips/i })).not.toHaveClass('bg-brand-50')
+})

@@ -97,6 +97,18 @@ export default function AccountPage() {
           <p className="text-sm text-ink-muted">
             Member since <span className="font-medium text-ink">{formatMemberSince(user?.created_at)}</span>
           </p>
+          {/* Hardcoded demo value, not real data — there's still no billing
+              backend (SubscriptionPage's Continue button is a toast, not a
+              save), so this can't actually reflect what anyone picked.
+              "Monthly Explorer" matches the plan name in SubscriptionPage.jsx
+              verbatim. Green pill now that it's representing an active
+              status rather than "nothing to report". */}
+          <p className="mt-1.5 flex items-center gap-1.5 text-sm text-ink-muted">
+            Active plan:
+            <span className="inline-flex items-center rounded-full bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-1">
+              Monthly Explorer
+            </span>
+          </p>
 
           <div className="mt-5 flex flex-wrap gap-3">
             <div className="flex items-center gap-2 rounded-full bg-white border border-gray-200/80 shadow-bento-sm px-4 py-2.5">
@@ -134,14 +146,7 @@ export default function AccountPage() {
           <span className="flex w-full items-center justify-between">
             <span className="flex items-center gap-3">
               <CreditCard size={18} />
-              {/* Honest placeholder — there's no real billing backend yet
-                  (SubscriptionPage's own Continue button is a toast, not a
-                  save), so this can't show a real plan. See it as a plan
-                  selector to try, not a "no data available" bug. */}
-              <span className="text-left">
-                <span className="block">Manage Subscription</span>
-                <span className="block text-xs text-ink-muted font-normal">No active plan</span>
-              </span>
+              Manage Subscription
             </span>
             <ChevronRight size={16} />
           </span>

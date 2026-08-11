@@ -151,6 +151,23 @@ test('swaps the hero to the soonest upcoming trip, with a View Trip link to its 
   expect(screen.queryByRole('link', { name: /^plan a trip/i })).not.toBeInTheDocument()
 })
 
+// Hero swap: a trip you're currently on (started in the past, hasn't ended)
+// beats a merely-future one — you're literally traveling on it right now.
+// Also covers the "current" vs "next adventure" wording split.
+test('features an ongoing trip over a later upcoming one, with "current trip" wording', async () => {
+  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  getTrips.mockResolvedValue([
+    { id: 7, name: 'Later', destination: 'Paris', start_date: '2099-01-01', end_date: '2099-01-07' },
+    { id: 8, name: 'Right Now', destination: 'Rome', start_date: yesterday, end_date: '2099-01-01' },
+  ])
+  renderPage()
+
+  const viewTripLink = await screen.findByRole('link', { name: /view trip/i })
+  expect(viewTripLink).toHaveAttribute('href', '/trips/8')
+  expect(screen.getByText('Your current trip')).toBeInTheDocument()
+  expect(screen.queryByText('Your next adventure')).not.toBeInTheDocument()
+})
+
 // Forecast-at-a-glance module: only appears for a real upcoming trip, reuses
 // geocodeCity/getForecast (mocked above) the same way ItineraryPage does, and
 // links through to that trip's itinerary.

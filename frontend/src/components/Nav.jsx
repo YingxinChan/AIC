@@ -10,7 +10,11 @@ const MotionLink = getMotionComponent(Link)
 export default function Nav() {
   const { pathname } = useLocation()
   const isHome = pathname === '/dashboard'
-  const isMyTrips = pathname.startsWith('/trips')
+  // Excludes /trips/new (and its flight-select sub-route) — that's the
+  // creation form, not browsing your trip list, so "My Trips" shouldn't
+  // light up while you're on it. Viewing an existing trip's itinerary
+  // (/trips/:tripId) still counts as My Trips.
+  const isMyTrips = pathname.startsWith('/trips') && !pathname.startsWith('/trips/new')
   const isAccount = pathname === '/account'
 
   return (
