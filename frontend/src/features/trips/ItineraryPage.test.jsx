@@ -606,6 +606,74 @@ test('inserts dedicated sunrise/sunset cards into the hourly forecast at their s
   expect(screen.getByText('7 PM')).toBeInTheDocument()
 })
 
+// Regression test: the umbrella tip's trigger used to be /rain|storm/, which
+// missed Drizzle entirely (none of "Light Drizzle"/"Drizzle"/"Heavy Drizzle"
+// contain the substring "rain") and any Showers variant other than "Rain
+// Showers" ("Heavy Showers"/"Violent Showers" don't contain "rain" either).
+test.each(['Light Drizzle', 'Drizzle', 'Heavy Drizzle', 'Heavy Showers', 'Violent Showers'])(
+  'shows the umbrella tip for condition "%s", not just literal "Rain"/"Storm" text',
+  async (condition) => {
+    getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+    geocodeCity.mockResolvedValueOnce([51.5074, -0.1278])
+    getForecast.mockResolvedValueOnce([{
+      date: '2026-08-01',
+      temp_max: 18,
+      temp_min: 12,
+      condition,
+      heavy_rain_probability: 40,
+      heavy_rain_warning: false,
+      flood_score: 10,
+      flood_risk: 'Low',
+      beach_safety_score: 60,
+      beach_safety_level: 'Good',
+      snow_probability: 0,
+      wind_speed: 10,
+      wind_level: 'Breezy',
+      uv_index: 2,
+      uv_level: 'Low',
+      visibility_m: 8000,
+      sunrise: '06:00 AM',
+      sunset: '08:00 PM',
+    }])
+    getItinerary.mockResolvedValue({ status: 'not_generated' })
+
+    renderAt(1)
+
+    expect(await screen.findByText(/bring an umbrella today/i)).toBeInTheDocument()
+  }
+)
+
+test('does not show the umbrella tip for a dry condition like Clear', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  geocodeCity.mockResolvedValueOnce([51.5074, -0.1278])
+  getForecast.mockResolvedValueOnce([{
+    date: '2026-08-01',
+    temp_max: 22,
+    temp_min: 14,
+    condition: 'Clear',
+    heavy_rain_probability: 5,
+    heavy_rain_warning: false,
+    flood_score: 5,
+    flood_risk: 'Low',
+    beach_safety_score: 90,
+    beach_safety_level: 'Excellent',
+    snow_probability: 0,
+    wind_speed: 5,
+    wind_level: 'Calm',
+    uv_index: 3,
+    uv_level: 'Moderate',
+    visibility_m: 15000,
+    sunrise: '06:34 AM',
+    sunset: '07:00 PM',
+  }])
+  getItinerary.mockResolvedValue({ status: 'not_generated' })
+
+  renderAt(1)
+
+  await screen.findByText('Clear')
+  expect(screen.queryByText(/bring an umbrella today/i)).not.toBeInTheDocument()
+})
+
 test('shows the "feels like" temperature in grey next to the actual temp, for today only', async () => {
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(new Date('2026-08-01T14:30:00Z'))

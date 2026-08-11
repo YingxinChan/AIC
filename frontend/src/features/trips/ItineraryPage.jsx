@@ -993,11 +993,16 @@ export default function ItineraryPage() {
   const riskInfoMeta = forecastDay ? getRiskInfoMeta(forecastDay) : {}
 
   // Simple practical nudge, replacing the old "worst of 9 risk cards"
-  // summary — just whether today's condition itself is rain (or storm,
-  // which implies rain too), read straight from the same condition text
-  // already shown next to it. The full 9-card breakdown is still available
-  // via "View full forecast" for anyone who wants the detailed severity read.
-  const isRainyDay = Boolean(forecastDay?.condition?.toLowerCase().match(/rain|storm/))
+  // summary — just whether today's condition itself calls for an umbrella,
+  // read straight from the same condition text already shown next to it.
+  // Matches every wet condition string weather_service.py's WEATHER_CODES
+  // can produce: Rain/Drizzle/Showers/Thunderstorm at any intensity ("Light
+  // Drizzle", "Heavy Showers", "Severe Thunderstorm", etc.) — "rain|storm"
+  // alone missed Drizzle entirely and any Showers variant other than "Rain
+  // Showers", since neither "drizzle" nor "showers" contains "rain". The
+  // full 9-card breakdown is still available via "View full forecast" for
+  // anyone who wants the detailed severity read.
+  const isRainyDay = Boolean(forecastDay?.condition?.toLowerCase().match(/rain|storm|drizzle|showers/))
 
   const itineraryDay = itinerary?.days?.find(d => d.date === selectedDate)
   const selectedDayNumber = tripDates.indexOf(selectedDate) + 1
