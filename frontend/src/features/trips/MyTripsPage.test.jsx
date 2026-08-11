@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { vi } from 'vitest'
@@ -62,7 +62,7 @@ test('shows a destination photo background on trip cards, case-insensitively, fa
   const unmappedCard = screen.getByText('B').closest('a')
   const unmappedPhoto = unmappedCard.querySelector('div')
   expect(unmappedPhoto.style.backgroundImage).toBe('')
-  expect(unmappedPhoto.className).toContain('from-indigo-400')
+  expect(unmappedPhoto.className).toContain('from-brand-400')
 })
 
 test('renders every trip as a card with name, dates, status, and a link to its itinerary page', async () => {
@@ -74,11 +74,14 @@ test('renders every trip as a card with name, dates, status, and a link to its i
 
   expect(await screen.findByText('Summer Trip')).toBeInTheDocument()
   expect(screen.getByText('Winter Trip')).toBeInTheDocument()
-  expect(screen.getByRole('link', { name: /summer trip/i })).toHaveAttribute('href', '/trips/1')
-  expect(screen.getByRole('link', { name: /winter trip/i })).toHaveAttribute('href', '/trips/2')
-  expect(screen.getAllByText(/view details/i).length).toBe(2)
-  expect(screen.getByText(/completed/i)).toBeInTheDocument()
-  expect(screen.getByText(/upcoming/i)).toBeInTheDocument()
+  const summerCard = screen.getByRole('link', { name: /summer trip/i })
+  const winterCard = screen.getByRole('link', { name: /winter trip/i })
+  expect(summerCard).toHaveAttribute('href', '/trips/1')
+  expect(winterCard).toHaveAttribute('href', '/trips/2')
+  // Scoped to each card specifically — the status filter chips (now shown
+  // regardless of trip count) also render "Completed"/"Upcoming" text.
+  expect(within(summerCard).getByText(/completed/i)).toBeInTheDocument()
+  expect(within(winterCard).getByText(/upcoming/i)).toBeInTheDocument()
 })
 
 test('shows an error and keeps the trip visible when deletion fails', async () => {

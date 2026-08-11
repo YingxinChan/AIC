@@ -36,12 +36,12 @@ test('no longer shows Flights, Notifications, or Sign out links (notifications f
 
 test('highlights only Home as active on the dashboard route', () => {
   render(<MemoryRouter initialEntries={['/dashboard']}><Nav /></MemoryRouter>)
-  expect(screen.getByRole('link', { name: /home/i })).toHaveClass('bg-indigo-50')
-  expect(screen.getByRole('link', { name: /my trips/i })).not.toHaveClass('bg-indigo-50')
+  expect(screen.getByRole('link', { name: /home/i })).toHaveClass('bg-brand-50')
+  expect(screen.getByRole('link', { name: /my trips/i })).not.toHaveClass('bg-brand-50')
 })
 
 test('highlights My Trips as active on any /trips route, including a specific trip', () => {
   render(<MemoryRouter initialEntries={['/trips/42']}><Nav /></MemoryRouter>)
-  expect(screen.getByRole('link', { name: /my trips/i })).toHaveClass('bg-indigo-50')
-  expect(screen.getByRole('link', { name: /home/i })).not.toHaveClass('bg-indigo-50')
+  expect(screen.getByRole('link', { name: /my trips/i })).toHaveClass('bg-brand-50')
+  expect(screen.getByRole('link', { name: /home/i })).not.toHaveClass('bg-brand-50')
 })

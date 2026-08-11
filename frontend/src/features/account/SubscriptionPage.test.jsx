@@ -42,9 +42,13 @@ describe('SubscriptionPage', () => {
   test('renders all three plans and prices', () => {
     renderPage()
 
+    // Single is selected by default, and the "Continue with Single Trip
+    // Pass" CTA also matches /single/i — disambiguate via `pressed`, which
+    // only the plan-card toggle buttons have (aria-pressed), not the CTA.
     expect(
       screen.getByRole('button', {
         name: /single/i,
+        pressed: true,
       }),
     ).toBeInTheDocument()
     expect(screen.getByText('£4.99')).toBeInTheDocument()
@@ -67,8 +71,11 @@ describe('SubscriptionPage', () => {
   test('allows the user to select a plan', () => {
     renderPage()
 
+    // Disambiguate from the "Continue with Single Trip Pass" CTA the same
+    // way as above — the plan card is the one with an aria-pressed state.
     const singlePlan = screen.getByRole('button', {
       name: /single/i,
+      pressed: true,
     })
     const monthlyPlan = screen.getByRole('button', {
       name: /monthly/i,

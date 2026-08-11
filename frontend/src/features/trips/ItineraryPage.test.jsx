@@ -149,6 +149,15 @@ function renderAt(tripId) {
   )
 }
 
+// The 9-card risk strip and the hourly forecast strip now sit behind the day
+// header's "View full forecast" disclosure, collapsed by default (the activity
+// timeline is the main pane's primary content; the condensed day header still
+// always shows temp/condition and the day's single worst risk). Any assertion
+// about the strips' own contents therefore has to open it first.
+const expandForecast = async () => {
+  fireEvent.click(await screen.findByRole('button', { name: /view full forecast/i }))
+}
+
 const renderItineraryPage = () => {
   return render(
     <MemoryRouter initialEntries={["/trips/571"]}>
@@ -228,7 +237,7 @@ test('shows placeholder and "Generate itinerary" button before anything is gener
   renderAt(1)
 
   await waitFor(() => expect(getItinerary).toHaveBeenCalled())
-  expect(screen.getByText(/ai-generated itinerary will appear here/i)).toBeInTheDocument()
+  expect(screen.getByText(/your day-by-day plan will appear here/i)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /^generate itinerary$/i })).toBeInTheDocument()
 })
 
@@ -242,7 +251,9 @@ test('renders an already-generated itinerary on load without needing to click ge
   renderAt(1)
 
   await waitFor(() => expect(screen.getByText('British Museum')).toBeInTheDocument())
-  expect(screen.getByText(/day 1.*2026-08-01/i)).toBeInTheDocument()
+  // "Day 1 · <date>" now appears in exactly two places by design: the sidebar
+  // day-list row that selects it, and the main pane's own day header.
+  expect(screen.getAllByText(/day 1.*2026-08-01/i)).toHaveLength(2)
   expect(screen.getByRole('button', { name: /regenerate itinerary/i })).toBeInTheDocument()
 })
 
@@ -389,7 +400,11 @@ test('renders the real weather summary and hourly strip once forecast data resol
 
   renderAt(1)
 
+  // Temp/condition stay on the always-visible condensed day header line.
   expect(await screen.findByText('Partly Cloudy')).toBeInTheDocument()
+
+  await expandForecast()
+
   expect(screen.getByText('65%')).toBeInTheDocument()
   expect(screen.getByText('Moderate')).toBeInTheDocument()
   expect(screen.getByText('Good')).toBeInTheDocument()
@@ -409,9 +424,11 @@ test('renders the real weather summary and hourly strip once forecast data resol
   expect(screen.getByText('72%')).toBeInTheDocument()
   expect(screen.getByText('Caution')).toBeInTheDocument()
 
-  // Backend doesn't provide sunrise/sunset data yet — should say so honestly
-  // instead of crashing or showing blank/undefined.
-  expect(screen.getByText(/sunrise \/ sunset not available/i)).toBeInTheDocument()
+  // Sunrise/sunset now lives in the condensed day-header row, not this
+  // panel — when the backend doesn't provide it, it's silently omitted
+  // there (a compact summary row isn't the place for an explanatory
+  // fallback message) rather than crashing or showing blank/undefined.
+  expect(screen.queryByText(/sunrise \/ sunset not available/i)).not.toBeInTheDocument()
 
   // Not a climatology day — the historical-average badge must not leak in.
   expect(
@@ -453,6 +470,8 @@ test('renders dashes for null climatology values and never displays null%', asyn
   expect(
     await screen.findByText(/typical weather \(historical average\)/i),
   ).toBeInTheDocument()
+
+  await expandForecast()
 
   expect(screen.getAllByText('—').length).toBeGreaterThan(0)
   expect(screen.queryByText(/null%/i)).not.toBeInTheDocument()
@@ -529,6 +548,7 @@ test('hourly strip highlights the current GMT hour with "Now"', async () => {
     getItinerary.mockResolvedValue({ status: 'not_generated' })
 
     renderAt(1)
+    await expandForecast()
 
     // The 14:00 GMT card (matching the fixed system time above) shows "Now"
     // instead of its formatted hour; the 13:00 card is unaffected.
@@ -571,6 +591,7 @@ test('inserts dedicated sunrise/sunset cards into the hourly forecast at their s
   getItinerary.mockResolvedValue({ status: 'not_generated' })
 
   renderAt(1)
+  await expandForecast()
 
   // Dedicated cards at the exact sunrise/sunset time (leading zero dropped,
   // matching formatHour's "6 AM" style), inserted alongside the hour cards.
@@ -616,6 +637,7 @@ test('shows the "feels like" temperature in grey next to the actual temp, for to
     getItinerary.mockResolvedValue({ status: 'not_generated' })
 
     renderAt(1)
+    await expandForecast()
 
     // "20°" appears twice by design — once as the big header number, once on
     // the hourly strip's "Now" card, since both read the same current-hour
@@ -657,8 +679,13 @@ test('risk cards use red/yellow/green styling based on severity level', async ()
   getItinerary.mockResolvedValue({ status: 'not_generated' })
 
   renderAt(1)
+  await expandForecast()
 
-  expect(await screen.findByText('High')).toHaveClass('bg-red-100')
+  // findAllByText (not findByText) for 'High' — more than one risk card can
+  // legitimately show a 'High' badge for the same fixture, so this asserts
+  // every match is correctly red rather than assuming exactly one exists.
+  const highBadges = await screen.findAllByText('High')
+  highBadges.forEach((badge) => expect(badge).toHaveClass('bg-red-100'))
   expect(screen.getByText('Moderate')).toHaveClass('bg-yellow-100')
   expect(screen.getByText('Good')).toHaveClass('bg-green-100')
   expect(screen.getByText('None')).toHaveClass('bg-green-100')
@@ -690,6 +717,7 @@ test('heavy rain "Low" (no warning) renders green, not yellow', async () => {
   getItinerary.mockResolvedValue({ status: 'not_generated' })
 
   renderAt(1)
+  await expandForecast()
 
   const lowBadges = await screen.findAllByText('Low')
   lowBadges.forEach((badge) => {
@@ -1088,6 +1116,7 @@ test('clicking the UV card opens its hourly-trend popup with the sparkline and t
   getItinerary.mockResolvedValue({ status: 'not_generated' })
 
   renderAt(1)
+  await expandForecast()
 
   fireEvent.click(await screen.findByRole('button', { name: /uv index/i }))
 
@@ -1148,6 +1177,7 @@ test('clicking the Wind card opens its popup without an advice sentence, since t
   getItinerary.mockResolvedValue({ status: 'not_generated' })
 
   renderAt(1)
+  await expandForecast()
 
   fireEvent.click(await screen.findByRole('button', { name: /^wind\b/i }))
 
@@ -1187,6 +1217,7 @@ test('clicking the Visibility card opens its popup with the visibility line colo
   getItinerary.mockResolvedValue({ status: 'not_generated' })
 
   renderAt(1)
+  await expandForecast()
 
   fireEvent.click(await screen.findByRole('button', { name: /^visibility\b/i }))
 
@@ -1226,6 +1257,7 @@ test('the popup marks the current hour as "Now" when viewing today\'s data', asy
     getItinerary.mockResolvedValue({ status: 'not_generated' })
 
     renderAt(1)
+    await expandForecast()
 
     fireEvent.click(await screen.findByRole('button', { name: /^wind\b/i }))
 
@@ -1271,6 +1303,7 @@ test('moving the pointer over the popup chart follows it and shows that point\'s
     getItinerary.mockResolvedValue({ status: 'not_generated' })
 
     renderAt(1)
+    await expandForecast()
 
     fireEvent.click(await screen.findByRole('button', { name: /^wind\b/i }))
     await screen.findByRole('heading', { name: /wind.*hourly trend/i })
@@ -1310,8 +1343,11 @@ test('risk cards (e.g. Heavy Rain) are not clickable — no popup opens', async 
   getItinerary.mockResolvedValue({ status: 'not_generated' })
 
   renderAt(1)
+  await expandForecast()
 
-  await screen.findByText(/heavy rain/i)
+  // findAllByText (not findByText) — "Heavy Rain" can legitimately appear
+  // more than once on the page (e.g. the risk card plus its detail modal).
+  await screen.findAllByText(/heavy rain/i)
   expect(screen.queryByRole('button', { name: /heavy rain/i })).not.toBeInTheDocument()
 })
 
@@ -1488,6 +1524,8 @@ test('hides the hourly strip for climatology even when hourly data exists', asyn
     await screen.findByText(/typical weather \(historical average\)/i),
   ).toBeInTheDocument()
 
+  await expandForecast()
+
   expect(screen.queryByText('97%')).not.toBeInTheDocument()
   expect(screen.queryByText('98%')).not.toBeInTheDocument()
   expect(screen.queryByText('Hourly Test Weather')).not.toBeInTheDocument()
@@ -1526,6 +1564,8 @@ test('uses neutral gray styling for an Unknown beach safety level', async () => 
   renderAt(1)
 
   await screen.findByText(/typical weather \(historical average\)/i)
+
+  await expandForecast()
 
   const unknownBadges = screen.getAllByText('Unknown')
   const unknownBadge = unknownBadges.find((element) =>
@@ -2136,6 +2176,7 @@ it("opens flood risk calculation modal", async () => {
   })
 
   renderItineraryPage()
+  await expandForecast()
   const card = await screen.findByText("Flood")
   await userEvent.click(card)
   expect(
@@ -2159,6 +2200,7 @@ it("opens snow probability calculation modal", async () => {
   })
 
   renderItineraryPage()
+  await expandForecast()
   const card = await screen.findByText(/Snow/i)
   await userEvent.click(card)
   expect(
@@ -2184,6 +2226,7 @@ it("opens wind hourly trend modal", async () => {
   })
 
   renderItineraryPage()
+  await expandForecast()
   const card = await screen.findByText(/Wind/i)
   await userEvent.click(card)
   expect(

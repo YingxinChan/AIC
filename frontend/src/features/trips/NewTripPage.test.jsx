@@ -41,21 +41,25 @@ test('renders the Plan Your Trip heading', () => {
   expect(screen.getByRole('heading', { name: /plan your trip!/i })).toBeInTheDocument()
 })
 
-test('renders departure, destination, dates, flight number, hotel, and places to visit fields', () => {
+test('renders departure, destination, dates, hotel, and places to visit fields, with flight number behind a toggle', () => {
   renderPage()
   expect(screen.getByLabelText(/departure/i)).toBeInTheDocument()
   expect(screen.getByLabelText(/destination/i)).toBeInTheDocument()
   expect(screen.getByLabelText(/date depart/i)).toBeInTheDocument()
   expect(screen.getByLabelText(/date return/i)).toBeInTheDocument()
-  expect(screen.getByLabelText(/flight number/i)).toBeInTheDocument()
   expect(screen.getByLabelText(/hotel/i)).toBeInTheDocument()
   expect(screen.getByLabelText(/places to visit/i)).toBeInTheDocument()
+
+  expect(screen.queryByLabelText(/flight number/i)).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: /already know your flight number/i }))
+  expect(screen.getByLabelText(/flight number/i)).toBeInTheDocument()
 })
 
 test('typing a departure city and flight number saves them to the draft', () => {
   renderPage()
   fillRequiredFields()
   fireEvent.change(screen.getByLabelText(/departure/i), { target: { value: 'London, UK' } })
+  fireEvent.click(screen.getByRole('button', { name: /already know your flight number/i }))
   fireEvent.change(screen.getByLabelText(/flight number/i), { target: { value: 'JL 712' } })
 
   fireEvent.click(screen.getByRole('button', { name: /find flight/i }))

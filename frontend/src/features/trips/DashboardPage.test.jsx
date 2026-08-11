@@ -3,10 +3,28 @@ import { MemoryRouter } from 'react-router-dom'
 import { vi } from 'vitest'
 import DashboardPage from './DashboardPage'
 import { getTrips } from './tripsApi'
+import { geocodeCity } from '../../lib/geocode'
+import { getForecast } from '../weather/weatherApi'
 
 vi.mock('./tripsApi', () => ({
   getTrips: vi.fn(),
 }))
+
+// The forecast-at-a-glance module geocodes the upcoming trip's destination
+// and fetches its forecast — mocked here so these tests never hit the real
+// Nominatim/backend network, matching how tripsApi is mocked above.
+vi.mock('../../lib/geocode', () => ({
+  geocodeCity: vi.fn(),
+}))
+
+vi.mock('../weather/weatherApi', () => ({
+  getForecast: vi.fn(),
+}))
+
+beforeEach(() => {
+  geocodeCity.mockResolvedValue(null)
+  getForecast.mockResolvedValue([])
+})
 
 function renderPage() {
   return render(<MemoryRouter><DashboardPage /></MemoryRouter>)
@@ -18,10 +36,22 @@ test('renders a Welcome back heading (Home page, not the My Trips page)', () => 
   expect(screen.getByRole('heading', { name: /welcome back/i })).toBeInTheDocument()
 })
 
-test('renders a "Plan a Trip" link to /trips/new', () => {
+// Regression test: the hero used to default to the generic "Plan a Trip"
+// copy while trips were still loading, then flash to the personalized
+// upcoming-trip hero a moment later once loading resolved. Neither hero
+// variant should commit until we actually know whether an upcoming trip
+// exists — the loading state should show a neutral placeholder instead.
+test('does not show either hero variant while trips are still loading', () => {
   getTrips.mockReturnValue(new Promise(() => {}))
   renderPage()
-  expect(screen.getByRole('link', { name: /plan a trip/i })).toHaveAttribute('href', '/trips/new')
+  expect(screen.queryByRole('link', { name: /plan a trip/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('link', { name: /view trip/i })).not.toBeInTheDocument()
+})
+
+test('renders a "Plan a Trip" link to /trips/new once loaded with no trips', async () => {
+  getTrips.mockResolvedValue([])
+  renderPage()
+  expect(await screen.findByRole('link', { name: /plan a trip/i })).toHaveAttribute('href', '/trips/new')
 })
 
 test('shows real stats derived from actual trips: count and distinct destinations, no fake data', async () => {
@@ -46,12 +76,16 @@ test('shows a condensed Recent Trips preview (not the full list) with a View all
     { id: 1, name: 'A', destination: 'Tokyo', start_date: '2026-08-01', end_date: '2026-08-07' },
     { id: 2, name: 'B', destination: 'Tokyo', start_date: '2026-09-01', end_date: '2026-09-07' },
     { id: 3, name: 'C', destination: 'Paris', start_date: '2026-10-01', end_date: '2026-10-07' },
+    { id: 4, name: 'D', destination: 'Rome', start_date: '2026-11-01', end_date: '2026-11-07' },
+    { id: 5, name: 'E', destination: 'Oslo', start_date: '2026-12-01', end_date: '2026-12-07' },
   ])
   renderPage()
 
   await screen.findByText('A')
   expect(screen.getByText('B')).toBeInTheDocument()
-  expect(screen.queryByText('C')).not.toBeInTheDocument()
+  expect(screen.getByText('C')).toBeInTheDocument()
+  expect(screen.getByText('D')).toBeInTheDocument()
+  expect(screen.queryByText('E')).not.toBeInTheDocument()
   expect(screen.getByRole('link', { name: /view all/i })).toHaveAttribute('href', '/trips')
 })
 
@@ -86,5 +120,68 @@ test('shows a destination photo background on Recent Trips cards, case-insensiti
   const unmappedCard = screen.getByText('B').closest('a')
   const unmappedPhoto = unmappedCard.querySelector('div')
   expect(unmappedPhoto.style.backgroundImage).toBe('')
-  expect(unmappedPhoto.className).toContain('from-indigo-400')
+  expect(unmappedPhoto.className).toContain('from-brand-400')
+})
+
+// Hero swap: when every trip is in the past, there's no "upcoming trip" to
+// promote into the hero, so it should fall back to the same generic
+// acquisition copy as the zero-trips case rather than showing stale info.
+test('falls back to the generic "Plan a Trip" hero when all trips are in the past', async () => {
+  getTrips.mockResolvedValue([
+    { id: 1, name: 'Old Trip', destination: 'Tokyo', start_date: '2020-01-01', end_date: '2020-01-07' },
+  ])
+  renderPage()
+
+  await screen.findByText('Old Trip')
+  expect(screen.getByRole('link', { name: /plan a trip/i })).toHaveAttribute('href', '/trips/new')
+  expect(screen.queryByRole('link', { name: /view trip/i })).not.toBeInTheDocument()
+})
+
+// Hero swap: a real upcoming trip should replace the generic copy with that
+// trip's own destination/dates and a "View Trip" CTA into its itinerary.
+test('swaps the hero to the soonest upcoming trip, with a View Trip link to its itinerary', async () => {
+  getTrips.mockResolvedValue([
+    { id: 5, name: 'Later', destination: 'Paris', start_date: '2099-01-01', end_date: '2099-01-07' },
+    { id: 6, name: 'Sooner', destination: 'Rome', start_date: '2098-01-01', end_date: '2098-01-07' },
+  ])
+  renderPage()
+
+  const viewTripLink = await screen.findByRole('link', { name: /view trip/i })
+  expect(viewTripLink).toHaveAttribute('href', '/trips/6')
+  expect(screen.queryByRole('link', { name: /^plan a trip/i })).not.toBeInTheDocument()
+})
+
+// Forecast-at-a-glance module: only appears for a real upcoming trip, reuses
+// geocodeCity/getForecast (mocked above) the same way ItineraryPage does, and
+// links through to that trip's itinerary.
+test('shows a forecast-at-a-glance module for the upcoming trip, linking to its itinerary', async () => {
+  getTrips.mockResolvedValue([
+    { id: 9, name: 'Next Up', destination: 'Rome', start_date: '2099-01-01', end_date: '2099-01-05' },
+  ])
+  geocodeCity.mockResolvedValue([41.9, 12.5])
+  getForecast.mockResolvedValue([
+    { date: '2099-01-01', condition: 'Clear', temp_max: 20, temp_min: 10 },
+    { date: '2099-01-02', condition: 'Overcast', temp_max: 18, temp_min: 9 },
+  ])
+  renderPage()
+
+  expect(await screen.findByText(/forecast at a glance/i)).toBeInTheDocument()
+  const glanceLink = screen.getByText(/forecast at a glance/i).closest('a')
+  expect(glanceLink).toHaveAttribute('href', '/trips/9')
+  expect(await screen.findByText(/until departure/i)).toBeInTheDocument()
+})
+
+// Forecast-at-a-glance module: a geocode/forecast failure shouldn't crash the
+// page or block the rest of the Dashboard from rendering — just a quiet
+// fallback inside the module itself.
+test('shows a graceful fallback in the forecast module when the weather fetch fails', async () => {
+  getTrips.mockResolvedValue([
+    { id: 9, name: 'Next Up', destination: 'Rome', start_date: '2099-01-01', end_date: '2099-01-05' },
+  ])
+  geocodeCity.mockResolvedValue(null)
+  renderPage()
+
+  expect(await screen.findByText(/isn't available right now/i)).toBeInTheDocument()
+  // The rest of the page still renders fine despite the weather failure.
+  expect(screen.getByText('Next Up')).toBeInTheDocument()
 })

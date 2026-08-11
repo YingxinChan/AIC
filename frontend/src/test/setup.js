@@ -14,3 +14,13 @@ class MemoryStorage {
   clear() { this.#store.clear() }
 }
 vi.stubGlobal('localStorage', new MemoryStorage())
+
+// jsdom has no IntersectionObserver; framer-motion's `whileInView` needs one
+// to mount without crashing. Tests don't assert on real viewport behavior,
+// so a no-op stub is sufficient.
+class MockIntersectionObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+vi.stubGlobal('IntersectionObserver', MockIntersectionObserver)

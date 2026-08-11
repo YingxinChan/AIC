@@ -1,98 +1,281 @@
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Briefcase, MapPin, Plane, ArrowRight, Calendar, ChevronRight } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { Plane, ArrowRight, Calendar, ChevronRight, Compass } from 'lucide-react'
 import ErrorMessage from '../../components/ErrorMessage'
+import Button from '../../components/Button'
+import Card from '../../components/Card'
+import EmptyState from '../../components/EmptyState'
+import Skeleton, { SkeletonTripCard, SkeletonForecastGlance } from '../../components/Skeleton'
+import { GRID_VARIANTS, ITEM_VARIANTS } from '../../lib/motion'
+import { WeatherIcon } from '../../lib/weatherDisplay'
 import { useTrips } from './useTrips'
 import { tripStatus, STATUS_STYLES } from './tripStatus'
 import { capitalize } from '../../lib/format'
 import { findDestinationImage } from './destinationImages'
+import { geocodeCity } from '../../lib/geocode'
+import { getForecast } from '../weather/weatherApi'
 import planeWing from '../../assets/dashboard-plane-wing.jpg'
 
-const RECENT_TRIPS_PREVIEW_COUNT = 2
+// The strip scrolls horizontally, so this only needs to be "enough to make
+// scrolling worthwhile on a wide screen" — 2 left a large empty gap next to
+// the hero on desktop even for a user with many trips.
+const RECENT_TRIPS_PREVIEW_COUNT = 4
+// How many of the trip's forecast days to show in the at-a-glance strip —
+// capped well below a typical trip length so the module stays compact.
+const GLANCE_DAY_COUNT = 5
+
+// Both sides parsed as plain "YYYY-MM-DD" strings via `new Date(...)`, same
+// convention MyTripsPage's daysUntil() uses for its own "in N days" badge —
+// kept local here rather than imported since MyTripsPage doesn't export it.
+function daysUntil(dateStr) {
+  const today = new Date().toISOString().slice(0, 10)
+  const msPerDay = 1000 * 60 * 60 * 24
+  return Math.round((new Date(dateStr) - new Date(today)) / msPerDay)
+}
+
+// Soonest trip whose start date hasn't passed yet — used to swap the hero
+// from generic acquisition copy into "here's what's next" content, and to
+// drive the forecast-at-a-glance module. Past/completed trips never qualify,
+// even if they're the only trips the user has.
+function soonestUpcomingTrip(trips) {
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const upcoming = trips.filter((t) => t.start_date && t.start_date >= todayStr)
+  if (!upcoming.length) return null
+  return [...upcoming].sort((a, b) => a.start_date.localeCompare(b.start_date))[0]
+}
 
 export default function DashboardPage() {
   const { trips, loading, error } = useTrips()
   const destinationCount = new Set(trips.map((t) => t.destination).filter(Boolean)).size
   const recentTrips = trips.slice(0, RECENT_TRIPS_PREVIEW_COUNT)
+  const upcomingTrip = useMemo(() => soonestUpcomingTrip(trips), [trips])
+
+  // Hero falls back to the generic "Plan a Trip" acquisition copy once we
+  // know there's no upcoming trip to show instead (no trips at all, or every
+  // trip is in the past). While trips are still loading, neither variant is
+  // shown — see the skeleton branch below — so the hero never commits to the
+  // wrong copy and then flashes to the other one a moment later.
+  const showGenericHero = !loading && !upcomingTrip
+
+  const [forecastGlance, setForecastGlance] = useState(null)
+  // 'idle' (no upcoming trip) | 'loading' | 'loaded' | 'failed'
+  const [glanceStatus, setGlanceStatus] = useState('idle')
+
+  useEffect(() => {
+    if (!upcomingTrip?.destination) {
+      setGlanceStatus('idle')
+      setForecastGlance(null)
+      return
+    }
+    let cancelled = false
+    setGlanceStatus('loading')
+    geocodeCity(upcomingTrip.destination)
+      .then((coords) => {
+        if (cancelled) return
+        if (!coords) {
+          setGlanceStatus('failed')
+          return
+        }
+        return getForecast(coords[0], coords[1], upcomingTrip.start_date, upcomingTrip.end_date).then((days) => {
+          if (cancelled) return
+          setForecastGlance(Array.isArray(days) ? days.slice(0, GLANCE_DAY_COUNT) : [])
+          setGlanceStatus('loaded')
+        })
+      })
+      .catch((err) => {
+        console.error('Forecast-at-a-glance fetch error:', err)
+        if (!cancelled) setGlanceStatus('failed')
+      })
+    return () => { cancelled = true }
+  }, [upcomingTrip?.destination, upcomingTrip?.start_date, upcomingTrip?.end_date])
+
+  // The forecast module only ever has something to show once there's a real
+  // upcoming trip — while still loading trips, its skeleton still reserves
+  // the layout's 1/3 column so nothing jumps once loading resolves.
+  const showForecastColumn = loading || Boolean(upcomingTrip)
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Welcome back</h1>
-        <p className="text-sm text-gray-500">Where are you heading next?</p>
+        <h1 className="heading-1">Welcome back</h1>
+        <p className="text-body-sm text-ink-muted">Where are you heading next?</p>
       </div>
 
-      <div className="bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl text-white grid sm:grid-cols-2 overflow-hidden">
-        <div className="p-8 flex flex-col justify-center">
-          <p className="text-xs font-medium text-indigo-200 mb-1">Ready for your next adventure?</p>
-          <h2 className="text-2xl font-bold">Let AI plan your perfect trip</h2>
-          <p className="text-sm text-indigo-100 mt-2 max-w-md">
-            Tell us your destination, and our AI will craft a perfect daily itinerary smartly synced with hourly weather forecasts—so rain never ruins your plans.
-          </p>
-          <Link
-            to="/trips/new"
-            className="mt-4 inline-flex items-center gap-2 bg-white text-indigo-700 px-5 py-2.5 rounded-full text-sm font-semibold hover:bg-indigo-50 transition-colors w-fit"
-          >
-            <Plane size={16} /> Plan a Trip <ArrowRight size={14} />
-          </Link>
+      <div className="grid lg:grid-cols-3 gap-4 items-start">
+        <div
+          className={`relative rounded-3xl shadow-bento-lg text-white overflow-hidden min-h-[280px] flex flex-col justify-center p-8 bg-cover ${showForecastColumn ? 'lg:col-span-2' : 'lg:col-span-3'}`}
+          style={{ backgroundImage: `url(${planeWing})`, backgroundPosition: 'center 68%' }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-brand-950/92 via-brand-800/85 to-purple-900/70" />
+          <div className="relative max-w-md">
+            {loading ? (
+              // Which hero variant will render isn't known until trips
+              // finish loading, so this is a deliberate default guess, not
+              // a guaranteed match: shaped like the upcoming-trip variant
+              // (short destination name + one date line), matching
+              // showForecastColumn's own default assumption below. Correct
+              // for any account with a trip already planned; an account
+              // that turns out to have none will briefly show this shape
+              // before reflowing into the longer "Plan your perfect trip"
+              // copy — a one-time state right after signup, not the
+              // common case, so it's the better default to optimize for.
+              <div className="space-y-3 animate-pulse">
+                <div className="h-3 w-36 rounded bg-white/20" />
+                <div className="h-8 w-40 rounded bg-white/20" />
+                <div className="h-4 w-48 rounded bg-white/20" />
+                <div className="h-10 w-32 rounded-full bg-white/20 mt-2" />
+              </div>
+            ) : showGenericHero ? (
+              <>
+                <p className="text-xs font-medium text-brand-200 mb-1">Ready for your next adventure?</p>
+                <h2 className="heading-2 text-white">Plan your perfect trip</h2>
+                <p className="text-sm text-brand-100 mt-2">
+                  Tell us your destination and dates — Navia builds a day-by-day plan synced with the hourly forecast, so rain never ruins your plans.
+                </p>
+                <Button to="/trips/new" variant="onBrand" shape="pill" className="mt-5 w-fit">
+                  <Plane size={16} /> Plan a Trip <ArrowRight size={14} />
+                </Button>
+              </>
+            ) : (
+              <>
+                <p className="text-xs font-medium text-brand-200 mb-1">Your next adventure</p>
+                <h2 className="heading-2 text-white">{capitalize(upcomingTrip.destination)}</h2>
+                <p className="flex items-center gap-1.5 text-sm text-brand-100 mt-2">
+                  <Calendar size={14} /> {upcomingTrip.start_date} &rarr; {upcomingTrip.end_date}
+                </p>
+                <Button to={`/trips/${upcomingTrip.id}`} variant="onBrand" shape="pill" className="mt-5 w-fit">
+                  <Plane size={16} /> View Trip <ArrowRight size={14} />
+                </Button>
+              </>
+            )}
+          </div>
         </div>
-        <div className="relative hidden sm:block min-h-[220px]">
-          <div
-            className="absolute inset-0 bg-cover"
-            style={{ backgroundImage: `url(${planeWing})`, backgroundPosition: 'center 68%' }}
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/95 via-purple-600/60 to-purple-600/40" />
-        </div>
+
+        {showForecastColumn && (
+          loading ? (
+            <SkeletonForecastGlance />
+          ) : (
+            <Link
+              to={`/trips/${upcomingTrip.id}`}
+              className="group min-h-[280px] flex flex-col justify-center gap-6 rounded-3xl border border-gray-200/80 shadow-bento hover:shadow-bento-hover hover:border-brand-200 transition-shadow bg-white p-6"
+            >
+              <div>
+                <p className="text-xs font-medium text-ink-muted">Your next trip's forecast at a glance</p>
+                <h3 className="font-display font-semibold text-ink text-lg mt-0.5">{capitalize(upcomingTrip.destination)}</h3>
+                <p className="text-sm text-ink-muted mt-0.5">
+                  {daysUntil(upcomingTrip.start_date)} day{daysUntil(upcomingTrip.start_date) === 1 ? '' : 's'} until departure
+                </p>
+              </div>
+
+              {glanceStatus === 'loading' && (
+                <div className="flex gap-2">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <Skeleton key={i} className="flex-1 h-24 rounded-xl" />
+                  ))}
+                </div>
+              )}
+
+              {glanceStatus === 'failed' && (
+                <p className="text-sm text-ink-muted">Weather preview isn't available right now.</p>
+              )}
+
+              {glanceStatus === 'loaded' && (
+                forecastGlance?.length > 0 ? (
+                  <div className="flex gap-2">
+                    {forecastGlance.map((day) => (
+                      <div key={day.date} className="flex-1 min-w-0 flex flex-col items-center gap-1.5 rounded-xl bg-surface py-3.5 px-1 group-hover:bg-surface-sunken transition-colors">
+                        <span className="text-[11px] font-medium text-ink-muted">
+                          {new Date(`${day.date}T00:00:00Z`).toLocaleDateString(undefined, { weekday: 'short', timeZone: 'UTC' })}
+                        </span>
+                        <WeatherIcon condition={day.condition} timeStr={`${day.date}T12:00:00`} className="w-6 h-6 text-brand-500" />
+                        {day.temp_max != null && day.temp_min != null && (
+                          <span className="text-[11px] text-ink-muted whitespace-nowrap">
+                            {Math.round(day.temp_max)}&deg;/{Math.round(day.temp_min)}&deg;
+                          </span>
+                        )}
+                        {day.condition && (
+                          // break-words needs a constrained width to actually
+                          // wrap rather than just growing — without w-full it
+                          // sizes to its own content and single long words
+                          // like "Thunderstorm" overflow past the chip edges.
+                          <span className="w-full text-[10px] text-ink-muted/80 text-center leading-tight capitalize break-words">{day.condition}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-ink-muted mt-4">Weather preview isn't available right now.</p>
+                )
+              )}
+            </Link>
+          )
+        )}
       </div>
 
-      {!loading && !error && trips.length > 0 && (
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center mb-3">
-              <Briefcase size={18} className="text-indigo-600" />
-            </div>
-            <p className="text-2xl font-bold text-gray-900">{trips.length}</p>
-            <p className="text-sm text-gray-500">Trips Planned</p>
-          </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center mb-3">
-              <MapPin size={18} className="text-amber-600" />
-            </div>
-            <p className="text-2xl font-bold text-gray-900">{destinationCount}</p>
-            <p className="text-sm text-gray-500">Destinations</p>
-          </div>
+      {!error && (
+        <div className="flex flex-wrap gap-3">
+          {loading ? (
+            <>
+              <Skeleton className="h-[46px] w-36 rounded-full" />
+              <Skeleton className="h-[46px] w-36 rounded-full" />
+            </>
+          ) : trips.length > 0 ? (
+            <motion.div className="flex flex-wrap gap-3" variants={GRID_VARIANTS} initial="hidden" animate="show">
+              <motion.div variants={ITEM_VARIANTS} className="flex items-center gap-2 rounded-full bg-white border border-gray-200/80 shadow-bento-sm px-4 py-2.5">
+                <span className="font-display font-bold text-ink tabular-nums">{trips.length}</span>
+                <span className="text-xs text-ink-muted">Trips Planned</span>
+              </motion.div>
+              <motion.div variants={ITEM_VARIANTS} className="flex items-center gap-2 rounded-full bg-white border border-gray-200/80 shadow-bento-sm px-4 py-2.5">
+                <span className="font-display font-bold text-ink tabular-nums">{destinationCount}</span>
+                <span className="text-xs text-ink-muted">Destinations</span>
+              </motion.div>
+            </motion.div>
+          ) : null}
         </div>
       )}
 
-      {loading && <p className="text-sm text-gray-500">Loading your trips...</p>}
+      {loading && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <SkeletonTripCard />
+          <SkeletonTripCard />
+        </div>
+      )}
 
       {!loading && error && <ErrorMessage message="Something went wrong while loading your trips." />}
 
       {!loading && !error && trips.length === 0 && (
-        <div className="rounded-lg border-2 border-dashed border-gray-200 px-6 py-10 text-center">
-          <p className="text-sm text-gray-400">No trips yet — plan your first one to get started.</p>
-        </div>
+        <EmptyState
+          icon={Compass}
+          title="No trips yet"
+          description="Plan your first weather-perfect trip and Navia will build the day-by-day plan for you."
+          action={<Button to="/trips/new">Start planning</Button>}
+        />
       )}
 
       {!loading && !error && trips.length > 0 && (
         <div>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-gray-900">Recent Trips</h3>
-            <Link to="/trips" className="flex items-center gap-1 text-sm text-indigo-600 font-medium hover:text-indigo-700">
-              View all <ChevronRight size={14} />
-            </Link>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <h3 className="font-semibold text-ink mb-3">Recent Trips</h3>
+          <motion.div
+            className="scroll-strip gap-4 -mx-1 px-1 pb-1"
+            variants={GRID_VARIANTS}
+            initial="hidden"
+            animate="show"
+          >
             {recentTrips.map((trip) => {
               const status = tripStatus(trip)
               const cardImage = findDestinationImage(trip.destination)
               return (
-                <Link
+                <Card
                   key={trip.id}
+                  as={Link}
                   to={`/trips/${trip.id}`}
-                  className="block bg-white rounded-xl border border-gray-200 overflow-hidden hover:border-indigo-300 transition-colors"
+                  hoverable
+                  variants={ITEM_VARIANTS}
+                  className="group relative block w-72 sm:w-80 shrink-0 snap-start overflow-hidden hover:border-brand-300"
                 >
                   <div
-                    className={`h-36 ${cardImage ? '' : 'bg-gradient-to-br from-indigo-400 to-purple-400'} ${cardImage && cardImage.fit !== 'contain' ? 'bg-cover' : ''}`}
+                    className={`h-48 overflow-hidden ${cardImage ? '' : 'bg-gradient-to-br from-brand-400 to-purple-400'} ${cardImage && cardImage.fit !== 'contain' ? 'bg-cover' : ''} bg-center transition-transform duration-500 group-hover:scale-105`}
                     style={
                       cardImage
                         ? cardImage.fit === 'contain'
@@ -106,22 +289,34 @@ export default function DashboardPage() {
                         : undefined
                     }
                   />
-                  <div className="p-4">
-                    <p className="font-semibold text-gray-900">{capitalize(trip.name)}</p>
-                    <p className="flex items-center gap-1.5 text-sm text-gray-500 mt-1">
-                      <Calendar size={14} /> {trip.start_date} &rarr; {trip.end_date}
-                    </p>
-                    <span className={`inline-block mt-2 text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_STYLES[status]}`}>
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent px-4 pb-3.5 pt-10">
+                    <span className={`inline-block mb-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full ${STATUS_STYLES[status]}`}>
                       {status}
                     </span>
-                    <p className="flex items-center gap-1 text-sm text-indigo-600 font-medium mt-3">
-                      View Details <ChevronRight size={14} />
+                    <p className="font-display font-semibold text-white text-lg leading-tight">{capitalize(trip.name)}</p>
+                    <p className="flex items-center gap-1.5 text-xs text-white/80 mt-1">
+                      <Calendar size={12} /> {trip.start_date} &rarr; {trip.end_date}
                     </p>
                   </div>
-                </Link>
+                </Card>
               )
             })}
-          </div>
+            {trips.length > recentTrips.length && (
+              <Card
+                as={Link}
+                to="/trips"
+                hoverable
+                variants={ITEM_VARIANTS}
+                className="group flex h-48 w-40 shrink-0 snap-start flex-col items-center justify-center gap-2 border-dashed text-ink-muted hover:border-brand-300 hover:text-brand-600"
+              >
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-surface transition-colors group-hover:bg-brand-50">
+                  <ChevronRight size={16} />
+                </span>
+                <span className="text-sm font-medium">View all</span>
+                <span className="text-xs">{trips.length} trips</span>
+              </Card>
+            )}
+          </motion.div>
         </div>
       )}
     </div>

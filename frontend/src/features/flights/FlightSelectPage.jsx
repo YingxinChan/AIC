@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { Plane, ArrowLeft } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { Plane, ArrowLeft, SearchX } from 'lucide-react'
 import ErrorMessage from '../../components/ErrorMessage'
+import Button from '../../components/Button'
+import Card from '../../components/Card'
+import EmptyState from '../../components/EmptyState'
+import { SkeletonFlightRow } from '../../components/Skeleton'
+import { useToast } from '../../components/Toast'
+import { GRID_VARIANTS, ITEM_VARIANTS } from '../../lib/motion'
 import { searchFlights } from './flightsApi'
 import { useTripDraft } from '../trips/useTripDraft'
 import { getTrip, selectFlight } from '../trips/tripsApi'
@@ -16,6 +23,7 @@ function airlineCode(flightNumber) {
 export default function FlightSelectPage() {
   const { leg, tripId } = useParams()
   const navigate = useNavigate()
+  const toast = useToast()
   const { draft, updateDraft } = useTripDraft()
 
   // Present when this page is reached via /trips/:tripId/flights/:leg (an
@@ -81,6 +89,7 @@ export default function FlightSelectPage() {
         // prompt (triggered by the pendingReview flag) is what actually
         // fires the regenerate, once the user is done editing everything.
         markPendingReview(tripId, leg)
+        toast.show('Flight saved')
         navigate(`/trips/${tripId}`)
       } catch (err) {
         // A separate error state from the search's errorMessage, which
@@ -107,12 +116,12 @@ export default function FlightSelectPage() {
       </Link>
 
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">
+        <h1 className="heading-1">
           {isOutbound
             ? `${capitalize(origin)} → ${capitalize(destination)}`
             : `${capitalize(destination)} → ${capitalize(origin)}`}
         </h1>
-        <p className="text-gray-500 text-sm mt-1">
+        <p className="text-body-sm text-ink-muted mt-1">
           {isOutbound ? 'Outbound Flight' : 'Return Flight'} &middot; {date || 'No date selected'}
         </p>
       </div>
@@ -120,48 +129,63 @@ export default function FlightSelectPage() {
       {errorMessage && <ErrorMessage message={errorMessage} />}
       {selectError && <ErrorMessage message={selectError} />}
 
-      {loading && <p className="text-sm text-gray-500">Searching for flights...</p>}
-
-      {!loading && !errorMessage && (
+      {loading && (
         <div className="space-y-3">
+          <p className="text-sm text-gray-500">Searching for flights...</p>
+          <SkeletonFlightRow />
+          <SkeletonFlightRow />
+          <SkeletonFlightRow />
+        </div>
+      )}
+
+      {!loading && !errorMessage && flights.length === 0 && (
+        <EmptyState
+          icon={SearchX}
+          title="No flights found"
+          description="No flights matched this route and date. Try a different date or double-check the trip's origin and destination."
+        />
+      )}
+
+      {!loading && !errorMessage && flights.length > 0 && (
+        <motion.div className="space-y-3" variants={GRID_VARIANTS} initial="hidden" animate="show">
           <p className="text-sm text-gray-500">{flights.length} flight{flights.length === 1 ? '' : 's'} found</p>
           {flights.map((flight, index) => (
-            <div key={index} className="bg-white rounded-lg border border-gray-200 p-4 flex items-center gap-4">
-              <div className="w-14 h-14 shrink-0 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-sm">
+            <Card
+              key={index}
+              hoverable
+              variants={ITEM_VARIANTS}
+              className="group p-4 flex items-center gap-4 hover:border-brand-300"
+            >
+              <div className="w-14 h-14 shrink-0 rounded-lg bg-brand-600 text-white flex items-center justify-center font-bold text-sm transition-transform group-hover:scale-105">
                 {airlineCode(flight.flight_number)}
               </div>
               <div className="flex-1">
-                <p className="font-semibold text-gray-900">{flight.airline}</p>
+                <p className="font-semibold text-ink group-hover:text-brand-700 transition-colors">{flight.airline}</p>
                 <p className="text-sm text-gray-500">{flight.flight_number}</p>
               </div>
               <div className="text-center">
-                <p className="font-bold text-gray-900">{flight.departure_time}</p>
+                <p className="font-bold text-ink">{flight.departure_time}</p>
                 <p className="text-xs text-gray-500">Departure</p>
               </div>
               <div className="flex flex-col items-center gap-1">
-                <p className="text-xs text-gray-400">{flight.duration}</p>
-                <div className="flex items-center gap-2 text-gray-400">
-                  <span className="w-8 border-t border-gray-300" />
-                  <Plane size={14} />
-                  <span className="w-8 border-t border-gray-300" />
+                <p className="text-sm font-medium text-gray-700">{flight.duration}</p>
+                <div className="flex items-center gap-2 text-brand-300">
+                  <span className="w-8 border-t-2 border-dashed border-brand-200" />
+                  <Plane size={14} className="text-brand-500" />
+                  <span className="w-8 border-t-2 border-dashed border-brand-200" />
                 </div>
                 <p className="text-xs font-medium text-green-600">Nonstop</p>
               </div>
               <div className="text-center">
-                <p className="font-bold text-gray-900">{flight.arrival_time}</p>
+                <p className="font-bold text-ink">{flight.arrival_time}</p>
                 <p className="text-xs text-gray-500">Arrival</p>
               </div>
-              <button
-                type="button"
-                onClick={() => handleSelect(flight)}
-                disabled={selecting}
-                className="bg-indigo-600 text-white px-5 py-2 rounded-md font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"
-              >
+              <Button onClick={() => handleSelect(flight)} disabled={selecting}>
                 {selecting ? 'Saving...' : 'Select'}
-              </button>
-            </div>
+              </Button>
+            </Card>
           ))}
-        </div>
+        </motion.div>
       )}
     </div>
   )

@@ -1,19 +1,33 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { MapPin, Calendar, Building2, Camera, Plane, Search } from 'lucide-react'
 import ErrorMessage from '../../components/ErrorMessage'
 import HotelSearchInput from '../../components/HotelSearchInput'
+import Input, { Textarea } from '../../components/Input'
+import Button from '../../components/Button'
+import Card from '../../components/Card'
+import { useToast } from '../../components/Toast'
 import { createTrip, selectFlight } from './tripsApi'
 import { useTripDraft } from './useTripDraft'
 
 export default function NewTripPage() {
   const navigate = useNavigate()
+  const toast = useToast()
   const { draft, updateDraft, clearDraft } = useTripDraft()
 
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+  const [showFlightNumber, setShowFlightNumber] = useState(Boolean(draft.flightNumber))
 
   const bothFlightsPicked = Boolean(draft.outboundFlight && draft.returnFlight)
+
+  // Same end-after-start threshold as ItineraryPage's datesInvalid check
+  // (endDraft <= startDraft) — kept consistent so "invalid dates" means the
+  // same thing everywhere in the app.
+  const datesInvalid = Boolean(draft.startDate && draft.endDate && draft.endDate <= draft.startDate)
+
+  const findFlightDisabled = !draft.origin || !draft.destination || !draft.startDate || !draft.endDate || datesInvalid
 
   const handleFindFlight = () => {
     navigate('/trips/new/flights/outbound')
@@ -21,6 +35,10 @@ export default function NewTripPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (datesInvalid) {
+      setErrorMessage('Return date must be after the departure date.')
+      return
+    }
     setSubmitting(true)
     setErrorMessage('')
     try {
@@ -54,6 +72,7 @@ export default function NewTripPage() {
       }
 
       clearDraft()
+      toast.show('Trip created')
       navigate(`/trips/${trip.id}`)
     } catch (error) {
       setErrorMessage(error.response?.data?.detail || 'Something went wrong while planning your trip.')
@@ -63,158 +82,165 @@ export default function NewTripPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900">Plan Your Trip!</h1>
-      <p className="text-gray-500 text-sm mt-1 mb-6">Fill in the details below and we'll find the best options for you.</p>
+      <h1 className="heading-1">Plan Your Trip!</h1>
+      <p className="text-body-sm text-ink-muted mt-1 mb-6">Fill in the details below and we'll find the best options for you.</p>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg border border-gray-200 p-6 space-y-5">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="origin" className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-1">
-              <Plane size={16} className="text-indigo-600" /> Departure
-            </label>
-            <input
+      <Card as="form" onSubmit={handleSubmit} className="p-6 space-y-5">
+        <div className="space-y-5">
+          <p className="eyebrow">Where &amp; When</p>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Input
               id="origin"
+              label="Departure"
+              labelIcon={<Plane size={16} className="text-brand-600" />}
               type="text"
               value={draft.origin || ''}
               onChange={(e) => updateDraft({ origin: e.target.value })}
               placeholder="e.g. London, UK"
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
               required
             />
-          </div>
-          <div>
-            <label htmlFor="destination" className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-1">
-              <MapPin size={16} className="text-indigo-600" /> Destination
-            </label>
-            <input
+            <Input
               id="destination"
+              label="Destination"
+              labelIcon={<MapPin size={16} className="text-brand-600" />}
               type="text"
               value={draft.destination || ''}
               onChange={(e) => updateDraft({ destination: e.target.value })}
               placeholder="e.g. Berlin, Germany"
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
               required
             />
           </div>
-        </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="date-depart" className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-1">
-              <Calendar size={16} className="text-indigo-600" /> Date Depart
-            </label>
-            <input
+          <div className="grid grid-cols-2 gap-4">
+            <Input
               id="date-depart"
+              label="Date Depart"
+              labelIcon={<Calendar size={16} className="text-brand-600" />}
               type="date"
               value={draft.startDate || ''}
               onChange={(e) => updateDraft({ startDate: e.target.value })}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
               required
             />
-          </div>
-          <div>
-            <label htmlFor="date-return" className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-1">
-              <Calendar size={16} className="text-indigo-600" /> Date Return
-            </label>
-            <input
+            <Input
               id="date-return"
+              label="Date Return"
+              labelIcon={<Calendar size={16} className="text-brand-600" />}
               type="date"
               value={draft.endDate || ''}
               onChange={(e) => updateDraft({ endDate: e.target.value })}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              error={datesInvalid ? 'Return date must be after the departure date.' : undefined}
               required
             />
           </div>
         </div>
 
-        {!bothFlightsPicked && (
-          <div>
-            <label htmlFor="flight-number" className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-1">
-              <Plane size={16} className="text-indigo-600" /> Flight Number <span className="text-gray-400 font-normal">(Optional)</span>
-            </label>
-            <input
-              id="flight-number"
-              type="text"
-              value={draft.flightNumber || ''}
-              onChange={(e) => updateDraft({ flightNumber: e.target.value })}
-              placeholder="e.g. JL 712"
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-            />
-          </div>
-        )}
+        <div className="border-t pt-5 space-y-3">
+          <p className="eyebrow">Flights</p>
 
-        {bothFlightsPicked ? (
-          <div className="space-y-3">
-            <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3">
-              <p className="text-xs font-medium text-indigo-600 mb-0.5">Outbound Flight</p>
-              <p className="font-semibold text-gray-900 text-sm">
-                {draft.outboundFlight.airline} · {draft.outboundFlight.flight_number}
-              </p>
-              <p className="text-xs text-gray-500">{draft.outboundFlight.departure_time} &rarr; {draft.outboundFlight.arrival_time}</p>
-            </div>
-            <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3">
-              <p className="text-xs font-medium text-indigo-600 mb-0.5">Return Flight</p>
-              <p className="font-semibold text-gray-900 text-sm">
-                {draft.returnFlight.airline} · {draft.returnFlight.flight_number}
-              </p>
-              <p className="text-xs text-gray-500">{draft.returnFlight.departure_time} &rarr; {draft.returnFlight.arrival_time}</p>
-            </div>
-            <button
-              type="button"
-              onClick={handleFindFlight}
-              className="w-full border border-gray-300 text-gray-700 px-6 py-2 rounded-md font-medium hover:bg-gray-50 transition-colors"
-            >
-              Change Flights
-            </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={handleFindFlight}
-            disabled={!draft.origin || !draft.destination || !draft.startDate || !draft.endDate}
-            className="w-full flex items-center justify-center gap-2 bg-indigo-50 border border-indigo-600 text-indigo-600 px-6 py-2 rounded-md font-medium hover:bg-indigo-100 transition-colors disabled:opacity-50"
-          >
-            <Plane size={16} /> Find Flight
-          </button>
-        )}
+          {!bothFlightsPicked && (
+            showFlightNumber ? (
+              <Input
+                id="flight-number"
+                label={
+                  <>
+                    Flight Number <span className="text-gray-400 font-normal">(Optional)</span>
+                  </>
+                }
+                labelIcon={<Plane size={16} className="text-brand-600" />}
+                type="text"
+                value={draft.flightNumber || ''}
+                onChange={(e) => updateDraft({ flightNumber: e.target.value })}
+                placeholder="e.g. JL 712"
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowFlightNumber(true)}
+                className="text-sm text-brand-600 font-medium hover:text-brand-700"
+              >
+                Already know your flight number?
+              </button>
+            )
+          )}
 
-        <div>
-          <label htmlFor="hotel" className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-1">
-            <Building2 size={16} className="text-indigo-600" /> Hotel
-          </label>
-          <HotelSearchInput
-            id="hotel"
-            value={draft.hotelAddress || ''}
-            onChange={(v) => updateDraft({ hotelAddress: v })}
-            cityContext={draft.destination}
-            placeholder="e.g. The Ritz Paris"
-          />
+          <motion.div layout className="space-y-3">
+            {bothFlightsPicked ? (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
+                <div className="bg-brand-50 border border-brand-100 rounded-lg p-3">
+                  <p className="text-xs font-medium text-brand-600 mb-0.5">Outbound Flight</p>
+                  <p className="font-semibold text-ink text-sm">
+                    {draft.outboundFlight.airline} · {draft.outboundFlight.flight_number}
+                  </p>
+                  <p className="text-xs text-gray-500">{draft.outboundFlight.departure_time} &rarr; {draft.outboundFlight.arrival_time}</p>
+                </div>
+                <div className="bg-brand-50 border border-brand-100 rounded-lg p-3">
+                  <p className="text-xs font-medium text-brand-600 mb-0.5">Return Flight</p>
+                  <p className="font-semibold text-ink text-sm">
+                    {draft.returnFlight.airline} · {draft.returnFlight.flight_number}
+                  </p>
+                  <p className="text-xs text-gray-500">{draft.returnFlight.departure_time} &rarr; {draft.returnFlight.arrival_time}</p>
+                </div>
+                <Button type="button" variant="secondary" onClick={handleFindFlight} className="w-full">
+                  Change Flights
+                </Button>
+              </motion.div>
+            ) : (
+              <div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleFindFlight}
+                  disabled={findFlightDisabled}
+                  className="w-full border border-brand-600"
+                >
+                  <Plane size={16} /> Find Flight
+                </Button>
+                {findFlightDisabled && (
+                  <p className="text-body-sm text-ink-muted mt-1.5">
+                    {datesInvalid
+                      ? 'Return date must be after the departure date.'
+                      : 'Fill in origin, destination, and both dates to search flights.'}
+                  </p>
+                )}
+              </div>
+            )}
+          </motion.div>
         </div>
 
-        <div>
-          <label htmlFor="places-to-visit" className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-1">
-            <Camera size={16} className="text-indigo-600" /> Places to Visit
-          </label>
-          <textarea
+        <div className="border-t pt-5 space-y-5">
+          <p className="eyebrow">Stay &amp; Plans</p>
+
+          <div>
+            <label htmlFor="hotel" className="field-label">
+              <Building2 size={16} className="text-brand-600" /> Hotel
+            </label>
+            <HotelSearchInput
+              id="hotel"
+              value={draft.hotelAddress || ''}
+              onChange={(v) => updateDraft({ hotelAddress: v })}
+              cityContext={draft.destination}
+              placeholder="e.g. The Ritz Paris"
+            />
+          </div>
+
+          <Textarea
             id="places-to-visit"
+            label="Places to Visit"
+            labelIcon={<Camera size={16} className="text-brand-600" />}
             value={draft.placesToVisit || ''}
             onChange={(e) => updateDraft({ placesToVisit: e.target.value })}
             placeholder="e.g. Eiffel Tower, Louvre Museum..."
             rows={3}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
           />
         </div>
 
         {errorMessage && <ErrorMessage message={errorMessage} />}
 
-        <button
-          type="submit"
-          disabled={submitting}
-          className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white px-6 py-2.5 rounded-md font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"
-        >
+        <Button type="submit" disabled={submitting || datesInvalid} className="w-full">
           <Search size={16} /> {submitting ? 'Planning...' : 'Plan My Trip'}
-        </button>
-      </form>
+        </Button>
+      </Card>
     </div>
   )
 }

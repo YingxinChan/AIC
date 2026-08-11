@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { MotionConfig } from 'framer-motion'
 import { AuthProvider } from './features/auth/useAuth'
+import { ToastProvider } from './components/Toast'
 import ProtectedRoute from './components/ProtectedRoute'
 import AuthLayout from './components/AuthLayout'
 import AppLayout from './components/AppLayout'
@@ -16,29 +18,33 @@ import SubscriptionPage from './features/account/SubscriptionPage'
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route element={<AuthLayout />}>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-          </Route>
-          <Route element={<ProtectedRoute />}>
-            <Route element={<AppLayout />}>
-              <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/trips" element={<MyTripsPage />} />
-              <Route path="/trips/new" element={<NewTripPage />} />
-              <Route path="/trips/new/flights/:leg" element={<FlightSelectPage />} />
-              <Route path="/trips/:tripId/flights/:leg" element={<FlightSelectPage />} />
-              <Route path="/trips/:tripId" element={<ItineraryPage />} />
-              <Route path="/account" element={<AccountPage />} />
-              <Route path="/account/subscription" element={<SubscriptionPage />} />
-            </Route>
-          </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </AuthProvider>
-    </BrowserRouter>
+    <MotionConfig reducedMotion="user">
+      <ToastProvider>
+        <BrowserRouter>
+          <AuthProvider>
+            <Routes>
+              <Route path="/" element={<LandingPage />} />
+              <Route element={<AuthLayout />}>
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+              </Route>
+              <Route element={<ProtectedRoute />}>
+                <Route element={<AppLayout />}>
+                  <Route path="/dashboard" element={<DashboardPage />} />
+                  <Route path="/trips" element={<MyTripsPage />} />
+                  <Route path="/trips/new" element={<NewTripPage />} />
+                  <Route path="/trips/new/flights/:leg" element={<FlightSelectPage />} />
+                  <Route path="/trips/:tripId/flights/:leg" element={<FlightSelectPage />} />
+                  <Route path="/trips/:tripId" element={<ItineraryPage />} />
+                  <Route path="/account" element={<AccountPage />} />
+                  <Route path="/account/subscription" element={<SubscriptionPage />} />
+                </Route>
+              </Route>
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </AuthProvider>
+        </BrowserRouter>
+      </ToastProvider>
+    </MotionConfig>
   )
 }

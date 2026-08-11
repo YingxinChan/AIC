@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import logo from '../../assets/logo.png'
 import { login } from './authApi'
 import { useAuth } from './useAuth'
 import ErrorMessage from '../../components/ErrorMessage'
 import PasswordInput from '../../components/PasswordInput'
+import Input from '../../components/Input'
+import Button from '../../components/Button'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -42,56 +43,39 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
-      <div className="flex flex-col items-center text-center mb-6">
-        <div className="w-12 h-12 rounded-xl overflow-hidden flex items-center justify-center mb-4">
-          <img src={logo} alt="Navia" className="w-full h-full object-cover" />
-        </div>
-        <h1 className="text-xl font-bold text-gray-900">Welcome back</h1>
-        <p className="text-sm text-gray-500 mt-1">Sign in to plan your weather-synced itinerary</p>
+    <div>
+      <div className="mb-8">
+        <h1 className="heading-1">Welcome back</h1>
+        <p className="text-body-sm text-ink-muted mt-1.5">Sign in to plan your weather-synced itinerary</p>
       </div>
 
       {error && <ErrorMessage message={error} />}
       <form className="space-y-4" onSubmit={handleSubmit}>
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-            Email
-          </label>
-          <input
-            id="email"
-            type="email"
-            autoComplete="email"
-            required
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="you@example.com"
-          />
-        </div>
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-            Password
-          </label>
-          <PasswordInput
-            id="password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            autoComplete="current-password"
-            placeholder="••••••••"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-indigo-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50"
-        >
+        <Input
+          id="email"
+          label="Email"
+          type="email"
+          autoComplete="email"
+          required
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          placeholder="you@example.com"
+        />
+        <PasswordInput
+          id="password"
+          label="Password"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          autoComplete="current-password"
+          placeholder="••••••••"
+        />
+        <Button type="submit" disabled={loading} className="w-full">
           {loading ? 'Signing in…' : 'Login'}
-        </button>
+        </Button>
       </form>
-      <p className="text-sm text-gray-500 mt-4 text-center">
+      <p className="text-body-sm text-ink-muted mt-4 text-center">
         Don't have an account?{' '}
-        <Link to="/register" className="text-indigo-600 font-medium hover:underline">
+        <Link to="/register" className="text-brand-600 font-medium hover:underline">
           Register
         </Link>
       </p>

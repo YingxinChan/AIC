@@ -8,8 +8,10 @@ function renderPage() {
 
 test('renders the headline and Get Started CTA linking to register', () => {
   renderPage()
-  expect(screen.getByRole('heading', { name: /plan weather-perfect trips with ai/i })).toBeInTheDocument()
-  expect(screen.getByRole('link', { name: /get started/i })).toHaveAttribute('href', '/register')
+  expect(screen.getByRole('heading', { name: /navia changes them back/i })).toBeInTheDocument()
+  const getStartedLinks = screen.getAllByRole('link', { name: /get started/i })
+  expect(getStartedLinks.length).toBeGreaterThan(0)
+  getStartedLinks.forEach((link) => expect(link).toHaveAttribute('href', '/register'))
 })
 
 test('renders a Login link linking to /login', () => {
@@ -23,7 +25,7 @@ test('feature grid renders all six feature cards', () => {
   expect(screen.getByText(/smart routing/i)).toBeInTheDocument()
   expect(screen.getByText(/seamless logistics/i)).toBeInTheDocument()
   expect(screen.getByText(/real-time adjustments/i)).toBeInTheDocument()
-  expect(screen.getByText(/destination guides/i)).toBeInTheDocument()
+  expect(screen.getByText(/daily trip alerts/i)).toBeInTheDocument()
   expect(screen.getByText(/trip dashboard/i)).toBeInTheDocument()
 })
 
