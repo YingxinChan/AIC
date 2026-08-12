@@ -23,16 +23,19 @@ import { useToast } from '../../components/Toast'
 import { useDragScroll } from '../../lib/useDragScroll'
 import { WeatherIcon, formatHour } from '../../lib/weatherDisplay'
 import { STRIP_VARIANTS, ITEM_VARIANTS, SPRING_SOFT } from '../../lib/motion'
-import { getTrip, updateTrip } from './tripsApi'
-import { getItinerary, generateItinerary, updateActivity, createActivity, deleteActivity } from './itineraryApi'
+import { getTrip } from './tripsApi'
+import { getItinerary } from './itineraryApi'
 import { tripStatus, STATUS_STYLES } from './tripStatus'
 import { geocodeCity, geocodeAddress } from '../../lib/geocode'
 import { capitalize } from '../../lib/format'
-import { splitTimeSlot, joinTimeSlot } from '../../lib/timeSlot'
+import { splitTimeSlot } from '../../lib/timeSlot'
 import { getForecast, getHourlyForecast } from '../weather/weatherApi'
 import { getPendingReview, clearPendingReview } from '../../lib/pendingReview'
 import { findDestinationImage } from './destinationImages'
 import TripSidebar from './TripSidebar'
+import { useWeatherInfoModal } from './useWeatherInfoModal'
+import { useActivityEditing } from './useActivityEditing'
+import { useTripEditing } from './useTripEditing'
 
 // --- SECTION 1: HELPER FUNCTIONS ---
 
@@ -172,7 +175,11 @@ const RISK_FAMILY_BORDER = {
 // Shared by all 9 Risks-row cards (risk cards map, Extreme Temp, weather-info
 // cards map) — only each card's family identity chip color varies, appended
 // by the caller.
-const RISK_CARD_CLASSES = 'shrink-0 snap-start w-[168px] p-4 rounded-2xl bg-white border border-gray-200/80 border-b-2 shadow-bento-sm text-center flex flex-col items-center gap-2 transition-shadow hover:shadow-bento-hover hover:border-brand-200'
+// rounded-t-2xl (not rounded-2xl) — the colored border-b-2 family accent is a
+// flat edge, so rounding the bottom corners too made it visibly clash with
+// the curve there. Square bottom corners let the accent read as a clean
+// underline instead.
+const RISK_CARD_CLASSES = 'shrink-0 snap-start w-[168px] p-4 rounded-t-2xl bg-white border border-gray-200/80 border-b-2 shadow-bento-sm text-center flex flex-col items-center gap-2 transition-shadow hover:shadow-bento-hover hover:border-brand-200'
 
 // Flood, Snow, Hiking Safety, Wind, UV and Visibility are all null on a
 // climatology (>14-day) day with no historical substitute standing in for
@@ -217,28 +224,6 @@ const visibilityLevel = (meters) => {
   if (meters >= 10000) return 'Good';
   if (meters >= 1000) return 'Moderate';
   return 'Poor';
-};
-
-// Metadata for the 3 clickable "weather info" cards' hourly-trend popup —
-// hourlyKey is the field name on each HourlyWeatherOut entry, advice pulls
-// the matching daily advice sentence when the backend provides one (only
-// UV does today; wind/visibility have no advice field yet).
-// WHO UV index scale — matches backend/ml/risk_calculator.py's uv_level()
-// bands exactly (Low <3, Moderate <6, High <8, Very High <11, else Extreme),
-// so the chart's colors/labels never disagree with the UV Index card's own
-// level badge for the same day.
-const UV_BANDS = [
-  { min: 0, level: 'Low', color: '#22c55e' },
-  { min: 3, level: 'Moderate', color: '#eab308' },
-  { min: 6, level: 'High', color: '#f97316' },
-  { min: 8, level: 'Very High', color: '#ef4444' },
-  { min: 11, level: 'Extreme', color: '#9333ea' },
-];
-
-const WEATHER_INFO_META = {
-  wind: { label: 'Wind', unit: 'km/h', hourlyKey: 'wind_speed', advice: () => null, color: '#0ea5e9' },
-  uv: { label: 'UV Index', unit: '', hourlyKey: 'uv_index', advice: (fd) => fd?.uv_advice || null, bands: UV_BANDS },
-  visibility: { label: 'Visibility', unit: 'km', hourlyKey: 'visibility_km', advice: () => null, color: '#64748b' },
 };
 
 const getRiskInfoMeta = (forecastDay) => ({
@@ -539,6 +524,13 @@ export default function ItineraryPage() {
   // --- SECTION 2: STATE VARIABLES ---
   const { tripId } = useParams()
   const navigate = useNavigate()
+  // Route param changes (navigating from one trip to another) don't remount
+  // this component (see the <Route> in App.jsx — no per-trip key), so a
+  // handleGenerate call started for one trip can still be in flight when the
+  // user navigates to a different one. This ref always holds the current
+  // tripId so handleGenerate can tell, on resolution, whether it's stale.
+  const tripIdRef = useRef(tripId)
+  tripIdRef.current = tripId
   const [trip, setTrip] = useState(null)
   // Mirrors weatherStatus's loading/failed/loaded pattern elsewhere in this
   // file — without it, a deleted/mistyped/tampered tripId or a transient
@@ -566,57 +558,60 @@ export default function ItineraryPage() {
   // single worst risk, so collapsing hides detail, never the headline.
   const [forecastExpanded, setForecastExpanded] = useState(false)
 
-  const [hotelModalOpen, setHotelModalOpen] = useState(false)
-  const [hotelDraft, setHotelDraft] = useState('')
-  // {lat, lon} from an explicit dropdown pick, or null — set alongside
-  // hotelDraft by handleHotelChange below, and dropped back to null the
-  // moment the user types (HotelSearchInput's onChange omits the second
-  // argument for freehand keystrokes), so a stale selection's coordinates
-  // never get saved against a since-edited address string.
-  const [hotelDraftCoords, setHotelDraftCoords] = useState(null)
-  const [datesModalOpen, setDatesModalOpen] = useState(false)
-  const [startDraft, setStartDraft] = useState('')
-  const [endDraft, setEndDraft] = useState('')
-  const [savingTrip, setSavingTrip] = useState(false)
-  const [reviewModalOpen, setReviewModalOpen] = useState(false)
-  // Which of dates/hotel/outbound/return was just saved — the review prompt
-  // excludes this one and only offers the others, so it never re-suggests
-  // editing the thing the user just finished editing.
-  const [lastEdited, setLastEdited] = useState(null)
+  const {
+    hotelModalOpen, setHotelModalOpen,
+    hotelDraft, hotelDraftCoords,
+    datesModalOpen, setDatesModalOpen,
+    startDraft, setStartDraft,
+    endDraft, setEndDraft,
+    savingTrip,
+    reviewModalOpen, setReviewModalOpen,
+    regenerateConfirmOpen, setRegenerateConfirmOpen,
+    lastEdited, setLastEdited,
+    datesInvalid,
+    handleGenerate,
+    handleRegenerateClick,
+    handleConfirmRegenerate,
+    openHotelModal,
+    handleHotelChange,
+    openDatesModal,
+    handleSaveHotel,
+    handleSaveDates,
+    handleReviewEditHotel,
+    handleReviewEditDates,
+    handleReviewEditOutbound,
+    handleReviewEditReturn,
+    handleReviewRegenerateNow,
+  } = useTripEditing({ tripId, trip, setTrip, itinerary, setItinerary, generating, setGenerating, toast, setItineraryNotice, navigate, tripIdRef })
 
-  // Which weather-info card ('wind' | 'uv' | 'visibility') has its hourly
-  // trend popup open, or null if none — only these 3 cards are clickable,
-  // not the risk cards (heavy rain/flood/beach/snow/extreme temp/hiking).
-  const [weatherInfoModalMetric, setWeatherInfoModalMetric] = useState(null)
-  const [riskInfoModal, setRiskInfoModal] = useState(null);
-
-  const [editActivityModalOpen, setEditActivityModalOpen] = useState(false)
-  const [editingActivityId, setEditingActivityId] = useState(null)
-  const [activityDayDraft, setActivityDayDraft] = useState('')
-  const [activityStartDraft, setActivityStartDraft] = useState('')
-  const [activityEndDraft, setActivityEndDraft] = useState('')
-  const [activityNameDraft, setActivityNameDraft] = useState('')
-  const [activityLocationDraft, setActivityLocationDraft] = useState('')
-  // {label, lat, lon} once the user picks a place, or null if the location
-  // hasn't been touched this session — only sent in the patch when set, so
-  // an untouched location never gets re-saved with stale/absent coordinates.
-  const [activityLatLngDraft, setActivityLatLngDraft] = useState(null)
-  const [activityFixedDraft, setActivityFixedDraft] = useState(false)
-  const [savingActivity, setSavingActivity] = useState(false)
-
-  const [addActivityModalOpen, setAddActivityModalOpen] = useState(false)
-  const [newActivityDayDraft, setNewActivityDayDraft] = useState('')
-  const [newActivityStartDraft, setNewActivityStartDraft] = useState('')
-  const [newActivityEndDraft, setNewActivityEndDraft] = useState('')
-  const [newActivityNameDraft, setNewActivityNameDraft] = useState('')
-  const [newActivityLocationDraft, setNewActivityLocationDraft] = useState('')
-  // Same {label, lat, lon}-only-on-selection contract as activityLatLngDraft
-  // above — the backend requires lat/lng on create, so Save stays disabled
-  // until this is actually set (see the disabled check on the Add button).
-  const [newActivityLatLngDraft, setNewActivityLatLngDraft] = useState(null)
-  const [newActivityTypeDraft, setNewActivityTypeDraft] = useState('outdoor')
-  const [newActivityFixedDraft, setNewActivityFixedDraft] = useState(false)
-  const [savingNewActivity, setSavingNewActivity] = useState(false)
+  const {
+    editActivityModalOpen, setEditActivityModalOpen,
+    activityDayDraft, setActivityDayDraft,
+    activityStartDraft, setActivityStartDraft,
+    activityEndDraft, setActivityEndDraft,
+    activityNameDraft, setActivityNameDraft,
+    activityLocationDraft, setActivityLocationDraft,
+    activityLatLngDraft, setActivityLatLngDraft,
+    activityFixedDraft, setActivityFixedDraft,
+    savingActivity,
+    activityPendingDelete, setActivityPendingDelete,
+    openEditActivityModal,
+    handleSaveActivity,
+    addActivityModalOpen, setAddActivityModalOpen,
+    newActivityDayDraft, setNewActivityDayDraft,
+    newActivityStartDraft, setNewActivityStartDraft,
+    newActivityEndDraft, setNewActivityEndDraft,
+    newActivityNameDraft, setNewActivityNameDraft,
+    newActivityLocationDraft, setNewActivityLocationDraft,
+    newActivityLatLngDraft, setNewActivityLatLngDraft,
+    newActivityTypeDraft, setNewActivityTypeDraft,
+    newActivityFixedDraft, setNewActivityFixedDraft,
+    savingNewActivity,
+    openAddActivityModal,
+    newActivityInvalid,
+    handleCreateActivity,
+    handleConfirmDeleteActivity,
+  } = useActivityEditing({ tripId, setItinerary, toast, setItineraryNotice, selectedDate, tripStartDate: trip?.start_date })
 
   const destination = trip?.destination || ''
 
@@ -781,206 +776,8 @@ export default function ItineraryPage() {
   }, [trip?.hotel_address, trip?.hotel_lat, trip?.hotel_lng])
 
   // --- SECTION 4: ACTIONS ---
-  const handleGenerate = async () => {
-    setGenerating(true)
-    setItineraryNotice('')
-    try {
-      const data = await generateItinerary(tripId)
-      if (data.days) {
-        setItinerary(data)
-        const swappedCount = data.days.flatMap(d => d.activities).filter(a => a.is_swapped).length
-        toast.show(
-          swappedCount > 0
-            ? `Itinerary regenerated — ${swappedCount} ${swappedCount === 1 ? 'activity' : 'activities'} adjusted for weather`
-            : 'Itinerary regenerated'
-        )
-      } else {
-        setItineraryNotice(data.message || 'Could not generate the itinerary.')
-      }
-    } catch (err) {
-      setItineraryNotice(err.response?.data?.detail || 'Something went wrong while generating the itinerary.')
-    }
-    setGenerating(false)
-  }
-
-  // Dates and hotel are baked into itinerary generation (day-1/last-day
-  // scheduling, routing anchor), so editing either no longer regenerates
-  // immediately — PATCH /api/trips/{id} just saves the field and returns
-  // the plain trip. Instead, saving here opens the review prompt so the
-  // user can batch in the other one before we regenerate once, via
-  // handleReviewRegenerateNow below. Each flight leg (see FlightSelectPage)
-  // is edited independently and marks pendingReview itself once saved,
-  // reopening this same prompt on return.
-  const openHotelModal = () => {
-    setHotelDraft(trip.hotel_address || '')
-    // Seed with the trip's existing coordinates (if any) so re-opening the
-    // modal and saving without touching the input doesn't wipe out a
-    // previously-good selection — the first real keystroke (handleChange,
-    // via handleHotelChange below) still drops these back to null.
-    setHotelDraftCoords(
-      trip.hotel_lat != null && trip.hotel_lng != null
-        ? { lat: trip.hotel_lat, lon: trip.hotel_lng }
-        : null
-    )
-    setHotelModalOpen(true)
-  }
-
-  // HotelSearchInput's onChange(value, coords?) — coords is only present on
-  // an explicit dropdown pick; every other call (freehand typing) omits it,
-  // which correctly clears any stale coordinates from a prior selection.
-  const handleHotelChange = (value, coords) => {
-    setHotelDraft(value)
-    setHotelDraftCoords(coords || null)
-  }
-
-  const openDatesModal = () => {
-    setStartDraft(trip.start_date || '')
-    setEndDraft(trip.end_date || '')
-    setDatesModalOpen(true)
-  }
-
-  const datesInvalid = !startDraft || !endDraft || endDraft <= startDraft
-
-  const saveTripDetails = async (patch, { closeModal, source }) => {
-    setSavingTrip(true)
-    try {
-      const updatedTrip = await updateTrip(tripId, patch)
-      setTrip(updatedTrip)
-      closeModal()
-      setLastEdited(source)
-      setReviewModalOpen(true)
-    } catch (err) {
-      setItineraryNotice(err.response?.data?.detail || 'Saving your trip details failed — try again.')
-    }
-    setSavingTrip(false)
-  }
-
-  const handleSaveHotel = () => saveTripDetails(
-    {
-      hotel_address: hotelDraft,
-      hotel_lat: hotelDraftCoords?.lat ?? null,
-      hotel_lng: hotelDraftCoords?.lon ?? null,
-    },
-    { closeModal: () => setHotelModalOpen(false), source: 'hotel' }
-  )
-
-  const handleSaveDates = () => {
-    if (datesInvalid) return
-    return saveTripDetails(
-      { start_date: startDraft, end_date: endDraft },
-      { closeModal: () => setDatesModalOpen(false), source: 'dates' }
-    )
-  }
-
-  const handleReviewEditHotel = () => {
-    setReviewModalOpen(false)
-    openHotelModal()
-  }
-
-  const handleReviewEditDates = () => {
-    setReviewModalOpen(false)
-    openDatesModal()
-  }
-
-  const handleReviewEditOutbound = () => {
-    setReviewModalOpen(false)
-    navigate(`/trips/${tripId}/flights/outbound`)
-  }
-
-  const handleReviewEditReturn = () => {
-    setReviewModalOpen(false)
-    navigate(`/trips/${tripId}/flights/return`)
-  }
-
-  const handleReviewRegenerateNow = async () => {
-    await handleGenerate()
-    clearPendingReview(tripId)
-    setReviewModalOpen(false)
-  }
-
-  const openEditActivityModal = (activity) => {
-    setEditingActivityId(activity.id)
-    setActivityDayDraft(activity.day_date)
-    const [start, end] = splitTimeSlot(activity.time_slot)
-    setActivityStartDraft(start)
-    setActivityEndDraft(end)
-    setActivityNameDraft(activity.is_swapped ? activity.alternate_name : activity.name)
-    setActivityLocationDraft(activity.is_swapped ? activity.alternate_location : activity.location)
-    setActivityLatLngDraft({ lat: activity.lat, lon: activity.lng })
-    setActivityFixedDraft(activity.is_fixed)
-    setEditActivityModalOpen(true)
-  }
-
-  const handleSaveActivity = async () => {
-    setSavingActivity(true)
-    try {
-      const updated = await updateActivity(tripId, editingActivityId, {
-        day_date: activityDayDraft,
-        time_slot: joinTimeSlot(activityStartDraft, activityEndDraft),
-        name: activityNameDraft,
-        location: activityLocationDraft,
-        lat: activityLatLngDraft.lat,
-        lng: activityLatLngDraft.lon,
-        is_fixed: activityFixedDraft,
-      })
-      setItinerary(updated)
-      setEditActivityModalOpen(false)
-      toast.show('Activity updated')
-    } catch (err) {
-      setItineraryNotice(err.response?.data?.detail || 'Saving this activity failed — try again.')
-    }
-    setSavingActivity(false)
-  }
-
-  const openAddActivityModal = () => {
-    setNewActivityDayDraft(selectedDate || trip?.start_date || '')
-    setNewActivityStartDraft('')
-    setNewActivityEndDraft('')
-    setNewActivityNameDraft('')
-    setNewActivityLocationDraft('')
-    setNewActivityLatLngDraft(null)
-    setNewActivityTypeDraft('outdoor')
-    setNewActivityFixedDraft(false)
-    setAddActivityModalOpen(true)
-  }
-
-  const newActivityInvalid =
-    !newActivityDayDraft || !newActivityStartDraft || !newActivityEndDraft ||
-    !newActivityNameDraft.trim() || !newActivityLatLngDraft
-
-  const handleCreateActivity = async () => {
-    setSavingNewActivity(true)
-    try {
-      const updated = await createActivity(tripId, {
-        day_date: newActivityDayDraft,
-        time_slot: joinTimeSlot(newActivityStartDraft, newActivityEndDraft),
-        name: newActivityNameDraft,
-        location: newActivityLocationDraft,
-        lat: newActivityLatLngDraft.lat,
-        lng: newActivityLatLngDraft.lon,
-        type: newActivityTypeDraft,
-        is_fixed: newActivityFixedDraft,
-      })
-      setItinerary(updated)
-      setAddActivityModalOpen(false)
-      toast.show('Activity added')
-    } catch (err) {
-      setItineraryNotice(err.response?.data?.detail || 'Adding this activity failed — try again.')
-    }
-    setSavingNewActivity(false)
-  }
-
-  const handleDeleteActivity = async (activity) => {
-    const label = activity.is_swapped ? activity.alternate_name : activity.name
-    if (!window.confirm(`Remove "${label}" from this day?`)) return
-    try {
-      const updated = await deleteActivity(tripId, activity.id)
-      setItinerary(updated.days ? updated : { days: [] })
-      toast.show('Activity removed')
-    } catch (err) {
-      setItineraryNotice(err.response?.data?.detail || 'Removing this activity failed — try again.')
-    }
-  }
+  // (Trip editing/regenerate and activity CRUD now live in useTripEditing
+  // and useActivityEditing above.)
 
   const status = trip?.start_date && trip?.end_date ? tripStatus(trip) : null
   const hotelParts = trip?.hotel_address?.trim() ? splitHotelAddress(trip.hotel_address) : null
@@ -1007,12 +804,11 @@ export default function ItineraryPage() {
   const itineraryDay = itinerary?.days?.find(d => d.date === selectedDate)
   const selectedDayNumber = tripDates.indexOf(selectedDate) + 1
 
-  const weatherInfoMeta = weatherInfoModalMetric ? WEATHER_INFO_META[weatherInfoModalMetric] : null
-  const weatherInfoHourly = weatherInfoMeta && hourlyForecast && forecastDay
-    ? hourlyForecast
-        .filter(h => h.time.startsWith(forecastDay.date))
-        .map(h => ({ time: h.time, value: h[weatherInfoMeta.hourlyKey] }))
-    : []
+  const {
+    weatherInfoModalMetric, setWeatherInfoModalMetric,
+    riskInfoModal, setRiskInfoModal,
+    weatherInfoMeta, weatherInfoHourly,
+  } = useWeatherInfoModal({ forecastDay, hourlyForecast })
 
   // Forecast/hourly data is fetched with &timezone=auto (see openmeteo.py),
   // so its date/time fields are the destination's own local time — shift the
@@ -1353,6 +1149,20 @@ export default function ItineraryPage() {
         </div>
       </Modal>
 
+      <Modal open={Boolean(activityPendingDelete)} onClose={() => setActivityPendingDelete(null)} title="Remove this activity?">
+        <p className="text-sm text-gray-600 mb-4">
+          {activityPendingDelete && `Remove "${activityPendingDelete.is_swapped ? activityPendingDelete.alternate_name : activityPendingDelete.name}" from this day?`}
+        </p>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={() => setActivityPendingDelete(null)}>
+            Cancel
+          </Button>
+          <Button type="button" variant="danger" onClick={handleConfirmDeleteActivity}>
+            Remove
+          </Button>
+        </div>
+      </Modal>
+
       <Modal open={reviewModalOpen} onClose={() => setReviewModalOpen(false)} title="Update anything else first?">
         <p className="text-sm text-gray-600 mb-4">
           Your itinerary is generated from your dates, hotel, and flights together — want to update anything else before we regenerate it?
@@ -1384,6 +1194,20 @@ export default function ItineraryPage() {
           )}
           <Button type="button" onClick={handleReviewRegenerateNow} disabled={generating} className="w-full mt-2">
             {generating ? 'Regenerating...' : "No, regenerate now"}
+          </Button>
+        </div>
+      </Modal>
+
+      <Modal open={regenerateConfirmOpen} onClose={() => setRegenerateConfirmOpen(false)} title="Regenerate this itinerary?">
+        <p className="text-sm text-gray-600 mb-4">
+          This replaces every activity currently planned for this trip with a fresh weather-based plan — including anything you've manually added, edited, or removed. This can't be undone.
+        </p>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={() => setRegenerateConfirmOpen(false)}>
+            Cancel
+          </Button>
+          <Button type="button" onClick={handleConfirmRegenerate}>
+            Regenerate
           </Button>
         </div>
       </Modal>
@@ -1643,7 +1467,7 @@ export default function ItineraryPage() {
           onSelectDate={setSelectedDate}
           generating={generating}
           hasItinerary={Boolean(itinerary)}
-          onGenerate={handleGenerate}
+          onGenerate={handleRegenerateClick}
         />
 
       {/* min-w-0 so the horizontally-scrollable strips inside can never widen
@@ -2081,7 +1905,10 @@ export default function ItineraryPage() {
               <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-800">
                 <ListChecks size={16} className="text-brand-600" /> Itinerary for Day {selectedDayNumber}
               </h3>
-              <Button type="button" onClick={openAddActivityModal} variant="secondary" shape="pill" size="sm">
+              {/* Disabled while generating — otherwise an activity added here
+                  mid-regenerate gets silently discarded the moment the
+                  regenerate response lands and replaces the day's list. */}
+              <Button type="button" onClick={openAddActivityModal} disabled={generating} variant="secondary" shape="pill" size="sm">
                 <Plus size={14} /> Add Activity
               </Button>
             </div>
@@ -2167,7 +1994,7 @@ export default function ItineraryPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleDeleteActivity(activity)}
+                            onClick={() => setActivityPendingDelete(activity)}
                             className="text-gray-400 hover:text-red-600"
                             aria-label={`Delete ${activity.name}`}
                           >

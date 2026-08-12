@@ -2,7 +2,7 @@
 // Risk model meta data
 
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom'
 import { vi } from 'vitest'
 import userEvent from '@testing-library/user-event'
 
@@ -1155,6 +1155,138 @@ test('"No, regenerate now" in the review prompt regenerates the itinerary exactl
   expect(screen.queryByRole('heading', { name: /update anything else first/i })).not.toBeInTheDocument()
 })
 
+test('clicking Regenerate Itinerary on an existing plan asks for confirmation instead of regenerating immediately', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  getItinerary.mockResolvedValue({
+    days: [{ date: '2026-08-01', activities: [
+      { id: 1, name: 'British Museum', type: 'indoor', time_slot: '09:00 - 11:00', location: 'Great Russell St', description: 'x', is_swapped: false },
+    ] }],
+  })
+  renderAt(1)
+
+  fireEvent.click(await screen.findByRole('button', { name: /regenerate itinerary/i }))
+
+  expect(await screen.findByRole('heading', { name: /regenerate this itinerary/i })).toBeInTheDocument()
+  expect(generateItinerary).not.toHaveBeenCalled()
+})
+
+test('confirming the regenerate warning actually regenerates and closes the confirmation', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  getItinerary.mockResolvedValue({
+    days: [{ date: '2026-08-01', activities: [
+      { id: 1, name: 'British Museum', type: 'indoor', time_slot: '09:00 - 11:00', location: 'Great Russell St', description: 'x', is_swapped: false },
+    ] }],
+  })
+  generateItinerary.mockResolvedValue({ days: [] })
+  renderAt(1)
+
+  fireEvent.click(await screen.findByRole('button', { name: /regenerate itinerary/i }))
+  fireEvent.click(await screen.findByRole('button', { name: /^regenerate$/i }))
+
+  await waitFor(() => expect(generateItinerary).toHaveBeenCalledTimes(1))
+  expect(screen.queryByRole('heading', { name: /regenerate this itinerary/i })).not.toBeInTheDocument()
+})
+
+test('cancelling the regenerate warning leaves the existing itinerary untouched', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  getItinerary.mockResolvedValue({
+    days: [{ date: '2026-08-01', activities: [
+      { id: 1, name: 'British Museum', type: 'indoor', time_slot: '09:00 - 11:00', location: 'Great Russell St', description: 'x', is_swapped: false },
+    ] }],
+  })
+  renderAt(1)
+
+  fireEvent.click(await screen.findByRole('button', { name: /regenerate itinerary/i }))
+  fireEvent.click(await screen.findByRole('button', { name: /cancel/i }))
+
+  expect(screen.queryByRole('heading', { name: /regenerate this itinerary/i })).not.toBeInTheDocument()
+  expect(generateItinerary).not.toHaveBeenCalled()
+  expect(screen.getByText('British Museum')).toBeInTheDocument()
+})
+
+test('the first-ever Generate (no existing itinerary) skips the confirmation, since there is nothing to lose yet', async () => {
+  generateItinerary.mockResolvedValue({ days: [] })
+  renderAt(1)
+
+  fireEvent.click(await screen.findByRole('button', { name: /^generate itinerary$/i }))
+
+  expect(screen.queryByRole('heading', { name: /regenerate this itinerary/i })).not.toBeInTheDocument()
+  await waitFor(() => expect(generateItinerary).toHaveBeenCalledTimes(1))
+})
+
+test('Add Activity is disabled while a regenerate is in flight, so a new activity can\'t be silently wiped out by it', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  getItinerary.mockResolvedValue({
+    days: [{ date: '2026-08-01', activities: [
+      { id: 1, name: 'British Museum', type: 'indoor', time_slot: '09:00 - 11:00', location: 'Great Russell St', description: 'x', is_swapped: false },
+    ] }],
+  })
+  let resolveGenerate
+  generateItinerary.mockReturnValue(new Promise((resolve) => { resolveGenerate = resolve }))
+  renderAt(1)
+
+  fireEvent.click(await screen.findByRole('button', { name: /regenerate itinerary/i }))
+  fireEvent.click(await screen.findByRole('button', { name: /^regenerate$/i }))
+
+  expect(await screen.findByRole('button', { name: /add activity/i })).toBeDisabled()
+  resolveGenerate({ days: [] })
+  await waitFor(() => expect(screen.getByRole('button', { name: /add activity/i })).not.toBeDisabled())
+})
+
+test('a regenerate started on one trip does not overwrite a different trip navigated to before it resolves', async () => {
+  getTrip.mockImplementation((id) =>
+    Promise.resolve(id === '1' ? { destination: 'London' } : { destination: 'Tokyo' })
+  )
+  getItinerary.mockImplementation((id) =>
+    Promise.resolve(
+      id === '1'
+        ? { days: [{ date: '2026-08-01', activities: [
+            { id: 1, name: 'British Museum', type: 'indoor', time_slot: '09:00 - 11:00', location: 'x', description: 'x', is_swapped: false },
+          ] }] }
+        : { status: 'not_generated' }
+    )
+  )
+  let resolveGenerate
+  generateItinerary.mockReturnValue(new Promise((resolve) => { resolveGenerate = resolve }))
+
+  function Harness() {
+    const navigate = useNavigate()
+    return (
+      <>
+        <button onClick={() => navigate('/trips/2')}>go to trip 2</button>
+        <Routes>
+          <Route path="/trips/:tripId" element={<ItineraryPage />} />
+        </Routes>
+      </>
+    )
+  }
+
+  render(
+    <MemoryRouter initialEntries={['/trips/1']}>
+      <Harness />
+    </MemoryRouter>
+  )
+
+  fireEvent.click(await screen.findByRole('button', { name: /regenerate itinerary/i }))
+  fireEvent.click(await screen.findByRole('button', { name: /^regenerate$/i }))
+  await waitFor(() => expect(generateItinerary).toHaveBeenCalledWith('1'))
+
+  fireEvent.click(screen.getByRole('button', { name: /go to trip 2/i }))
+  await waitFor(() => expect(getItinerary).toHaveBeenCalledWith('2'))
+  expect(await screen.findByText('Tokyo Trip')).toBeInTheDocument()
+
+  // Trip 1's regenerate resolves only after we've already navigated to trip 2.
+  resolveGenerate({ days: [{ date: '2026-08-02', activities: [
+    { id: 99, name: 'Stale London Activity', type: 'indoor', time_slot: '09:00 - 11:00', location: 'x', description: 'x', is_swapped: false },
+  ] }] })
+
+  // The stale response must not get applied — the "generating" flag still
+  // clears (so the button doesn't stay stuck disabled forever), but the
+  // regenerated data it carried is for a trip that's no longer on screen.
+  await waitFor(() => expect(screen.getByRole('button', { name: /regenerate itinerary/i })).not.toBeDisabled())
+  expect(screen.queryByText('Stale London Activity')).not.toBeInTheDocument()
+})
+
 test('clicking the UV card opens its hourly-trend popup with the sparkline and the daily advice sentence', async () => {
   getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
   geocodeCity.mockResolvedValueOnce([51.5074, -0.1278])
@@ -2178,7 +2310,6 @@ test('a rejected activity add shows an adding-failed message instead of crashing
 })
 
 test('deleting an activity asks for confirmation, then calls deleteActivity and updates the list from the response', async () => {
-  vi.spyOn(window, 'confirm').mockReturnValue(true)
   getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
   getItinerary.mockResolvedValue({
     days: [{ date: '2026-08-01', activities: [mockGeneratedActivity()] }],
@@ -2189,15 +2320,16 @@ test('deleting an activity asks for confirmation, then calls deleteActivity and 
   await screen.findByText('British Museum')
   fireEvent.click(screen.getByRole('button', { name: /delete british museum/i }))
 
-  expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('British Museum'))
+  expect(await screen.findByRole('heading', { name: /remove this activity/i })).toBeInTheDocument()
+  expect(deleteActivity).not.toHaveBeenCalled()
+
+  fireEvent.click(screen.getByRole('button', { name: /^remove$/i }))
+
   await waitFor(() => expect(deleteActivity).toHaveBeenCalledWith('1', 1))
   expect(await screen.findByText(/no activities generated for this day yet/i)).toBeInTheDocument()
-
-  window.confirm.mockRestore()
 })
 
 test('declining the delete confirmation does not call deleteActivity', async () => {
-  vi.spyOn(window, 'confirm').mockReturnValue(false)
   getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
   getItinerary.mockResolvedValue({
     days: [{ date: '2026-08-01', activities: [mockGeneratedActivity()] }],
@@ -2206,15 +2338,14 @@ test('declining the delete confirmation does not call deleteActivity', async () 
 
   await screen.findByText('British Museum')
   fireEvent.click(screen.getByRole('button', { name: /delete british museum/i }))
+  fireEvent.click(await screen.findByRole('button', { name: /cancel/i }))
 
+  expect(screen.queryByRole('heading', { name: /remove this activity/i })).not.toBeInTheDocument()
   expect(deleteActivity).not.toHaveBeenCalled()
   expect(screen.getByText('British Museum')).toBeInTheDocument()
-
-  window.confirm.mockRestore()
 })
 
 test('a rejected delete shows a removal-failed message instead of crashing', async () => {
-  vi.spyOn(window, 'confirm').mockReturnValue(true)
   getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
   getItinerary.mockResolvedValue({
     days: [{ date: '2026-08-01', activities: [mockGeneratedActivity()] }],
@@ -2224,10 +2355,9 @@ test('a rejected delete shows a removal-failed message instead of crashing', asy
 
   await screen.findByText('British Museum')
   fireEvent.click(screen.getByRole('button', { name: /delete british museum/i }))
+  fireEvent.click(await screen.findByRole('button', { name: /^remove$/i }))
 
   expect(await screen.findByText(/removing this activity failed/i)).toBeInTheDocument()
-
-  window.confirm.mockRestore()
 })
 
 // test for weather info click

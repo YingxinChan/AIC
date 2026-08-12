@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import Button from '../../components/Button'
 import Card from '../../components/Card'
+import NaviaWordmark from '../../components/NaviaWordmark'
 import { GRID_VARIANTS, ITEM_VARIANTS, STRIP_VARIANTS } from '../../lib/motion'
 import { useDragScroll } from '../../lib/useDragScroll'
 import { DESTINATION_IMAGES } from '../trips/destinationImages'
@@ -136,9 +137,9 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-9 h-9 rounded-lg overflow-hidden flex items-center justify-center">
-              <img src={logo} alt="Navia" className="w-full h-full object-cover" />
+              <img src={logo} alt="" className="w-full h-full object-cover" />
             </div>
-            <span className="font-display font-bold text-ink text-lg">Nav<span className="text-brand-600">ia</span></span>
+            <NaviaWordmark className="h-4 w-auto text-ink" />
           </div>
           <nav className="hidden md:flex items-center gap-1">
             {NAV_LINKS.map((link) => (
@@ -405,7 +406,7 @@ export default function LandingPage() {
 
       <footer className="border-t border-gray-100 py-10">
         <div className="max-w-6xl mx-auto px-4 flex flex-col items-center gap-2 text-center">
-          <span className="font-display font-bold text-ink">Nav<span className="text-brand-600">ia</span></span>
+          <NaviaWordmark className="h-4 w-auto text-ink" />
           <p className="text-body-sm text-ink-muted">Weather-perfect trips, without the guesswork.</p>
           <p className="text-body-sm text-ink-muted">Aegis Innovation Competition 2026</p>
         </div>

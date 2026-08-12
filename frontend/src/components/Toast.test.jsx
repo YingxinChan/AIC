@@ -2,10 +2,10 @@ import { render, screen, fireEvent, act } from '@testing-library/react'
 import { vi } from 'vitest'
 import { ToastProvider, useToast } from './Toast'
 
-function Trigger({ message = 'Saved!' }) {
+function Trigger({ message = 'Saved!', variant }) {
   const toast = useToast()
   return (
-    <button type="button" onClick={() => toast.show(message)}>
+    <button type="button" onClick={() => toast.show(message, variant)}>
       Fire
     </button>
   )
@@ -61,4 +61,28 @@ test('caps the queue at 3 toasts', () => {
   expect(screen.getByText('two')).toBeInTheDocument()
   expect(screen.getByText('three')).toBeInTheDocument()
   expect(screen.getByText('four')).toBeInTheDocument()
+})
+
+test('a celebration-variant toast gets the brand-gradient treatment instead of the everyday ink pill', async () => {
+  render(
+    <ToastProvider>
+      <Trigger message="Trip created" variant="celebration" />
+    </ToastProvider>
+  )
+  fireEvent.click(screen.getByRole('button', { name: 'Fire' }))
+
+  const toast = await screen.findByText('Trip created')
+  expect(toast.closest('div')).toHaveClass('from-brand-600')
+})
+
+test('an unrecognized variant falls back to the everyday success style rather than rendering blank', async () => {
+  render(
+    <ToastProvider>
+      <Trigger message="Saved!" variant="not-a-real-variant" />
+    </ToastProvider>
+  )
+  fireEvent.click(screen.getByRole('button', { name: 'Fire' }))
+
+  const toast = await screen.findByText('Saved!')
+  expect(toast.closest('div')).toHaveClass('bg-ink')
 })

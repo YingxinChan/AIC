@@ -1,14 +1,17 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { MapPin, Calendar, Building2, Camera, Plane, CalendarPlus, ArrowLeft, ArrowRight, Pencil } from 'lucide-react'
+import {
+  MapPin, Calendar, Building2, Camera, Plane, CalendarPlus, ArrowLeft, ArrowRight, Pencil,
+  ClipboardCheck, Check,
+} from 'lucide-react'
 import ErrorMessage from '../../components/ErrorMessage'
 import HotelSearchInput from '../../components/HotelSearchInput'
 import Input, { Textarea } from '../../components/Input'
 import Button from '../../components/Button'
 import Card from '../../components/Card'
 import { useToast } from '../../components/Toast'
-import { SPRING_SOFT, GRID_VARIANTS, ITEM_VARIANTS } from '../../lib/motion'
+import { SPRING_SOFT, SPRING_POP, GRID_VARIANTS, ITEM_VARIANTS } from '../../lib/motion'
 import { createTrip, selectFlight } from './tripsApi'
 import { useTripDraft } from './useTripDraft'
 
@@ -22,6 +25,11 @@ const STEPS = ['origin', 'destination', 'dates', 'flight', 'hotel', 'places', 'r
 const FLIGHT_STEP = STEPS.indexOf('flight')
 const HOTEL_STEP = STEPS.indexOf('hotel')
 const PLACES_STEP = STEPS.indexOf('places')
+
+const STEP_ICONS = {
+  origin: Plane, destination: MapPin, dates: Calendar,
+  flight: Plane, hotel: Building2, places: Camera, review: ClipboardCheck,
+}
 
 export default function NewTripPage() {
   const navigate = useNavigate()
@@ -63,6 +71,18 @@ export default function NewTripPage() {
     hotel: Boolean(draft.hotelAddress?.trim()),
     places: Boolean(draft.placesToVisit?.trim()),
   }[STEPS[step]]
+
+  // Drives the little checkmark badge on the step icon — stepHasValue only
+  // covers the optional steps, so required steps (and review) fall back to
+  // stepValid.
+  const stepSatisfied = stepHasValue ?? stepValid
+
+  // Enter-to-continue only actually fires on these — single plain-text-input
+  // steps where the browser's native implicit form submission applies (see
+  // the guard in handleSubmit). Dates has two inputs and hotel/places use
+  // richer widgets, so hinting there would promise a shortcut that may not
+  // work.
+  const showEnterHint = (STEPS[step] === 'origin' || STEPS[step] === 'destination') && stepValid
 
   const handleFindFlight = () => {
     goTo(FLIGHT_STEP)
@@ -121,7 +141,7 @@ export default function NewTripPage() {
       }
 
       clearDraft()
-      toast.show('Trip created')
+      toast.show('Trip created — let\'s check the forecast', 'celebration')
       navigate(`/trips/${trip.id}`)
     } catch (error) {
       setErrorMessage(error.response?.data?.detail || 'Something went wrong while planning your trip.')
@@ -135,20 +155,20 @@ export default function NewTripPage() {
       <p className="text-body-sm text-ink-muted mt-1 mb-6">Just a few quick questions and we'll set up your trip.</p>
 
       <Card as="form" onSubmit={handleSubmit} className="p-6 sm:p-8">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-2">
           {step > 0 ? (
             <button type="button" onClick={back} className="flex items-center gap-1 text-sm text-ink-muted hover:text-ink font-medium">
               <ArrowLeft size={15} /> Back
             </button>
           ) : <span />}
-          <div className="flex items-center gap-1.5">
-            {STEPS.map((s, i) => (
-              <span
-                key={s}
-                className={`h-1.5 rounded-full transition-all ${i === step ? 'w-6 bg-brand-600' : i < step ? 'w-1.5 bg-brand-300' : 'w-1.5 bg-gray-200'}`}
-              />
-            ))}
-          </div>
+          <span className="text-xs font-semibold text-ink-muted">Step {step + 1} of {STEPS.length}</span>
+        </div>
+        <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden mb-6">
+          <motion.div
+            className="h-full rounded-full bg-gradient-to-r from-brand-500 to-purple-500"
+            animate={{ width: `${((step + 1) / STEPS.length) * 100}%` }}
+            transition={SPRING_SOFT}
+          />
         </div>
 
         <AnimatePresence mode="wait">
@@ -159,6 +179,8 @@ export default function NewTripPage() {
             exit={{ opacity: 0, y: -10 }}
             transition={SPRING_SOFT}
           >
+            <StepIcon icon={STEP_ICONS[STEPS[step]]} satisfied={stepSatisfied} />
+
             {STEPS[step] === 'origin' && (
               <div className="space-y-4">
                 <p className="heading-3">Where are you flying from?</p>
@@ -223,7 +245,7 @@ export default function NewTripPage() {
 
             {STEPS[step] === 'flight' && (
               <div className="space-y-4">
-                <p className="heading-3">Know your flight number? <span className="text-ink-muted font-normal">(Optional)</span></p>
+                <p className="heading-3">Got a flight? <span className="text-ink-muted font-normal">(Optional)</span></p>
                 {bothFlightsPicked ? (
                   <div className="space-y-3">
                     <div className="bg-brand-50 border border-brand-100 rounded-lg p-3">
@@ -340,12 +362,40 @@ export default function NewTripPage() {
                   Continue <ArrowRight size={16} />
                 </Button>
               )}
+              {showEnterHint && (
+                <p className="text-center text-xs text-ink-muted mt-2.5">
+                  Press <kbd className="px-1.5 py-0.5 rounded border border-gray-300 bg-gray-50 font-mono text-[10px]">Enter ↵</kbd> to continue
+                </p>
+              )}
             </div>
           </motion.div>
         </AnimatePresence>
 
         {errorMessage && <div className="mt-4"><ErrorMessage message={errorMessage} /></div>}
       </Card>
+    </div>
+  )
+}
+
+function StepIcon({ icon: Icon, satisfied }) {
+  return (
+    <div className="relative w-12 h-12 mb-4">
+      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-50 to-brand-100 flex items-center justify-center">
+        <Icon size={22} className="text-brand-600" />
+      </div>
+      <AnimatePresence>
+        {satisfied && (
+          <motion.div
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0, opacity: 0 }}
+            transition={SPRING_POP}
+            className="absolute -right-1 -bottom-1 w-5 h-5 rounded-full bg-emerald-500 ring-2 ring-white flex items-center justify-center"
+          >
+            <Check size={12} className="text-white" strokeWidth={3} />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

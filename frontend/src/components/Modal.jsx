@@ -1,20 +1,61 @@
-import { useEffect, useId } from 'react'
+import { useEffect, useId, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { X } from 'lucide-react'
 import { SPRING_POP } from '../lib/motion'
 
+const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
 export default function Modal({ open, onClose, title, children, size = 'sm' }) {
   const titleId = useId()
+  const dialogRef = useRef(null)
+  const previouslyFocusedRef = useRef(null)
   const maxWidthClass = size === 'lg' ? 'max-w-2xl' : 'max-w-md'
 
   useEffect(() => {
     if (!open) return
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') {
+        onClose()
+        return
+      }
+      // Tab trap — without this, tabbing past the last focusable element
+      // (or shift-tabbing past the first) escapes into whatever's behind
+      // the dialog, which a keyboard/screen-reader user can't see is now
+      // covered by an open modal.
+      if (e.key === 'Tab') {
+        const focusable = dialogRef.current?.querySelectorAll(FOCUSABLE_SELECTOR)
+        if (!focusable || focusable.length === 0) return
+        const first = focusable[0]
+        const last = focusable[focusable.length - 1]
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault()
+          last.focus()
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault()
+          first.focus()
+        }
+      }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [open, onClose])
+
+  // Moves focus into the dialog on open (otherwise a keyboard user's focus
+  // stays wherever it was on the page behind the now-open modal), and
+  // restores it to whatever triggered the modal once it closes — without
+  // this, closing a dialog silently drops keyboard focus back to the top
+  // of the page.
+  useEffect(() => {
+    if (!open) return
+    previouslyFocusedRef.current = document.activeElement
+    const focusable = dialogRef.current?.querySelectorAll(FOCUSABLE_SELECTOR)
+    const target = focusable && focusable.length > 0 ? focusable[0] : dialogRef.current
+    target?.focus()
+
+    return () => {
+      previouslyFocusedRef.current?.focus?.()
+    }
+  }, [open])
 
   if (!open) return null
   return (
@@ -26,9 +67,11 @@ export default function Modal({ open, onClose, title, children, size = 'sm' }) {
       transition={{ duration: 0.2, ease: 'easeOut' }}
     >
       <motion.div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        tabIndex={-1}
         className={`bg-white rounded-3xl shadow-bento-lg p-6 w-full ${maxWidthClass}`}
         onClick={(e) => e.stopPropagation()}
         initial={{ opacity: 0, scale: 0.95, y: 12 }}

@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { User } from 'lucide-react'
 import logo from '../assets/logo.png'
+import NaviaWordmark from './NaviaWordmark'
 import { getMotionComponent } from '../lib/motionComponent'
 import { SPRING_POP } from '../lib/motion'
 
@@ -20,11 +21,11 @@ export default function Nav() {
   return (
     <nav className="sticky top-0 z-40 bg-white/85 backdrop-blur-md border-b border-gray-200/70">
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-        <Link to="/dashboard" className="flex items-center gap-2 font-display font-bold text-ink text-xl">
+        <Link to="/dashboard" className="flex items-center gap-2 text-ink">
           <span className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
-            <img src={logo} alt="Navia" className="w-full h-full object-cover" />
+            <img src={logo} alt="" className="w-full h-full object-cover" />
           </span>
-          <span>Nav<span className="text-brand-600">ia</span></span>
+          <NaviaWordmark className="h-5 w-auto" />
         </Link>
         <div className="flex items-center gap-2 text-sm">
           <Link

@@ -5,6 +5,7 @@ import { Plane, Calendar, Trash2, Compass, FilterX } from 'lucide-react'
 import ErrorMessage from '../../components/ErrorMessage'
 import Button from '../../components/Button'
 import Card from '../../components/Card'
+import Modal from '../../components/Modal'
 import EmptyState from '../../components/EmptyState'
 import { SkeletonTripCard } from '../../components/Skeleton'
 import { Select } from '../../components/Input'
@@ -31,6 +32,9 @@ export default function MyTripsPage() {
   const [deleteError, setDeleteError] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
   const [sortBy, setSortBy] = useState('soonest')
+  // Which trip is pending a delete confirmation, or null — holds the trip
+  // object (not just an id) so the confirmation modal can show its name.
+  const [tripPendingDelete, setTripPendingDelete] = useState(null)
   const toast = useToast()
 
   const visibleTrips = useMemo(() => {
@@ -48,16 +52,15 @@ export default function MyTripsPage() {
     return sorted
   }, [trips, statusFilter, sortBy])
 
-  const handleDelete = async (event, trip) => {
+  const handleDeleteClick = (event, trip) => {
     event.preventDefault()
     event.stopPropagation()
+    setTripPendingDelete(trip)
+  }
 
-    const confirmed = window.confirm(
-      `Delete "${trip.name}"? This cannot be undone.`
-    )
-
-    if (!confirmed) return
-
+  const handleConfirmDelete = async () => {
+    const trip = tripPendingDelete
+    setTripPendingDelete(null)
     setDeleteError('')
     setDeletingId(trip.id)
 
@@ -201,7 +204,7 @@ export default function MyTripsPage() {
                   shape="icon"
                   aria-label={`Delete ${trip.name}`}
                   disabled={deletingId === trip.id}
-                  onClick={(event) => handleDelete(event, trip)}
+                  onClick={(event) => handleDeleteClick(event, trip)}
                   className="absolute top-2.5 right-2.5 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
                 >
                   <Trash2 size={16} />
@@ -218,6 +221,20 @@ export default function MyTripsPage() {
           })}
         </motion.div>
       )}
+
+      <Modal open={Boolean(tripPendingDelete)} onClose={() => setTripPendingDelete(null)} title="Delete this trip?">
+        <p className="text-sm text-gray-600 mb-4">
+          {tripPendingDelete && `Delete "${tripPendingDelete.name}"? This can't be undone.`}
+        </p>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={() => setTripPendingDelete(null)}>
+            Cancel
+          </Button>
+          <Button type="button" variant="danger" onClick={handleConfirmDelete}>
+            Delete
+          </Button>
+        </div>
+      </Modal>
     </div>
   )
 }

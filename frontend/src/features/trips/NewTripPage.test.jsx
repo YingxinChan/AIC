@@ -46,7 +46,7 @@ async function answerRequiredQuestions() {
   fireEvent.change(await screen.findByLabelText(/date depart/i), { target: { value: '2026-08-01' } })
   fireEvent.change(screen.getByLabelText(/date return/i), { target: { value: '2026-08-10' } })
   fireEvent.click(screen.getByRole('button', { name: /continue/i }))
-  await screen.findByText(/know your flight number/i)
+  await screen.findByText(/got a flight/i)
 }
 
 // From the flight question, skips flight/hotel/places to land on Review.

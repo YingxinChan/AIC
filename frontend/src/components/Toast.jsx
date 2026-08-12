@@ -1,11 +1,21 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
-import { CheckCircle2 } from 'lucide-react'
+import { CheckCircle2, Plane } from 'lucide-react'
 import { SPRING_POP } from '../lib/motion'
 
 const MAX_TOASTS = 3
 const DEFAULT_AUTO_DISMISS_MS = 3200
+
+// 'success' is the everyday pill (saved/deleted/updated — routine actions,
+// all deserve the same quiet treatment). 'celebration' is reserved for
+// the rare moment that should actually feel different — right now just
+// finishing the full trip-creation wizard — so it doesn't get lost next to
+// "Activity removed" using the exact same look.
+const VARIANT_STYLES = {
+  success: { container: 'bg-ink text-white', icon: CheckCircle2, iconClassName: 'text-accent-400' },
+  celebration: { container: 'bg-gradient-to-r from-brand-600 to-purple-600 text-white shadow-brand-glow', icon: Plane, iconClassName: 'text-white' },
+}
 
 // No-op default: components can call useToast() even when no ToastProvider
 // is mounted (as in every existing page test, which renders pages standalone
@@ -22,14 +32,16 @@ function ToastItem({ toast, autoDismissMs, onDismiss }) {
     return () => clearTimeout(timer)
   }, [onDismiss, autoDismissMs])
 
+  const { container, icon: Icon, iconClassName } = VARIANT_STYLES[toast.variant] || VARIANT_STYLES.success
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={SPRING_POP}
-      className="flex items-center gap-2 bg-ink text-white px-4 py-2.5 rounded-xl shadow-bento-lg text-body-sm"
+      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-bento-lg text-body-sm ${container}`}
     >
-      <CheckCircle2 size={16} className="text-accent-400 shrink-0" />
+      <Icon size={16} className={`${iconClassName} shrink-0`} />
       {toast.message}
     </motion.div>
   )

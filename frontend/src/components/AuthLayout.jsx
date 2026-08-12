@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { EASE_OUT } from '../lib/motion'
 import { DESTINATION_IMAGES } from '../features/trips/destinationImages'
 import logo from '../assets/logo.png'
+import NaviaWordmark from './NaviaWordmark'
 
 export default function AuthLayout() {
   const location = useLocation()
@@ -13,11 +14,11 @@ export default function AuthLayout() {
         style={{ backgroundImage: `url(${DESTINATION_IMAGES.Prague.url})` }}
       >
         <div className="absolute inset-0 bg-gradient-to-br from-brand-950/90 via-brand-900/70 to-purple-900/50" />
-        <Link to="/" className="relative flex items-center gap-2 font-display font-bold text-lg">
+        <Link to="/" className="relative flex items-center gap-2">
           <span className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
-            <img src={logo} alt="Navia" className="w-full h-full object-cover" />
+            <img src={logo} alt="" className="w-full h-full object-cover" />
           </span>
-          <span>Nav<span className="text-brand-300">ia</span></span>
+          <NaviaWordmark className="h-4 w-auto" accentClassName="text-brand-300" />
         </Link>
         <div className="relative max-w-md">
           <p className="font-display font-bold text-4xl leading-tight">
@@ -40,11 +41,9 @@ export default function AuthLayout() {
         >
           <div className="mb-8 flex items-center gap-2 lg:hidden">
             <span className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
-              <img src={logo} alt="Navia" className="w-full h-full object-cover" />
+              <img src={logo} alt="" className="w-full h-full object-cover" />
             </span>
-            <span className="font-display font-bold text-ink text-xl">
-              Nav<span className="text-brand-600">ia</span>
-            </span>
+            <NaviaWordmark className="h-5 w-auto text-ink" />
           </div>
           <Outlet />
         </motion.div>

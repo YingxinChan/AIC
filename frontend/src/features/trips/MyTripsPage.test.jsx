@@ -98,15 +98,13 @@ test('shows an error and keeps the trip visible when deletion fails', async () =
   ])
 
   deleteTrip.mockRejectedValueOnce(new Error('network error'))
-  vi.spyOn(window, 'confirm').mockReturnValueOnce(true)
 
   renderPage()
 
   expect(await screen.findByText('Summer Trip')).toBeInTheDocument()
 
-  await user.click(
-    screen.getByRole('button', { name: /delete summer trip/i })
-  )
+  await user.click(screen.getByRole('button', { name: /delete summer trip/i }))
+  await user.click(await screen.findByRole('button', { name: /^delete$/i }))
 
   expect(
     await screen.findByText(/couldn't delete/i)
@@ -129,15 +127,14 @@ test('deletes a trip and removes it from the page', async () => {
   ])
 
   deleteTrip.mockResolvedValueOnce({})
-  vi.spyOn(window, 'confirm').mockReturnValueOnce(true)
 
   renderPage()
 
   expect(await screen.findByText('Summer Trip')).toBeInTheDocument()
 
-  await user.click(
-    screen.getByRole('button', { name: /delete summer trip/i })
-  )
+  await user.click(screen.getByRole('button', { name: /delete summer trip/i }))
+  expect(await screen.findByRole('heading', { name: /delete this trip/i })).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /^delete$/i }))
 
   expect(deleteTrip).toHaveBeenCalledWith(1)
 
@@ -146,7 +143,7 @@ test('deletes a trip and removes it from the page', async () => {
   })
 })
 
-test('does not delete when confirmation is cancelled', async () => {
+test('does not delete when the confirmation is cancelled', async () => {
   const user = userEvent.setup()
 
   getTrips.mockResolvedValue([
@@ -159,16 +156,14 @@ test('does not delete when confirmation is cancelled', async () => {
     },
   ])
 
-  vi.spyOn(window, 'confirm').mockReturnValueOnce(false)
-
   renderPage()
 
   expect(await screen.findByText('Summer Trip')).toBeInTheDocument()
 
-  await user.click(
-    screen.getByRole('button', { name: /delete summer trip/i })
-  )
+  await user.click(screen.getByRole('button', { name: /delete summer trip/i }))
+  await user.click(await screen.findByRole('button', { name: /cancel/i }))
 
+  expect(screen.queryByRole('heading', { name: /delete this trip/i })).not.toBeInTheDocument()
   expect(deleteTrip).not.toHaveBeenCalled()
   expect(screen.getByText('Summer Trip')).toBeInTheDocument()
 })
@@ -187,7 +182,6 @@ test('does not navigate when the delete button is clicked', async () => {
   ])
 
   deleteTrip.mockResolvedValueOnce({})
-  vi.spyOn(window, 'confirm').mockReturnValueOnce(true)
 
   render(
     <MemoryRouter initialEntries={['/trips']}>
@@ -200,9 +194,8 @@ test('does not navigate when the delete button is clicked', async () => {
 
   expect(await screen.findByText('Summer Trip')).toBeInTheDocument()
 
-  await user.click(
-    screen.getByRole('button', { name: /delete summer trip/i })
-  )
+  await user.click(screen.getByRole('button', { name: /delete summer trip/i }))
+  await user.click(await screen.findByRole('button', { name: /^delete$/i }))
 
   expect(screen.queryByText('Trip Detail Page')).not.toBeInTheDocument()
 })
@@ -221,7 +214,6 @@ test('disables the delete button while a delete request is in flight', async () 
   ])
 
   deleteTrip.mockReturnValue(new Promise(() => {}))
-  vi.spyOn(window, 'confirm').mockReturnValueOnce(true)
 
   renderPage()
 
@@ -229,6 +221,7 @@ test('disables the delete button while a delete request is in flight', async () 
 
   const deleteButton = screen.getByRole('button', { name: /delete summer trip/i })
   await user.click(deleteButton)
+  await user.click(await screen.findByRole('button', { name: /^delete$/i }))
 
   expect(deleteButton).toBeDisabled()
   expect(deleteTrip).toHaveBeenCalledTimes(1)

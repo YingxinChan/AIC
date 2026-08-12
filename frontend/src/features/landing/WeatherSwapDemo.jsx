@@ -13,14 +13,18 @@ const BULLETS = [
 export default function WeatherSwapDemo() {
   const prefersReducedMotion = useReducedMotion()
   const [isRaining, setIsRaining] = useState(!!prefersReducedMotion)
+  // Paused on hover/focus — a first-time visitor reading the bullets beside
+  // this card was often still on the first one by the time the demo had
+  // already auto-cycled past the state it describes.
+  const [paused, setPaused] = useState(false)
 
   useEffect(() => {
-    if (prefersReducedMotion) return
+    if (prefersReducedMotion || paused) return
     const id = setInterval(() => {
       setIsRaining((prev) => !prev)
     }, 3500)
     return () => clearInterval(id)
-  }, [prefersReducedMotion])
+  }, [prefersReducedMotion, paused])
 
   return (
     <section id="adapts" className="max-w-6xl mx-auto px-4 py-16 sm:py-20 border-t border-gray-100">
@@ -46,7 +50,14 @@ export default function WeatherSwapDemo() {
           </motion.ul>
         </div>
 
-        <Card elevation="lg" className="p-6">
+        <Card
+          elevation="lg"
+          className="p-6"
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => setPaused(false)}
+          onFocus={() => setPaused(true)}
+          onBlur={() => setPaused(false)}
+        >
           <div className="flex items-center justify-between">
             <h3 className="heading-3">Barcelona · Day 3</h3>
             <AnimatePresence mode="wait">
