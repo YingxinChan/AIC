@@ -82,13 +82,14 @@ async def find_alternative_activity(
             f"specific to what the original activity needed (e.g. a view fog would "
             f"ruin, or open-water/height wind would make unsafe) rather than the "
             f"outdoor setting itself — outdoor is fine as long as the new activity "
-            f"doesn't have the same specific vulnerability. Also give its real "
-            f"approximate latitude and longitude (as decimal degrees, e.g. lat "
-            f"51.5194, lng -0.1270 for the British Museum) — use your knowledge of "
-            f"the actual location, not a placeholder or the original activity's "
-            f"coordinates. Also state whether the venue you suggested is indoor "
-            f"or outdoor, matching whichever you actually picked above — not "
-            f"always indoor."
+            f"doesn't have the same specific vulnerability. The venue must be a real "
+            f"place actually located in {trip.destination}, never a landmark from a "
+            f"different city. Also give its real approximate latitude and longitude "
+            f"as decimal degrees, using your own knowledge of that venue's actual "
+            f"location — not a placeholder, not the original activity's coordinates, "
+            f"and not any location mentioned elsewhere in these instructions. Also "
+            f"state whether the venue you suggested is indoor or outdoor, matching "
+            f"whichever you actually picked above — not always indoor."
         ),
         messages=[{"role": "user", "content": content}],
         output_config={"format": {"type": "json_schema", "schema": ALTERNATE_ACTIVITY_SCHEMA}},
