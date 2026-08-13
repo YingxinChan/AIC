@@ -16,8 +16,7 @@ afterEach(() => vi.restoreAllMocks())
 
 test('renders the logo, Home linking to /dashboard, and My Trips linking to /trips', () => {
   render(<MemoryRouter><Nav /></MemoryRouter>)
-  expect(screen.getByText('Nav')).toBeInTheDocument()
-  expect(screen.getByText('ia')).toBeInTheDocument()
+  expect(screen.getByText('Navia')).toBeInTheDocument()
   expect(screen.getByRole('link', { name: /home/i })).toHaveAttribute('href', '/dashboard')
   expect(screen.getByRole('link', { name: /my trips/i })).toHaveAttribute('href', '/trips')
 })
@@ -36,12 +35,26 @@ test('no longer shows Flights, Notifications, or Sign out links (notifications f
 
 test('highlights only Home as active on the dashboard route', () => {
   render(<MemoryRouter initialEntries={['/dashboard']}><Nav /></MemoryRouter>)
-  expect(screen.getByRole('link', { name: /home/i })).toHaveClass('bg-indigo-50')
-  expect(screen.getByRole('link', { name: /my trips/i })).not.toHaveClass('bg-indigo-50')
+  expect(screen.getByRole('link', { name: /home/i })).toHaveClass('bg-brand-800')
+  expect(screen.getByRole('link', { name: /my trips/i })).not.toHaveClass('bg-brand-800')
 })
 
 test('highlights My Trips as active on any /trips route, including a specific trip', () => {
   render(<MemoryRouter initialEntries={['/trips/42']}><Nav /></MemoryRouter>)
-  expect(screen.getByRole('link', { name: /my trips/i })).toHaveClass('bg-indigo-50')
-  expect(screen.getByRole('link', { name: /home/i })).not.toHaveClass('bg-indigo-50')
+  expect(screen.getByRole('link', { name: /my trips/i })).toHaveClass('bg-brand-800')
+  expect(screen.getByRole('link', { name: /home/i })).not.toHaveClass('bg-brand-800')
+})
+
+// The creation form isn't "browsing your trips" — so My Trips shouldn't
+// light up there.
+test('does not highlight My Trips on the New Trip form', () => {
+  render(<MemoryRouter initialEntries={['/trips/new']}><Nav /></MemoryRouter>)
+  expect(screen.getByRole('link', { name: /my trips/i })).not.toHaveClass('bg-brand-800')
+})
+
+// Nor on its nested flight-select sub-route — still part of the same
+// creation flow, not the trip list.
+test('does not highlight My Trips on the New Trip flow\'s flight-select sub-route', () => {
+  render(<MemoryRouter initialEntries={['/trips/new/flights/outbound']}><Nav /></MemoryRouter>)
+  expect(screen.getByRole('link', { name: /my trips/i })).not.toHaveClass('bg-brand-800')
 })

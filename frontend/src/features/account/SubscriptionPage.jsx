@@ -1,11 +1,15 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, Check } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { ArrowLeft, CloudSun, AlertTriangle, RefreshCw, Check } from 'lucide-react'
+import { GRID_VARIANTS, ITEM_VARIANTS } from '../../lib/motion'
+import { useToast } from '../../components/Toast'
+import Button from '../../components/Button'
 
 const sharedFeatures = [
-  'Weather and climate insights',
-  'Weather-risk alerts',
-  'Activity alternatives and itinerary updates',
+  { icon: CloudSun, text: 'Weather and climate insights' },
+  { icon: AlertTriangle, text: 'Weather-risk alerts' },
+  { icon: RefreshCw, text: 'Activity alternatives and itinerary updates' },
 ]
 
 const plans = [
@@ -16,6 +20,7 @@ const plans = [
     price: '£4.99',
     cadence: 'one-time',
     description: 'Access for one complete trip',
+    badge: 'Recommended',
   },
   {
     id: 'monthly',
@@ -32,100 +37,124 @@ const plans = [
     price: '£59.99',
     cadence: 'one-time',
     description: 'Ongoing lifetime access',
+    badge: 'Best value',
+    // £59.99 / £4.99 ≈ 12.02 — Lifetime only comes out cheaper than paying
+    // per trip once you've taken 13 single trips.
+    footnote: 'Cheaper than paying per trip after 13 trips',
   },
 ]
 
 export default function SubscriptionPage() {
   const [selectedPlan, setSelectedPlan] = useState('single')
+  const toast = useToast()
+  const selected = plans.find((plan) => plan.id === selectedPlan)
+
+  const handleContinue = () => {
+    toast.show("Checkout isn't available in this preview — thanks for trying Navia!")
+  }
 
   return (
     <div className="space-y-6">
       <Link
         to="/account"
-        className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900"
+        className="inline-flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink"
       >
         <ArrowLeft size={16} />
         Back to Account
       </Link>
 
-      <section className="rounded-3xl border border-gray-300 bg-white px-5 py-10 shadow-sm sm:px-10">
-        <header className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-            Plan
-          </h1>
-
-          <p className="mt-3 text-gray-500">
-            Choose how long you would like to use Navia.
+      {/* Impeccable surface concept-seed roll (scope=surface, mode=persuade):
+          assigned candidate — a check-in desk. The navy band above the
+          perforation is the counter, the mono tag is the desk number, and
+          the three plans below are stubs the agent hands you, not a plain
+          bordered pricing grid. Says "plan," not "fare" — this is a
+          subscription tier, not a flight, and reusing "book"/"fare" language
+          from the actual flight-booking flow risked a cold user thinking
+          they'd landed on a booking screen (clarify pass). */}
+      <section className="rounded-3xl bg-surface shadow-ticket overflow-hidden">
+        <div className="bg-brand-900 text-white px-6 py-10 sm:px-10 text-center">
+          <p className="font-mono text-[11px] tracking-wide text-brand-300 uppercase">Desk 01 · Plan select</p>
+          <h1 className="heading-display mt-2 text-white">Which plan would you like?</h1>
+          <p className="mt-3 text-body-sm text-brand-100 max-w-lg mx-auto">
+            Every plan includes the same weather-adaptive itinerary. Only your access window changes.
           </p>
-        </header>
 
-        <div className="mx-auto mt-10 max-w-4xl rounded-2xl border border-gray-300 bg-gray-50 p-6 sm:p-8">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-gray-500">
-            Feature highlights
-          </h2>
-
-          <ul className="mt-6 space-y-5">
-            {sharedFeatures.map((feature) => (
-              <li
-                key={feature}
-                className="flex items-start gap-3 text-base text-gray-700"
-              >
-                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-700">
-                  <Check size={15} strokeWidth={3} aria-hidden="true" />
+          <ul className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-3 max-w-2xl mx-auto">
+            {sharedFeatures.map(({ icon: Icon, text }) => (
+              <li key={text} className="flex items-center gap-2 text-sm text-brand-100">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-800 text-brand-200">
+                  <Icon size={13} strokeWidth={2.25} aria-hidden="true" />
                 </span>
-
-                <span>{feature}</span>
+                <span>{text}</span>
               </li>
             ))}
           </ul>
         </div>
 
-        <div className="mx-auto mt-10 grid max-w-4xl grid-cols-1 gap-5 sm:grid-cols-3">
-          {plans.map((plan) => {
-            const isSelected = selectedPlan === plan.id
+        <div className="px-6 pt-9 pb-8 sm:px-10">
+          <motion.div
+            className="mx-auto grid max-w-4xl grid-cols-1 gap-5 sm:grid-cols-3"
+            variants={GRID_VARIANTS}
+            initial="hidden"
+            animate="show"
+          >
+            {plans.map((plan) => {
+              const isSelected = selectedPlan === plan.id
 
-            return (
-              <button
-                key={plan.id}
-                type="button"
-                onClick={() => setSelectedPlan(plan.id)}
-                aria-pressed={isSelected}
-                className={`rounded-2xl border-2 px-5 py-6 text-center transition ${
-                  isSelected
-                    ? 'border-indigo-600 bg-indigo-600 text-white shadow-lg'
-                    : 'border-gray-300 bg-white text-gray-900 hover:border-indigo-400 hover:bg-indigo-50'
-                }`}
-              >
-                <span className="block text-xl font-bold">{plan.label}</span>
-
-                <span className="mt-3 block text-3xl font-bold">
-                  {plan.price}
-                </span>
-
-                <span
-                  className={`mt-1 block text-sm ${
-                    isSelected ? 'text-indigo-100' : 'text-gray-500'
+              return (
+                <motion.button
+                  key={plan.id}
+                  type="button"
+                  layout
+                  variants={ITEM_VARIANTS}
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setSelectedPlan(plan.id)}
+                  aria-pressed={isSelected}
+                  className={`relative rounded-2xl border-2 px-5 py-6 text-center transition ${
+                    isSelected
+                      ? 'border-brand-600 bg-surface shadow-bento-hover'
+                      : 'border-brand-100 bg-surface hover:border-brand-300'
                   }`}
                 >
-                  {plan.cadence}
-                </span>
+                  {(isSelected || plan.badge) && (
+                    <span
+                      className={`absolute -top-3 left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${
+                        isSelected ? 'bg-brand-600 text-white' : 'bg-brand-50 text-brand-600 ring-1 ring-brand-100'
+                      }`}
+                    >
+                      {isSelected && <Check size={12} strokeWidth={3} />}
+                      {isSelected ? 'Selected' : plan.badge}
+                    </span>
+                  )}
 
-                <span
-                  className={`mt-3 block text-sm ${
-                    isSelected ? 'text-indigo-100' : 'text-gray-600'
-                  }`}
-                >
-                  {plan.description}
-                </span>
-              </button>
-            )
-          })}
+                  <span className="block text-body-sm font-semibold uppercase tracking-wide text-ink-muted">
+                    {plan.label}
+                  </span>
+
+                  <span className="mt-3 block font-mono text-3xl font-bold text-ink">{plan.price}</span>
+
+                  <span className="mt-1 block text-sm text-ink-muted">{plan.cadence}</span>
+
+                  <span className="mt-3 block text-sm text-ink-muted">{plan.description}</span>
+
+                  {plan.footnote && (
+                    <span className="mt-2 block text-xs text-ink-muted">{plan.footnote}</span>
+                  )}
+                </motion.button>
+              )
+            })}
+          </motion.div>
         </div>
 
-        <p className="mt-8 text-center text-sm text-gray-400">
-          All plans include the same core Navia features. Only the access
-          period differs.
-        </p>
+        <div className="h-8 barcode-strip text-brand-900/60" aria-hidden="true" />
+
+        <div className="flex flex-col items-center gap-3 px-6 py-8 sm:px-10">
+          <Button onClick={handleContinue} shape="pill" size="lg">
+            Continue with {selected.name}
+          </Button>
+          <p className="text-xs text-ink-muted">This is a prototype checkout — no payment is actually taken.</p>
+        </div>
       </section>
     </div>
   )

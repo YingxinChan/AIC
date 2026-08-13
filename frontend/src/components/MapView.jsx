@@ -87,7 +87,7 @@ export default function MapView({
       {routeStops.length > 1 && (
         <Polyline
           positions={routeStops.map(stop => stop.position)}
-          color="#6366f1"
+          color="#3A5080"
           dashArray="10,10"
         />
       )}

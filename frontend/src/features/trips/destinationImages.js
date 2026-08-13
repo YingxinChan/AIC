@@ -38,14 +38,15 @@ export const DESTINATION_IMAGES = {
   Zurich: { url: '/images/destinations/zurich.jpg', position: 'center' },
 }
 
-// trip.destination is free-typed text (see NewTripPage's plain input, no
-// fixed city list enforced) — a straight DESTINATION_IMAGES[destination]
-// lookup silently misses any trip saved with different casing than the
-// object keys above (e.g. "amsterdam" saved instead of "Amsterdam"), even
-// though the file exists. Case-insensitive lookup instead.
+// trip.destination can be free-typed text (older trips, before
+// CitySearchInput existed) or "City, Country" (from CitySearchInput's
+// 25-city list) — a straight DESTINATION_IMAGES[destination] lookup would
+// miss "Oslo, Norway" even though "Oslo" has an image, and also misses any
+// trip saved with different casing than the object keys above. Matching on
+// just the part before the first comma, case-insensitively, covers both.
 export const findDestinationImage = (destination) => {
   if (!destination) return null
-  const normalized = destination.trim().toLowerCase()
+  const normalized = destination.split(',')[0].trim().toLowerCase()
   const key = Object.keys(DESTINATION_IMAGES).find(k => k.toLowerCase() === normalized)
   return key ? DESTINATION_IMAGES[key] : null
 }

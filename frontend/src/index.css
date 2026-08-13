@@ -1,3 +1,132 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-surface text-ink antialiased;
+  }
+  h1, h2, h3 {
+    @apply font-display;
+  }
+  ::selection {
+    @apply bg-brand-100 text-brand-900;
+  }
+}
+
+@layer components {
+  .heading-display {
+    @apply font-display text-display font-bold text-ink;
+  }
+  .heading-1 {
+    @apply font-display text-h1 font-bold text-ink;
+  }
+  .heading-2 {
+    @apply font-display text-h2 font-semibold text-ink;
+  }
+  .heading-3 {
+    @apply font-display text-h3 font-semibold text-ink;
+  }
+  .field-label {
+    @apply flex items-center gap-1.5 text-body-sm font-medium text-ink-muted mb-1.5;
+  }
+  .scroll-strip {
+    @apply flex overflow-x-auto snap-x scroll-px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden;
+  }
+
+  /* Boarding-pass direction (see index.html's direction-contract comment).
+     A vertical perforated tear-line between a ticket's "stub" and its main
+     body — a bold dashed rule punched by two visible circular notches, top
+     and bottom, matching a real ticket's tear perforation. This is an
+     INTERIOR seam (used between two side-by-side columns of the same card)
+     — the notches poke past the divider's own hairline on purpose, and
+     there's always card content to either side absorbing that overhang, so
+     nothing clips them. Do not use this for a seam flush against a card's
+     own outer edge (see .ticket-divider-h below for that case). The notch
+     gets an explicit ring border so it reads as a punched hole even when
+     --ticket-notch can't be set exactly right, instead of silently
+     vanishing the way a color-matched-fill-only notch did before. */
+  .ticket-divider {
+    position: relative;
+    border-left: 3px dashed theme('colors.brand.400');
+  }
+  .ticket-divider::before,
+  .ticket-divider::after {
+    content: '';
+    position: absolute;
+    left: -14px;
+    width: 28px;
+    height: 28px;
+    border-radius: 9999px;
+    background: var(--ticket-notch, theme('colors.surface'));
+    border: 2.5px solid theme('colors.brand.300');
+  }
+  .ticket-divider::before {
+    top: -14px;
+  }
+  .ticket-divider::after {
+    bottom: -14px;
+  }
+
+  /* A horizontal tear between two STACKED sections that share a card's full
+     outer width (stub above, body below) — e.g. a hero banner reissuing
+     into a forecast stub underneath. Tried as a row of punched dots; it
+     read as a busy dotted rule rather than a tear, so this is back to a
+     plain, confident dashed line — the barcode footer and the stub's own
+     ticket-divider notch already carry the "this is a ticket" signal, this
+     seam doesn't need to compete with them. */
+  .ticket-divider-h {
+    border-top: 2px dashed theme('colors.brand.200');
+  }
+
+  /* A decorative barcode texture — vertical bars of varying width in
+     currentColor, mimicking a boarding pass's barcode strip. Purely
+     decorative (aria-hidden at the call site); never a real scannable
+     code. Opacity is set by the caller via text-{color}/{opacity} — keep
+     that at 30% or higher. Anything paler reads as "nothing there," which
+     is exactly the bug this replaced (a 4%-opacity strip is invisible, not
+     subtle). A 40px repeat (the same bar pattern scaled up ~20% from a
+     33px cycle) — same fill ratio, just fewer transitions per unit width. */
+  .barcode-strip {
+    background-image: repeating-linear-gradient(
+      90deg,
+      currentColor 0, currentColor 4px,
+      transparent 4px, transparent 8px,
+      currentColor 8px, currentColor 11px,
+      transparent 11px, transparent 17px,
+      currentColor 17px, currentColor 22px,
+      transparent 22px, transparent 31px,
+      currentColor 31px, currentColor 34px,
+      transparent 34px, transparent 40px
+    );
+  }
+
+  /* Same barcode, rotated: horizontal bars stacked top-to-bottom instead of
+     vertical bars side-to-side — for a tall, narrow strip on the EDGE of a
+     ticket (real boarding passes run their barcode down the side, not
+     along the bottom). Use on a tall/narrow element, e.g. `w-7 h-full`. */
+  .barcode-strip-v {
+    background-image: repeating-linear-gradient(
+      0deg,
+      currentColor 0, currentColor 4px,
+      transparent 4px, transparent 8px,
+      currentColor 8px, currentColor 11px,
+      transparent 11px, transparent 17px,
+      currentColor 17px, currentColor 22px,
+      transparent 22px, transparent 31px,
+      currentColor 31px, currentColor 34px,
+      transparent 34px, transparent 40px
+    );
+  }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

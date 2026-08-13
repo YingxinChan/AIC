@@ -2,7 +2,7 @@
 // Risk model meta data
 
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom'
 import { vi } from 'vitest'
 import userEvent from '@testing-library/user-event'
 
@@ -149,6 +149,15 @@ function renderAt(tripId) {
   )
 }
 
+// The 9-card risk strip and the hourly forecast strip now sit behind the day
+// header's "View full forecast" disclosure, collapsed by default (the activity
+// timeline is the main pane's primary content; the condensed day header still
+// always shows temp/condition and the day's single worst risk). Any assertion
+// about the strips' own contents therefore has to open it first.
+const expandForecast = async () => {
+  fireEvent.click(await screen.findByRole('button', { name: /view full forecast/i }))
+}
+
 const renderItineraryPage = () => {
   return render(
     <MemoryRouter initialEntries={["/trips/571"]}>
@@ -179,7 +188,7 @@ test('shows a loading message while the trip is still being fetched', async () =
   getTrip.mockReturnValue(new Promise(() => {}))
   renderAt(1)
 
-  expect(await screen.findByText(/loading trip/i)).toBeInTheDocument()
+  expect(await screen.findByText(/loading your trip/i)).toBeInTheDocument()
 })
 
 test('shows an error message with a way back, instead of a blank page, when the trip fails to load', async () => {
@@ -228,7 +237,7 @@ test('shows placeholder and "Generate itinerary" button before anything is gener
   renderAt(1)
 
   await waitFor(() => expect(getItinerary).toHaveBeenCalled())
-  expect(screen.getByText(/ai-generated itinerary will appear here/i)).toBeInTheDocument()
+  expect(screen.getByText(/your day-by-day plan will appear here/i)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /^generate itinerary$/i })).toBeInTheDocument()
 })
 
@@ -242,7 +251,9 @@ test('renders an already-generated itinerary on load without needing to click ge
   renderAt(1)
 
   await waitFor(() => expect(screen.getByText('British Museum')).toBeInTheDocument())
-  expect(screen.getByText(/day 1.*2026-08-01/i)).toBeInTheDocument()
+  // "Day 1 · <date>" now appears in exactly two places by design: the sidebar
+  // day-list row that selects it, and the main pane's own day header.
+  expect(screen.getAllByText(/day 1.*2026-08-01/i)).toHaveLength(2)
   expect(screen.getByRole('button', { name: /regenerate itinerary/i })).toBeInTheDocument()
 })
 
@@ -389,7 +400,11 @@ test('renders the real weather summary and hourly strip once forecast data resol
 
   renderAt(1)
 
+  // Temp/condition stay on the always-visible condensed day header line.
   expect(await screen.findByText('Partly Cloudy')).toBeInTheDocument()
+
+  await expandForecast()
+
   expect(screen.getByText('65%')).toBeInTheDocument()
   expect(screen.getByText('Moderate')).toBeInTheDocument()
   expect(screen.getByText('Good')).toBeInTheDocument()
@@ -409,9 +424,11 @@ test('renders the real weather summary and hourly strip once forecast data resol
   expect(screen.getByText('72%')).toBeInTheDocument()
   expect(screen.getByText('Caution')).toBeInTheDocument()
 
-  // Backend doesn't provide sunrise/sunset data yet — should say so honestly
-  // instead of crashing or showing blank/undefined.
-  expect(screen.getByText(/sunrise \/ sunset not available/i)).toBeInTheDocument()
+  // Sunrise/sunset now lives in the condensed day-header row, not this
+  // panel — when the backend doesn't provide it, it's silently omitted
+  // there (a compact summary row isn't the place for an explanatory
+  // fallback message) rather than crashing or showing blank/undefined.
+  expect(screen.queryByText(/sunrise \/ sunset not available/i)).not.toBeInTheDocument()
 
   // Not a climatology day — the historical-average badge must not leak in.
   expect(
@@ -453,6 +470,8 @@ test('renders dashes for null climatology values and never displays null%', asyn
   expect(
     await screen.findByText(/typical weather \(historical average\)/i),
   ).toBeInTheDocument()
+
+  await expandForecast()
 
   expect(screen.getAllByText('—').length).toBeGreaterThan(0)
   expect(screen.queryByText(/null%/i)).not.toBeInTheDocument()
@@ -529,6 +548,7 @@ test('hourly strip highlights the current GMT hour with "Now"', async () => {
     getItinerary.mockResolvedValue({ status: 'not_generated' })
 
     renderAt(1)
+    await expandForecast()
 
     // The 14:00 GMT card (matching the fixed system time above) shows "Now"
     // instead of its formatted hour; the 13:00 card is unaffected.
@@ -571,6 +591,7 @@ test('inserts dedicated sunrise/sunset cards into the hourly forecast at their s
   getItinerary.mockResolvedValue({ status: 'not_generated' })
 
   renderAt(1)
+  await expandForecast()
 
   // Dedicated cards at the exact sunrise/sunset time (leading zero dropped,
   // matching formatHour's "6 AM" style), inserted alongside the hour cards.
@@ -583,6 +604,74 @@ test('inserts dedicated sunrise/sunset cards into the hourly forecast at their s
   expect(screen.getByText('6 AM')).toBeInTheDocument()
   expect(screen.getByText('12 PM')).toBeInTheDocument()
   expect(screen.getByText('7 PM')).toBeInTheDocument()
+})
+
+// Regression test: the umbrella tip's trigger used to be /rain|storm/, which
+// missed Drizzle entirely (none of "Light Drizzle"/"Drizzle"/"Heavy Drizzle"
+// contain the substring "rain") and any Showers variant other than "Rain
+// Showers" ("Heavy Showers"/"Violent Showers" don't contain "rain" either).
+test.each(['Light Drizzle', 'Drizzle', 'Heavy Drizzle', 'Heavy Showers', 'Violent Showers'])(
+  'shows the umbrella tip for condition "%s", not just literal "Rain"/"Storm" text',
+  async (condition) => {
+    getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+    geocodeCity.mockResolvedValueOnce([51.5074, -0.1278])
+    getForecast.mockResolvedValueOnce([{
+      date: '2026-08-01',
+      temp_max: 18,
+      temp_min: 12,
+      condition,
+      heavy_rain_probability: 40,
+      heavy_rain_warning: false,
+      flood_score: 10,
+      flood_risk: 'Low',
+      beach_safety_score: 60,
+      beach_safety_level: 'Good',
+      snow_probability: 0,
+      wind_speed: 10,
+      wind_level: 'Breezy',
+      uv_index: 2,
+      uv_level: 'Low',
+      visibility_m: 8000,
+      sunrise: '06:00 AM',
+      sunset: '08:00 PM',
+    }])
+    getItinerary.mockResolvedValue({ status: 'not_generated' })
+
+    renderAt(1)
+
+    expect(await screen.findByText(/bring an umbrella today/i)).toBeInTheDocument()
+  }
+)
+
+test('does not show the umbrella tip for a dry condition like Clear', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  geocodeCity.mockResolvedValueOnce([51.5074, -0.1278])
+  getForecast.mockResolvedValueOnce([{
+    date: '2026-08-01',
+    temp_max: 22,
+    temp_min: 14,
+    condition: 'Clear',
+    heavy_rain_probability: 5,
+    heavy_rain_warning: false,
+    flood_score: 5,
+    flood_risk: 'Low',
+    beach_safety_score: 90,
+    beach_safety_level: 'Excellent',
+    snow_probability: 0,
+    wind_speed: 5,
+    wind_level: 'Calm',
+    uv_index: 3,
+    uv_level: 'Moderate',
+    visibility_m: 15000,
+    sunrise: '06:34 AM',
+    sunset: '07:00 PM',
+  }])
+  getItinerary.mockResolvedValue({ status: 'not_generated' })
+
+  renderAt(1)
+
+  await screen.findByText('Clear')
+  expect(screen.queryByText(/bring an umbrella today/i)).not.toBeInTheDocument()
 })
 
 test('shows the "feels like" temperature in grey next to the actual temp, for today only', async () => {
@@ -616,6 +705,7 @@ test('shows the "feels like" temperature in grey next to the actual temp, for to
     getItinerary.mockResolvedValue({ status: 'not_generated' })
 
     renderAt(1)
+    await expandForecast()
 
     // "20°" appears twice by design — once as the big header number, once on
     // the hourly strip's "Now" card, since both read the same current-hour
@@ -657,8 +747,13 @@ test('risk cards use red/yellow/green styling based on severity level', async ()
   getItinerary.mockResolvedValue({ status: 'not_generated' })
 
   renderAt(1)
+  await expandForecast()
 
-  expect(await screen.findByText('High')).toHaveClass('bg-red-100')
+  // findAllByText (not findByText) for 'High' — more than one risk card can
+  // legitimately show a 'High' badge for the same fixture, so this asserts
+  // every match is correctly red rather than assuming exactly one exists.
+  const highBadges = await screen.findAllByText('High')
+  highBadges.forEach((badge) => expect(badge).toHaveClass('bg-red-100'))
   expect(screen.getByText('Moderate')).toHaveClass('bg-yellow-100')
   expect(screen.getByText('Good')).toHaveClass('bg-green-100')
   expect(screen.getByText('None')).toHaveClass('bg-green-100')
@@ -690,6 +785,7 @@ test('heavy rain "Low" (no warning) renders green, not yellow', async () => {
   getItinerary.mockResolvedValue({ status: 'not_generated' })
 
   renderAt(1)
+  await expandForecast()
 
   const lowBadges = await screen.findAllByText('Low')
   lowBadges.forEach((badge) => {
@@ -719,7 +815,7 @@ test('editing dates in-place re-fetches weather for the new range instead of lea
   renderAt(1)
   await waitFor(() => expect(getForecast).toHaveBeenCalledWith(51.5074, -0.1278, '2026-08-01', '2026-08-02'))
 
-  fireEvent.click(await screen.findByRole('button', { name: /^edit dates$/i }))
+  fireEvent.click((await screen.findAllByRole('button', { name: /^edit dates$/i })).at(0))
   fireEvent.change(screen.getByLabelText(/date depart/i), { target: { value: '2026-08-05' } })
   fireEvent.change(screen.getByLabelText(/date return/i), { target: { value: '2026-08-06' } })
   fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
@@ -954,7 +1050,7 @@ test('"Edit Dates" opens the modal pre-filled with the trip\'s current dates', a
   getTrip.mockResolvedValue({ destination: 'Paris', start_date: '2026-08-01', end_date: '2026-08-10' })
   renderAt(1)
 
-  fireEvent.click(await screen.findByRole('button', { name: /^edit dates$/i }))
+  fireEvent.click((await screen.findAllByRole('button', { name: /^edit dates$/i })).at(0))
 
   expect(screen.getByRole('heading', { name: /edit dates/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/date depart/i)).toHaveValue('2026-08-01')
@@ -966,13 +1062,13 @@ test('confirming the dates save calls updateTrip and the page reflects the new v
   updateTrip.mockResolvedValue({ destination: 'Paris', start_date: '2026-08-02', end_date: '2026-08-11' })
   renderAt(1)
 
-  fireEvent.click(await screen.findByRole('button', { name: /^edit dates$/i }))
+  fireEvent.click((await screen.findAllByRole('button', { name: /^edit dates$/i })).at(0))
   fireEvent.change(screen.getByLabelText(/date depart/i), { target: { value: '2026-08-02' } })
   fireEvent.change(screen.getByLabelText(/date return/i), { target: { value: '2026-08-11' } })
   fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
 
   await waitFor(() => expect(updateTrip).toHaveBeenCalledWith('1', { start_date: '2026-08-02', end_date: '2026-08-11' }))
-  expect(await screen.findByText(/2026-08-02.*2026-08-11/)).toBeInTheDocument()
+  await waitFor(() => expect(screen.getAllByText(/2026-08-02.*2026-08-11/).length).toBeGreaterThan(0))
 })
 
 test('saving the dates does not regenerate immediately — it opens the review prompt instead', async () => {
@@ -980,7 +1076,7 @@ test('saving the dates does not regenerate immediately — it opens the review p
   updateTrip.mockResolvedValue({ destination: 'Paris', start_date: '2026-08-02', end_date: '2026-08-11' })
   renderAt(1)
 
-  fireEvent.click(await screen.findByRole('button', { name: /^edit dates$/i }))
+  fireEvent.click((await screen.findAllByRole('button', { name: /^edit dates$/i })).at(0))
   fireEvent.change(screen.getByLabelText(/date depart/i), { target: { value: '2026-08-02' } })
   fireEvent.change(screen.getByLabelText(/date return/i), { target: { value: '2026-08-11' } })
   fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
@@ -993,7 +1089,7 @@ test('Cancel in the dates modal closes without saving', async () => {
   getTrip.mockResolvedValue({ destination: 'Paris', start_date: '2026-08-01', end_date: '2026-08-10' })
   renderAt(1)
 
-  fireEvent.click(await screen.findByRole('button', { name: /^edit dates$/i }))
+  fireEvent.click((await screen.findAllByRole('button', { name: /^edit dates$/i })).at(0))
   fireEvent.change(screen.getByLabelText(/date depart/i), { target: { value: '2026-08-02' } })
   fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }))
 
@@ -1006,7 +1102,7 @@ test('a rejected dates updateTrip shows a saving-failed message instead of crash
   updateTrip.mockRejectedValue(new Error('server error'))
   renderAt(1)
 
-  fireEvent.click(await screen.findByRole('button', { name: /^edit dates$/i }))
+  fireEvent.click((await screen.findAllByRole('button', { name: /^edit dates$/i })).at(0))
   fireEvent.change(screen.getByLabelText(/date depart/i), { target: { value: '2026-08-02' } })
   fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
 
@@ -1017,7 +1113,7 @@ test('an invalid date range (end before/equal to start) disables Save and never 
   getTrip.mockResolvedValue({ destination: 'Paris', start_date: '2026-08-01', end_date: '2026-08-10' })
   renderAt(1)
 
-  fireEvent.click(await screen.findByRole('button', { name: /^edit dates$/i }))
+  fireEvent.click((await screen.findAllByRole('button', { name: /^edit dates$/i })).at(0))
   fireEvent.change(screen.getByLabelText(/date depart/i), { target: { value: '2026-08-10' } })
   fireEvent.change(screen.getByLabelText(/date return/i), { target: { value: '2026-08-01' } })
 
@@ -1035,7 +1131,7 @@ test('clearing the start (or end) date field disables Save instead of allowing a
   getTrip.mockResolvedValue({ destination: 'Paris', start_date: '2026-08-01', end_date: '2026-08-10' })
   renderAt(1)
 
-  fireEvent.click(await screen.findByRole('button', { name: /^edit dates$/i }))
+  fireEvent.click((await screen.findAllByRole('button', { name: /^edit dates$/i })).at(0))
   fireEvent.change(screen.getByLabelText(/date depart/i), { target: { value: '' } })
 
   expect(screen.getByRole('button', { name: /^save$/i })).toBeDisabled()
@@ -1057,6 +1153,138 @@ test('"No, regenerate now" in the review prompt regenerates the itinerary exactl
 
   await waitFor(() => expect(generateItinerary).toHaveBeenCalledTimes(1))
   expect(screen.queryByRole('heading', { name: /update anything else first/i })).not.toBeInTheDocument()
+})
+
+test('clicking Regenerate Itinerary on an existing plan asks for confirmation instead of regenerating immediately', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  getItinerary.mockResolvedValue({
+    days: [{ date: '2026-08-01', activities: [
+      { id: 1, name: 'British Museum', type: 'indoor', time_slot: '09:00 - 11:00', location: 'Great Russell St', description: 'x', is_swapped: false },
+    ] }],
+  })
+  renderAt(1)
+
+  fireEvent.click(await screen.findByRole('button', { name: /regenerate itinerary/i }))
+
+  expect(await screen.findByRole('heading', { name: /regenerate this itinerary/i })).toBeInTheDocument()
+  expect(generateItinerary).not.toHaveBeenCalled()
+})
+
+test('confirming the regenerate warning actually regenerates and closes the confirmation', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  getItinerary.mockResolvedValue({
+    days: [{ date: '2026-08-01', activities: [
+      { id: 1, name: 'British Museum', type: 'indoor', time_slot: '09:00 - 11:00', location: 'Great Russell St', description: 'x', is_swapped: false },
+    ] }],
+  })
+  generateItinerary.mockResolvedValue({ days: [] })
+  renderAt(1)
+
+  fireEvent.click(await screen.findByRole('button', { name: /regenerate itinerary/i }))
+  fireEvent.click(await screen.findByRole('button', { name: /^regenerate$/i }))
+
+  await waitFor(() => expect(generateItinerary).toHaveBeenCalledTimes(1))
+  expect(screen.queryByRole('heading', { name: /regenerate this itinerary/i })).not.toBeInTheDocument()
+})
+
+test('cancelling the regenerate warning leaves the existing itinerary untouched', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  getItinerary.mockResolvedValue({
+    days: [{ date: '2026-08-01', activities: [
+      { id: 1, name: 'British Museum', type: 'indoor', time_slot: '09:00 - 11:00', location: 'Great Russell St', description: 'x', is_swapped: false },
+    ] }],
+  })
+  renderAt(1)
+
+  fireEvent.click(await screen.findByRole('button', { name: /regenerate itinerary/i }))
+  fireEvent.click(await screen.findByRole('button', { name: /cancel/i }))
+
+  expect(screen.queryByRole('heading', { name: /regenerate this itinerary/i })).not.toBeInTheDocument()
+  expect(generateItinerary).not.toHaveBeenCalled()
+  expect(screen.getByText('British Museum')).toBeInTheDocument()
+})
+
+test('the first-ever Generate (no existing itinerary) skips the confirmation, since there is nothing to lose yet', async () => {
+  generateItinerary.mockResolvedValue({ days: [] })
+  renderAt(1)
+
+  fireEvent.click(await screen.findByRole('button', { name: /^generate itinerary$/i }))
+
+  expect(screen.queryByRole('heading', { name: /regenerate this itinerary/i })).not.toBeInTheDocument()
+  await waitFor(() => expect(generateItinerary).toHaveBeenCalledTimes(1))
+})
+
+test('Add Activity is disabled while a regenerate is in flight, so a new activity can\'t be silently wiped out by it', async () => {
+  getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
+  getItinerary.mockResolvedValue({
+    days: [{ date: '2026-08-01', activities: [
+      { id: 1, name: 'British Museum', type: 'indoor', time_slot: '09:00 - 11:00', location: 'Great Russell St', description: 'x', is_swapped: false },
+    ] }],
+  })
+  let resolveGenerate
+  generateItinerary.mockReturnValue(new Promise((resolve) => { resolveGenerate = resolve }))
+  renderAt(1)
+
+  fireEvent.click(await screen.findByRole('button', { name: /regenerate itinerary/i }))
+  fireEvent.click(await screen.findByRole('button', { name: /^regenerate$/i }))
+
+  expect(await screen.findByRole('button', { name: /add activity/i })).toBeDisabled()
+  resolveGenerate({ days: [] })
+  await waitFor(() => expect(screen.getByRole('button', { name: /add activity/i })).not.toBeDisabled())
+})
+
+test('a regenerate started on one trip does not overwrite a different trip navigated to before it resolves', async () => {
+  getTrip.mockImplementation((id) =>
+    Promise.resolve(id === '1' ? { destination: 'London' } : { destination: 'Tokyo' })
+  )
+  getItinerary.mockImplementation((id) =>
+    Promise.resolve(
+      id === '1'
+        ? { days: [{ date: '2026-08-01', activities: [
+            { id: 1, name: 'British Museum', type: 'indoor', time_slot: '09:00 - 11:00', location: 'x', description: 'x', is_swapped: false },
+          ] }] }
+        : { status: 'not_generated' }
+    )
+  )
+  let resolveGenerate
+  generateItinerary.mockReturnValue(new Promise((resolve) => { resolveGenerate = resolve }))
+
+  function Harness() {
+    const navigate = useNavigate()
+    return (
+      <>
+        <button onClick={() => navigate('/trips/2')}>go to trip 2</button>
+        <Routes>
+          <Route path="/trips/:tripId" element={<ItineraryPage />} />
+        </Routes>
+      </>
+    )
+  }
+
+  render(
+    <MemoryRouter initialEntries={['/trips/1']}>
+      <Harness />
+    </MemoryRouter>
+  )
+
+  fireEvent.click(await screen.findByRole('button', { name: /regenerate itinerary/i }))
+  fireEvent.click(await screen.findByRole('button', { name: /^regenerate$/i }))
+  await waitFor(() => expect(generateItinerary).toHaveBeenCalledWith('1'))
+
+  fireEvent.click(screen.getByRole('button', { name: /go to trip 2/i }))
+  await waitFor(() => expect(getItinerary).toHaveBeenCalledWith('2'))
+  expect(await screen.findByText('Tokyo Trip')).toBeInTheDocument()
+
+  // Trip 1's regenerate resolves only after we've already navigated to trip 2.
+  resolveGenerate({ days: [{ date: '2026-08-02', activities: [
+    { id: 99, name: 'Stale London Activity', type: 'indoor', time_slot: '09:00 - 11:00', location: 'x', description: 'x', is_swapped: false },
+  ] }] })
+
+  // The stale response must not get applied — the "generating" flag still
+  // clears (so the button doesn't stay stuck disabled forever), but the
+  // regenerated data it carried is for a trip that's no longer on screen.
+  await waitFor(() => expect(screen.getByRole('button', { name: /regenerate itinerary/i })).not.toBeDisabled())
+  expect(screen.queryByText('Stale London Activity')).not.toBeInTheDocument()
 })
 
 test('clicking the UV card opens its hourly-trend popup with the sparkline and the daily advice sentence', async () => {
@@ -1088,6 +1316,7 @@ test('clicking the UV card opens its hourly-trend popup with the sparkline and t
   getItinerary.mockResolvedValue({ status: 'not_generated' })
 
   renderAt(1)
+  await expandForecast()
 
   fireEvent.click(await screen.findByRole('button', { name: /uv index/i }))
 
@@ -1148,6 +1377,7 @@ test('clicking the Wind card opens its popup without an advice sentence, since t
   getItinerary.mockResolvedValue({ status: 'not_generated' })
 
   renderAt(1)
+  await expandForecast()
 
   fireEvent.click(await screen.findByRole('button', { name: /^wind\b/i }))
 
@@ -1187,6 +1417,7 @@ test('clicking the Visibility card opens its popup with the visibility line colo
   getItinerary.mockResolvedValue({ status: 'not_generated' })
 
   renderAt(1)
+  await expandForecast()
 
   fireEvent.click(await screen.findByRole('button', { name: /^visibility\b/i }))
 
@@ -1226,6 +1457,7 @@ test('the popup marks the current hour as "Now" when viewing today\'s data', asy
     getItinerary.mockResolvedValue({ status: 'not_generated' })
 
     renderAt(1)
+    await expandForecast()
 
     fireEvent.click(await screen.findByRole('button', { name: /^wind\b/i }))
 
@@ -1271,6 +1503,7 @@ test('moving the pointer over the popup chart follows it and shows that point\'s
     getItinerary.mockResolvedValue({ status: 'not_generated' })
 
     renderAt(1)
+    await expandForecast()
 
     fireEvent.click(await screen.findByRole('button', { name: /^wind\b/i }))
     await screen.findByRole('heading', { name: /wind.*hourly trend/i })
@@ -1285,7 +1518,14 @@ test('moving the pointer over the popup chart follows it and shows that point\'s
   }
 })
 
-test('risk cards (e.g. Heavy Rain) are not clickable — no popup opens', async () => {
+// Regression test replacing a stale one that asserted the opposite: Heavy
+// Rain (and Flood/Beach Safety/Snow/Extreme Temp) already had an onClick
+// opening the same risk-info modal system as UV/Wind/Hiking/Visibility —
+// the old test only checked for the *absence of a button role*, which
+// passed by accident on an inaccessible div and masked exactly the
+// keyboard/screen-reader gap the design critique caught. All 9 risk cards
+// are real buttons now, matching this test's own name for the other 4.
+test('clicking the Heavy Rain card opens its detail modal, same as every other risk card', async () => {
   getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
   geocodeCity.mockResolvedValueOnce([51.5074, -0.1278])
   getForecast.mockResolvedValueOnce([{
@@ -1310,9 +1550,12 @@ test('risk cards (e.g. Heavy Rain) are not clickable — no popup opens', async 
   getItinerary.mockResolvedValue({ status: 'not_generated' })
 
   renderAt(1)
+  await expandForecast()
 
-  await screen.findByText(/heavy rain/i)
-  expect(screen.queryByRole('button', { name: /heavy rain/i })).not.toBeInTheDocument()
+  fireEvent.click(await screen.findByRole('button', { name: /heavy rain/i }))
+
+  expect(await screen.findByRole('heading', { name: /heavy rain/i })).toBeInTheDocument()
+  expect(screen.getByText(/heavy rain probability/i)).toBeInTheDocument()
 })
 
 test('the review prompt offers Dates/Outbound/Return but not Hotel again, right after a hotel save', async () => {
@@ -1413,7 +1656,7 @@ test('the hero "Edit Dates" and hotel card "Edit Hotel" buttons have distinct ac
   })
   renderAt(1)
 
-  expect(await screen.findByRole('button', { name: /^edit dates$/i })).toBeInTheDocument()
+  expect((await screen.findAllByRole('button', { name: /^edit dates$/i })).at(0)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /^edit hotel$/i })).toBeInTheDocument()
 })
 
@@ -1426,8 +1669,11 @@ test('hero card shows the real trip name, destination, dates, and a status deriv
   await screen.findByText('Tokyo Trip')
   // Match the combined "start -> end" text so this only finds the hero's own
   // date-range line, not one of the day tabs (which now also render a single
-  // date each, e.g. "Day 1 - 2099-01-01").
-  expect(screen.getByText(/2099-01-01.*2099-01-10/)).toBeInTheDocument()
+  // date each, e.g. "Day 1 - 2099-01-01"). The hero renders this in two
+  // responsive places (mobile fallback + sm+ stub) — only one is ever
+  // visible at a given viewport, but jsdom doesn't evaluate the media query
+  // that makes that true, so both exist in the test DOM at once.
+  expect(screen.getAllByText(/2099-01-01.*2099-01-10/).length).toBeGreaterThan(0)
   expect(screen.getByText(/upcoming/i)).toBeInTheDocument()
 })
 
@@ -1488,6 +1734,8 @@ test('hides the hourly strip for climatology even when hourly data exists', asyn
     await screen.findByText(/typical weather \(historical average\)/i),
   ).toBeInTheDocument()
 
+  await expandForecast()
+
   expect(screen.queryByText('97%')).not.toBeInTheDocument()
   expect(screen.queryByText('98%')).not.toBeInTheDocument()
   expect(screen.queryByText('Hourly Test Weather')).not.toBeInTheDocument()
@@ -1526,6 +1774,8 @@ test('uses neutral gray styling for an Unknown beach safety level', async () => 
   renderAt(1)
 
   await screen.findByText(/typical weather \(historical average\)/i)
+
+  await expandForecast()
 
   const unknownBadges = screen.getAllByText('Unknown')
   const unknownBadge = unknownBadges.find((element) =>
@@ -1587,6 +1837,8 @@ test('passes selected day activities to MapView as stops', async () => {
   )
 
   await screen.findByText("British Museum")
+
+  fireEvent.click(screen.getByRole('button', { name: /show map/i }))
 
   expect(mockMapView).toHaveBeenLastCalledWith(
     expect.objectContaining({
@@ -1656,6 +1908,8 @@ test('updates MapView stops when switching days', async () => {
 
   await screen.findByText("Big Ben")
 
+  fireEvent.click(screen.getByRole('button', { name: /show map/i }))
+
   expect(mockMapView).toHaveBeenLastCalledWith(
     expect.objectContaining({
       stops: [
@@ -1702,6 +1956,8 @@ test('passes hotel location to MapView when hotel address exists', async () => {
 
   await screen.findByText("Park Hyatt Tokyo")
 
+  fireEvent.click(screen.getByRole('button', { name: /show map/i }))
+
   expect(mockMapView).toHaveBeenLastCalledWith(
     expect.objectContaining({
       hotel: {
@@ -1723,7 +1979,7 @@ test('does not pass hotel to MapView when hotel address is missing', async () =>
 
   renderAt(1)
 
-  await waitFor(() => expect(getTrip).toHaveBeenCalled())
+  fireEvent.click(await screen.findByRole('button', { name: /show map/i }))
 
   expect(mockMapView).toHaveBeenLastCalledWith(
     expect.objectContaining({
@@ -2070,7 +2326,6 @@ test('a rejected activity add shows an adding-failed message instead of crashing
 })
 
 test('deleting an activity asks for confirmation, then calls deleteActivity and updates the list from the response', async () => {
-  vi.spyOn(window, 'confirm').mockReturnValue(true)
   getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
   getItinerary.mockResolvedValue({
     days: [{ date: '2026-08-01', activities: [mockGeneratedActivity()] }],
@@ -2081,15 +2336,16 @@ test('deleting an activity asks for confirmation, then calls deleteActivity and 
   await screen.findByText('British Museum')
   fireEvent.click(screen.getByRole('button', { name: /delete british museum/i }))
 
-  expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('British Museum'))
+  expect(await screen.findByRole('heading', { name: /remove this activity/i })).toBeInTheDocument()
+  expect(deleteActivity).not.toHaveBeenCalled()
+
+  fireEvent.click(screen.getByRole('button', { name: /^remove$/i }))
+
   await waitFor(() => expect(deleteActivity).toHaveBeenCalledWith('1', 1))
   expect(await screen.findByText(/no activities generated for this day yet/i)).toBeInTheDocument()
-
-  window.confirm.mockRestore()
 })
 
 test('declining the delete confirmation does not call deleteActivity', async () => {
-  vi.spyOn(window, 'confirm').mockReturnValue(false)
   getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
   getItinerary.mockResolvedValue({
     days: [{ date: '2026-08-01', activities: [mockGeneratedActivity()] }],
@@ -2098,15 +2354,14 @@ test('declining the delete confirmation does not call deleteActivity', async () 
 
   await screen.findByText('British Museum')
   fireEvent.click(screen.getByRole('button', { name: /delete british museum/i }))
+  fireEvent.click(await screen.findByRole('button', { name: /cancel/i }))
 
+  expect(screen.queryByRole('heading', { name: /remove this activity/i })).not.toBeInTheDocument()
   expect(deleteActivity).not.toHaveBeenCalled()
   expect(screen.getByText('British Museum')).toBeInTheDocument()
-
-  window.confirm.mockRestore()
 })
 
 test('a rejected delete shows a removal-failed message instead of crashing', async () => {
-  vi.spyOn(window, 'confirm').mockReturnValue(true)
   getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
   getItinerary.mockResolvedValue({
     days: [{ date: '2026-08-01', activities: [mockGeneratedActivity()] }],
@@ -2116,10 +2371,9 @@ test('a rejected delete shows a removal-failed message instead of crashing', asy
 
   await screen.findByText('British Museum')
   fireEvent.click(screen.getByRole('button', { name: /delete british museum/i }))
+  fireEvent.click(await screen.findByRole('button', { name: /^remove$/i }))
 
   expect(await screen.findByText(/removing this activity failed/i)).toBeInTheDocument()
-
-  window.confirm.mockRestore()
 })
 
 // test for weather info click
@@ -2136,6 +2390,7 @@ it("opens flood risk calculation modal", async () => {
   })
 
   renderItineraryPage()
+  await expandForecast()
   const card = await screen.findByText("Flood")
   await userEvent.click(card)
   expect(
@@ -2159,6 +2414,7 @@ it("opens snow probability calculation modal", async () => {
   })
 
   renderItineraryPage()
+  await expandForecast()
   const card = await screen.findByText(/Snow/i)
   await userEvent.click(card)
   expect(
@@ -2184,6 +2440,7 @@ it("opens wind hourly trend modal", async () => {
   })
 
   renderItineraryPage()
+  await expandForecast()
   const card = await screen.findByText(/Wind/i)
   await userEvent.click(card)
   expect(

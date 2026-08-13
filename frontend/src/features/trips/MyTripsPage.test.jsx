@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { vi } from 'vitest'
@@ -56,13 +56,13 @@ test('shows a destination photo background on trip cards, case-insensitively, fa
   renderPage()
 
   const parisCard = (await screen.findByText('A')).closest('a')
-  const parisPhoto = parisCard.querySelector('div')
+  const parisPhoto = parisCard.querySelectorAll('div')[1]
   expect(parisPhoto.style.backgroundImage).toContain('/images/destinations/paris.jpg')
 
   const unmappedCard = screen.getByText('B').closest('a')
-  const unmappedPhoto = unmappedCard.querySelector('div')
+  const unmappedPhoto = unmappedCard.querySelectorAll('div')[1]
   expect(unmappedPhoto.style.backgroundImage).toBe('')
-  expect(unmappedPhoto.className).toContain('from-indigo-400')
+  expect(unmappedPhoto.className).toContain('from-brand-400')
 })
 
 test('renders every trip as a card with name, dates, status, and a link to its itinerary page', async () => {
@@ -74,11 +74,14 @@ test('renders every trip as a card with name, dates, status, and a link to its i
 
   expect(await screen.findByText('Summer Trip')).toBeInTheDocument()
   expect(screen.getByText('Winter Trip')).toBeInTheDocument()
-  expect(screen.getByRole('link', { name: /summer trip/i })).toHaveAttribute('href', '/trips/1')
-  expect(screen.getByRole('link', { name: /winter trip/i })).toHaveAttribute('href', '/trips/2')
-  expect(screen.getAllByText(/view details/i).length).toBe(2)
-  expect(screen.getByText(/completed/i)).toBeInTheDocument()
-  expect(screen.getByText(/upcoming/i)).toBeInTheDocument()
+  const summerCard = screen.getByRole('link', { name: /summer trip/i })
+  const winterCard = screen.getByRole('link', { name: /winter trip/i })
+  expect(summerCard).toHaveAttribute('href', '/trips/1')
+  expect(winterCard).toHaveAttribute('href', '/trips/2')
+  // Scoped to each card specifically — the status filter chips (now shown
+  // regardless of trip count) also render "Completed"/"Upcoming" text.
+  expect(within(summerCard).getByText(/completed/i)).toBeInTheDocument()
+  expect(within(winterCard).getByText(/upcoming/i)).toBeInTheDocument()
 })
 
 test('shows an error and keeps the trip visible when deletion fails', async () => {
@@ -95,15 +98,13 @@ test('shows an error and keeps the trip visible when deletion fails', async () =
   ])
 
   deleteTrip.mockRejectedValueOnce(new Error('network error'))
-  vi.spyOn(window, 'confirm').mockReturnValueOnce(true)
 
   renderPage()
 
   expect(await screen.findByText('Summer Trip')).toBeInTheDocument()
 
-  await user.click(
-    screen.getByRole('button', { name: /delete summer trip/i })
-  )
+  await user.click(screen.getByRole('button', { name: /delete summer trip/i }))
+  await user.click(await screen.findByRole('button', { name: /^delete$/i }))
 
   expect(
     await screen.findByText(/couldn't delete/i)
@@ -126,15 +127,14 @@ test('deletes a trip and removes it from the page', async () => {
   ])
 
   deleteTrip.mockResolvedValueOnce({})
-  vi.spyOn(window, 'confirm').mockReturnValueOnce(true)
 
   renderPage()
 
   expect(await screen.findByText('Summer Trip')).toBeInTheDocument()
 
-  await user.click(
-    screen.getByRole('button', { name: /delete summer trip/i })
-  )
+  await user.click(screen.getByRole('button', { name: /delete summer trip/i }))
+  expect(await screen.findByRole('heading', { name: /delete this trip/i })).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /^delete$/i }))
 
   expect(deleteTrip).toHaveBeenCalledWith(1)
 
@@ -143,7 +143,7 @@ test('deletes a trip and removes it from the page', async () => {
   })
 })
 
-test('does not delete when confirmation is cancelled', async () => {
+test('does not delete when the confirmation is cancelled', async () => {
   const user = userEvent.setup()
 
   getTrips.mockResolvedValue([
@@ -156,16 +156,14 @@ test('does not delete when confirmation is cancelled', async () => {
     },
   ])
 
-  vi.spyOn(window, 'confirm').mockReturnValueOnce(false)
-
   renderPage()
 
   expect(await screen.findByText('Summer Trip')).toBeInTheDocument()
 
-  await user.click(
-    screen.getByRole('button', { name: /delete summer trip/i })
-  )
+  await user.click(screen.getByRole('button', { name: /delete summer trip/i }))
+  await user.click(await screen.findByRole('button', { name: /cancel/i }))
 
+  expect(screen.queryByRole('heading', { name: /delete this trip/i })).not.toBeInTheDocument()
   expect(deleteTrip).not.toHaveBeenCalled()
   expect(screen.getByText('Summer Trip')).toBeInTheDocument()
 })
@@ -184,7 +182,6 @@ test('does not navigate when the delete button is clicked', async () => {
   ])
 
   deleteTrip.mockResolvedValueOnce({})
-  vi.spyOn(window, 'confirm').mockReturnValueOnce(true)
 
   render(
     <MemoryRouter initialEntries={['/trips']}>
@@ -197,9 +194,8 @@ test('does not navigate when the delete button is clicked', async () => {
 
   expect(await screen.findByText('Summer Trip')).toBeInTheDocument()
 
-  await user.click(
-    screen.getByRole('button', { name: /delete summer trip/i })
-  )
+  await user.click(screen.getByRole('button', { name: /delete summer trip/i }))
+  await user.click(await screen.findByRole('button', { name: /^delete$/i }))
 
   expect(screen.queryByText('Trip Detail Page')).not.toBeInTheDocument()
 })
@@ -218,7 +214,6 @@ test('disables the delete button while a delete request is in flight', async () 
   ])
 
   deleteTrip.mockReturnValue(new Promise(() => {}))
-  vi.spyOn(window, 'confirm').mockReturnValueOnce(true)
 
   renderPage()
 
@@ -226,6 +221,7 @@ test('disables the delete button while a delete request is in flight', async () 
 
   const deleteButton = screen.getByRole('button', { name: /delete summer trip/i })
   await user.click(deleteButton)
+  await user.click(await screen.findByRole('button', { name: /^delete$/i }))
 
   expect(deleteButton).toBeDisabled()
   expect(deleteTrip).toHaveBeenCalledTimes(1)

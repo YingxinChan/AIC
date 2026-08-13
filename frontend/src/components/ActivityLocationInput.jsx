@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { searchPlaces } from '../lib/nominatim'
+import { inputClasses } from './Input'
 
 const DEBOUNCE_MS = 400
 const MIN_QUERY_LENGTH = 3
@@ -113,19 +114,19 @@ export default function ActivityLocationInput({ id, value, onChange, cityContext
         onFocus={() => setIsOpen(true)}
         onKeyDown={(e) => { if (e.key === 'Escape') setIsOpen(false) }}
         placeholder={placeholder}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+        className={inputClasses()}
       />
 
       {showPanel && (
-        <div className="absolute z-10 mt-1 w-full bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div className="absolute z-10 mt-1 w-full bg-surface rounded-xl border border-brand-100 shadow-bento-hover overflow-hidden">
           {showNeedDestinationHint && (
-            <p className="px-3 py-2 text-sm text-gray-500">Enter a destination above to search places</p>
+            <p className="px-3 py-2 text-sm text-ink-muted">Enter a destination above to search places</p>
           )}
           {loading && (
-            <p className="px-3 py-2 text-sm text-gray-500">Searching...</p>
+            <p className="px-3 py-2 text-sm text-ink-muted">Searching...</p>
           )}
           {showNoMatchesHint && (
-            <p className="px-3 py-2 text-sm text-gray-500">No matches found</p>
+            <p className="px-3 py-2 text-sm text-ink-muted">No matches found</p>
           )}
           {showResults && (
             <ul>
@@ -134,7 +135,7 @@ export default function ActivityLocationInput({ id, value, onChange, cityContext
                   <button
                     type="button"
                     onClick={() => handleSelect(result)}
-                    className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    className="w-full text-left px-3 py-2 text-sm text-ink-muted hover:bg-surface-sunken"
                   >
                     {result.label}
                   </button>
