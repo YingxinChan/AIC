@@ -6,7 +6,7 @@ export function tripStatus(trip) {
 }
 
 export const STATUS_STYLES = {
-  Upcoming: 'bg-indigo-100 text-indigo-700',
+  Upcoming: 'bg-brand-100 text-brand-700',
   Ongoing: 'bg-green-100 text-green-700',
-  Completed: 'bg-gray-100 text-gray-600',
+  Completed: 'bg-surface-sunken text-ink-muted',
 }

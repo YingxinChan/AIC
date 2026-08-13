@@ -6,10 +6,9 @@ import {
   AlertTriangle, Waves, Umbrella, Snowflake,
   SunDim, Wind, Eye, Sunrise, Sunset, Palmtree, Clock, Flame, Info,
   Pencil, Lock, Trash2, Plus, Mountain, CloudOff,
-  CalendarPlus, ListChecks, ArrowRight, ChevronDown, ChevronUp, Lightbulb,
+  CalendarPlus, ListChecks, ArrowRight, ChevronDown, ChevronUp, Lightbulb, Plane,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
-import Placeholder from '../../components/Placeholder'
 import MapView from '../../components/MapView'
 import Modal from '../../components/Modal'
 import HotelSearchInput from '../../components/HotelSearchInput'
@@ -18,7 +17,9 @@ import Button from '../../components/Button'
 import Card from '../../components/Card'
 import Input from '../../components/Input'
 import EmptyState from '../../components/EmptyState'
-import Skeleton, { SkeletonTripPage, SkeletonWeatherPanel } from '../../components/Skeleton'
+import Skeleton from '../../components/Skeleton'
+import PlaneLoader from '../../components/PlaneLoader'
+import PageLoader from '../../components/PageLoader'
 import { useToast } from '../../components/Toast'
 import { useDragScroll } from '../../lib/useDragScroll'
 import { WeatherIcon, formatHour } from '../../lib/weatherDisplay'
@@ -179,7 +180,7 @@ const RISK_FAMILY_BORDER = {
 // flat edge, so rounding the bottom corners too made it visibly clash with
 // the curve there. Square bottom corners let the accent read as a clean
 // underline instead.
-const RISK_CARD_CLASSES = 'shrink-0 snap-start w-[168px] p-4 rounded-t-2xl bg-white border border-gray-200/80 border-b-2 shadow-bento-sm text-center flex flex-col items-center gap-2 transition-shadow hover:shadow-bento-hover hover:border-brand-200'
+const RISK_CARD_CLASSES = 'shrink-0 snap-start w-[168px] p-4 rounded-t-2xl bg-surface border border-brand-100 border-b-2 shadow-bento-sm text-center flex flex-col items-center gap-2 transition-shadow hover:shadow-bento-hover hover:border-brand-200'
 
 // Flood, Snow, Hiking Safety, Wind, UV and Visibility are all null on a
 // climatology (>14-day) day with no historical substitute standing in for
@@ -557,6 +558,13 @@ export default function ItineraryPage() {
   // condensed day header above them always shows temp/condition and the day's
   // single worst risk, so collapsing hides detail, never the headline.
   const [forecastExpanded, setForecastExpanded] = useState(false)
+  // Per the design critique: the map was always-rendered at the bottom of
+  // every trip page regardless of whether anyone opened it, adding to the
+  // page's total simultaneous surface area — collapsed by default like the
+  // full-forecast panel above, an explicit secondary view rather than a
+  // fixture. Matches CLAUDE.md's own priority note that the map is the
+  // first thing to cut if time is short; this at least makes it optional.
+  const [mapExpanded, setMapExpanded] = useState(false)
 
   const {
     hotelModalOpen, setHotelModalOpen,
@@ -853,15 +861,12 @@ export default function ItineraryPage() {
           otherwise visually identical (both a blank page), which is exactly
           the ambiguity this is meant to resolve. */}
       {!trip && !tripLoadError && (
-        <div>
-          <span className="sr-only">Loading trip...</span>
-          <SkeletonTripPage />
-        </div>
+        <PageLoader label="Loading your trip…" />
       )}
 
       {tripLoadError && (
         <div className="text-center py-16 space-y-3">
-          <p className="text-gray-500">
+          <p className="text-ink-muted">
             We couldn't load this trip — it may have been deleted, or the link may be incorrect.
           </p>
           <Link to="/dashboard" className="text-brand-600 font-medium hover:text-brand-700 inline-block">
@@ -871,63 +876,103 @@ export default function ItineraryPage() {
       )}
 
       {/* 5A: Hero Header */}
-      {trip && (
+      {trip && (() => {
+        const heroImage = findDestinationImage(destination)
+        return (
         // Contained to max-w-6xl (matching every section below) instead of
         // the previous edge-to-edge w-screen breakout — full-bleed made the
         // banner's aspect ratio so wide/short relative to the source photo
         // that bg-cover had to zoom in drastically, leaving almost nothing
         // of the skyline visible regardless of vertical crop position.
         <div className="max-w-6xl mx-auto">
-          {(() => {
-            const heroImage = findDestinationImage(destination)
-            return (
-          <div
-            // h-96 (not h-72) when there's a photo — a taller banner needs
-            // less bg-cover zoom to fill its width, so more of the photo's
-            // height survives the crop. Each photo has its own tuned
-            // backgroundPosition (see destinationImages.js).
-            // fit:'contain' photos (see above) layer the photo over the
-            // same indigo/purple gradient as the no-photo fallback, so the
-            // letterboxed gap reads as intentional, not a rendering bug.
-            className={`relative text-white flex flex-col justify-between px-4 sm:px-8 py-8 rounded-3xl shadow-bento overflow-hidden ${heroImage ? 'h-96' : 'h-72 bg-gradient-to-br from-brand-600 to-purple-600'} ${heroImage && heroImage.fit !== 'contain' ? 'bg-cover' : ''}`}
-            style={
-              heroImage
-                ? heroImage.fit === 'contain'
-                  ? {
-                      backgroundImage: `url(${heroImage.url}), linear-gradient(to bottom right, #4f46e5, #9333ea)`,
-                      backgroundSize: 'contain, cover',
-                      backgroundPosition: `${heroImage.position}, center`,
-                      backgroundRepeat: 'no-repeat, no-repeat',
-                    }
-                  : { backgroundImage: `url(${heroImage.url})`, backgroundPosition: heroImage.position }
-                : undefined
-            }
-          >
-            {/* Scrim so the white text stays legible over a photo, tinted
-                indigo/purple (not flat black) to stay tonally consistent with
-                the gradient this replaces, rather than looking like an
-                unrelated photo dropped on top of the app. */}
-            {heroImage && (
-              <div className="absolute inset-0 bg-gradient-to-t from-brand-950/85 via-brand-900/40 to-purple-900/20" />
-            )}
-            <div className="relative w-full flex justify-end">
-              {status && <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_STYLES[status]}`}>{status}</span>}
-            </div>
-            <div className="relative w-full">
-              <p className="flex items-center gap-1.5 text-sm text-brand-200"><MapPin size={14} /> {capitalize(destination)}</p>
-              <h2 className="text-3xl font-bold mt-1">{capitalize(trip.name || `${destination} Trip`)}</h2>
-              {trip.start_date && trip.end_date && (
-                <p className="flex items-center gap-1.5 text-sm text-brand-100 mt-2">
-                  <Calendar size={14} /> {trip.start_date} &rarr; {trip.end_date}
-                  <button type="button" onClick={openDatesModal} className="ml-1 text-brand-100 underline hover:text-white">Edit Dates</button>
-                </p>
-              )}
+          <div className="rounded-3xl shadow-ticket overflow-hidden">
+            <div className="grid grid-cols-[auto_1fr_auto]">
+              {/* Barcode on its own solid-backed strip, like a real boarding
+                  pass prints it on paper — not textured directly over the
+                  photo, which just reads as a smear across the image. */}
+              <div className="hidden sm:block w-7 sm:w-8 shrink-0 barcode-strip-v text-white/70 bg-brand-950" aria-hidden="true" />
+
+              <div
+                // h-96 (not h-72) when there's a photo — a taller banner needs
+                // less bg-cover zoom to fill its width, so more of the photo's
+                // height survives the crop. Each photo has its own tuned
+                // backgroundPosition (see destinationImages.js).
+                // fit:'contain' photos (see above) layer the photo over the
+                // same navy gradient as the no-photo fallback, so the
+                // letterboxed gap reads as intentional, not a rendering bug.
+                className={`relative text-white flex flex-col justify-between px-4 sm:px-8 py-8 overflow-hidden ${heroImage ? 'h-96' : 'h-72 bg-gradient-to-br from-brand-600 to-brand-900'} ${heroImage && heroImage.fit !== 'contain' ? 'bg-cover' : ''}`}
+                style={
+                  heroImage
+                    ? heroImage.fit === 'contain'
+                      ? {
+                          backgroundImage: `url(${heroImage.url}), linear-gradient(to bottom right, #2C4066, #0F1729)`,
+                          backgroundSize: 'contain, cover',
+                          backgroundPosition: `${heroImage.position}, center`,
+                          backgroundRepeat: 'no-repeat, no-repeat',
+                        }
+                      : { backgroundImage: `url(${heroImage.url})`, backgroundPosition: heroImage.position }
+                    : undefined
+                }
+              >
+                {/* Scrim so the white text stays legible over a photo, tinted
+                    navy (not flat black) to stay tonally consistent with
+                    the gradient this replaces, rather than looking like an
+                    unrelated photo dropped on top of the app. */}
+                {heroImage && (
+                  <div className="absolute inset-0 bg-gradient-to-t from-brand-950/85 via-brand-900/40 to-brand-950/30" />
+                )}
+                <div className="relative w-full flex justify-end">
+                  {status && <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_STYLES[status]}`}>{status}</span>}
+                </div>
+                <div className="relative w-full">
+                  <p className="flex items-center gap-1.5 text-sm text-brand-200"><MapPin size={14} /> {capitalize(destination)}</p>
+                  <h2 className="font-display text-4xl sm:text-5xl font-bold mt-1 leading-none">{capitalize(trip.name || `${destination} Trip`)}</h2>
+                  {/* The stub (right) states dates on sm+; this is the
+                      mobile-only fallback, since the stub hides there —
+                      never both at once. */}
+                  {trip.start_date && trip.end_date && (
+                    <p className="flex items-center gap-1.5 text-sm text-brand-100 mt-3 sm:hidden">
+                      <Calendar size={14} /> {trip.start_date} &rarr; {trip.end_date}
+                      <button type="button" onClick={openDatesModal} className="ml-1 text-brand-100 underline hover:text-white">Edit Dates</button>
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Torn stub — a real boarding-pass counterfoil (destination +
+                  depart/return rows on a light panel under its own dark
+                  "Boarding Pass" tag), not just a code + decorative label.
+                  Dates live here (once) instead of also on the photo. */}
+              <div className="ticket-divider hidden sm:flex flex-col w-44 sm:w-52 shrink-0 bg-surface text-ink">
+                <div className="flex items-center gap-2 bg-brand-950 text-white px-4 py-2.5">
+                  <Plane size={14} className="text-brand-300 shrink-0" />
+                  <span className="font-mono text-[10px] font-bold tracking-[0.2em] uppercase">Boarding Pass</span>
+                </div>
+                <div className="flex-1 p-4 space-y-3">
+                  <div>
+                    <p className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-wide text-ink-muted"><MapPin size={10} /> Destination</p>
+                    <p className="font-display font-bold text-xl text-ink leading-none mt-0.5 truncate uppercase">{destination}</p>
+                  </div>
+                  {trip.start_date && trip.end_date && (
+                    <>
+                      <div className="border-t border-brand-100 pt-2.5">
+                        <p className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-wide text-ink-muted"><Calendar size={10} /> Depart</p>
+                        <p className="font-mono text-sm font-semibold text-ink mt-0.5">{trip.start_date}</p>
+                      </div>
+                      <div className="border-t border-brand-100 pt-2.5">
+                        <p className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-wide text-ink-muted"><Calendar size={10} /> Return</p>
+                        <p className="font-mono text-sm font-semibold text-ink mt-0.5">{trip.end_date}</p>
+                        <button type="button" onClick={openDatesModal} className="text-[11px] text-brand-600 underline hover:text-brand-700 mt-1.5">Edit Dates</button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
-            )
-          })()}
         </div>
-      )}
+        )
+      })()}
 
       <Modal open={hotelModalOpen} onClose={() => setHotelModalOpen(false)} title={trip?.hotel_address ? 'Edit Hotel' : 'Add Hotel'}>
         <HotelSearchInput
@@ -1029,7 +1074,7 @@ export default function ItineraryPage() {
             {/* Fixed checkbox lives to the right of the location field —
                 the field most relevant to "is this still the same booked
                 thing" is the natural pairing for this toggle. */}
-            <label className="flex items-center gap-1.5 text-sm text-gray-700 shrink-0 pb-2.5 px-3 rounded-xl bg-surface ring-1 ring-gray-200/70 h-[42px]">
+            <label className="flex items-center gap-1.5 text-sm text-ink-muted shrink-0 pb-2.5 px-3 rounded-xl bg-surface ring-1 ring-brand-100 h-[42px]">
               <input
                 type="checkbox"
                 className="accent-brand-600"
@@ -1104,7 +1149,7 @@ export default function ItineraryPage() {
             <div>
               <span className="field-label mb-1">Type</span>
               <div className="flex gap-3 pt-1">
-                <label className="flex items-center gap-1.5 text-sm text-gray-700 px-3 py-2 rounded-xl bg-surface ring-1 ring-gray-200/70">
+                <label className="flex items-center gap-1.5 text-sm text-ink-muted px-3 py-2 rounded-xl bg-surface ring-1 ring-brand-100">
                   <input
                     type="radio"
                     name="new-activity-type"
@@ -1115,7 +1160,7 @@ export default function ItineraryPage() {
                   />
                   Outdoor
                 </label>
-                <label className="flex items-center gap-1.5 text-sm text-gray-700 px-3 py-2 rounded-xl bg-surface ring-1 ring-gray-200/70">
+                <label className="flex items-center gap-1.5 text-sm text-ink-muted px-3 py-2 rounded-xl bg-surface ring-1 ring-brand-100">
                   <input
                     type="radio"
                     name="new-activity-type"
@@ -1128,7 +1173,7 @@ export default function ItineraryPage() {
                 </label>
               </div>
             </div>
-            <label className="flex items-center gap-1.5 text-sm text-gray-700 shrink-0 px-3 py-2 rounded-xl bg-surface ring-1 ring-gray-200/70 mt-6">
+            <label className="flex items-center gap-1.5 text-sm text-ink-muted shrink-0 px-3 py-2 rounded-xl bg-surface ring-1 ring-brand-100 mt-6">
               <input
                 type="checkbox"
                 className="accent-brand-600"
@@ -1150,7 +1195,7 @@ export default function ItineraryPage() {
       </Modal>
 
       <Modal open={Boolean(activityPendingDelete)} onClose={() => setActivityPendingDelete(null)} title="Remove this activity?">
-        <p className="text-sm text-gray-600 mb-4">
+        <p className="text-sm text-ink-muted mb-4">
           {activityPendingDelete && `Remove "${activityPendingDelete.is_swapped ? activityPendingDelete.alternate_name : activityPendingDelete.name}" from this day?`}
         </p>
         <div className="flex justify-end gap-2">
@@ -1164,7 +1209,7 @@ export default function ItineraryPage() {
       </Modal>
 
       <Modal open={reviewModalOpen} onClose={() => setReviewModalOpen(false)} title="Update anything else first?">
-        <p className="text-sm text-gray-600 mb-4">
+        <p className="text-sm text-ink-muted mb-4">
           Your itinerary is generated from your dates, hotel, and flights together — want to update anything else before we regenerate it?
         </p>
         <div className="flex flex-col gap-2">
@@ -1199,7 +1244,7 @@ export default function ItineraryPage() {
       </Modal>
 
       <Modal open={regenerateConfirmOpen} onClose={() => setRegenerateConfirmOpen(false)} title="Regenerate this itinerary?">
-        <p className="text-sm text-gray-600 mb-4">
+        <p className="text-sm text-ink-muted mb-4">
           This replaces every activity currently planned for this trip with a fresh weather-based plan — including anything you've manually added, edited, or removed. This can't be undone.
         </p>
         <div className="flex justify-end gap-2">
@@ -1216,7 +1261,7 @@ export default function ItineraryPage() {
         {weatherInfoMeta && (
           weatherInfoHourly.length > 0 ? (
             <div className="space-y-3">
-              <div className="rounded-2xl bg-surface p-4 ring-1 ring-gray-200/60">
+              <div className="rounded-2xl bg-surface p-4 ring-1 ring-brand-100/60">
                 <Sparkline
                   data={weatherInfoHourly}
                   unit={weatherInfoMeta.unit}
@@ -1226,14 +1271,14 @@ export default function ItineraryPage() {
                 />
               </div>
               {weatherInfoMeta.advice(forecastDay) && (
-                <p className="flex items-start gap-2 text-sm text-gray-700 bg-brand-50 ring-1 ring-brand-100 rounded-xl p-3.5">
+                <p className="flex items-start gap-2 text-sm text-ink-muted bg-brand-50 ring-1 ring-brand-100 rounded-xl p-3.5">
                   <Info size={15} className="text-brand-500 shrink-0 mt-0.5" />
                   {weatherInfoMeta.advice(forecastDay)}
                 </p>
               )}
             </div>
           ) : (
-            <p className="text-sm text-gray-400 italic">No hourly data available for this day.</p>
+            <p className="text-sm text-ink-muted italic">No hourly data available for this day.</p>
           )
         )}
       </Modal>
@@ -1247,7 +1292,7 @@ export default function ItineraryPage() {
               // Flood, Snow, Hiking Safety, UV, Visibility — no historical
               // substitute exists for these (see FORECAST_ONLY_NOTE above), so
               // there's no score/breakdown to show, just the explanation.
-              <p className="text-sm text-gray-600">{FORECAST_ONLY_NOTE}</p>
+              <p className="text-sm text-ink-muted">{FORECAST_ONLY_NOTE}</p>
 
             ) : riskInfoModal === "heavyRain" ? (
               forecastDay.is_climatology ? (
@@ -1258,7 +1303,7 @@ export default function ItineraryPage() {
                   // genuinely has no rain data. Same caveat Flood/Snow show for
                   // their own "nothing to report" case, rather than rendering
                   // a bare "%" with no number.
-                  <p className="text-sm text-gray-600">{FORECAST_ONLY_NOTE}</p>
+                  <p className="text-sm text-ink-muted">{FORECAST_ONLY_NOTE}</p>
                 ) : (
                   // rain_chance stands in for heavy_rain_probability on climatology
                   // days (see rainChanceLevel above) — a real historical stat, but a
@@ -1267,9 +1312,9 @@ export default function ItineraryPage() {
                   <div className="space-y-4 text-sm">
                     <div className="text-center">
                       <div className="text-3xl font-bold">{forecastDay.rain_chance}%</div>
-                      <div className="text-gray-500">Historical rain frequency</div>
+                      <div className="text-ink-muted">Historical rain frequency</div>
                     </div>
-                    <p className="text-xs text-gray-500 border-t pt-4">
+                    <p className="text-xs text-ink-muted border-t border-brand-100 pt-4">
                       Based on this destination's 10-year historical rain frequency, not a live forecast.
                     </p>
                   </div>
@@ -1283,67 +1328,25 @@ export default function ItineraryPage() {
                       {forecastDay.heavy_rain_probability}%
                     </div>
 
-                    <div className="text-gray-500">
+                    <div className="text-ink-muted">
                       Heavy rain probability
                     </div>
                   </div>
 
-                  <div className="border-t pt-4 space-y-3">
-
-                    <h3 className="font-semibold">
-                      About this prediction
-                    </h3>
-
-                    <div>
-                      <span className="font-medium">
-                        Model:
-                      </span>
-                      <p>
-                        LightGBM Classifier
-                      </p>
-                    </div>
-
-                    <div>
-                      <span className="font-medium">
-                        Purpose:
-                      </span>
-                      <p>
-                        Predict the probability of heavy rainfall
-                        based on weather forecast conditions.
-                      </p>
-                    </div>
-
-                    <div>
-                      <span className="font-medium">
-                        Features analysed:
-                      </span>
-                      <p>
-                        17 weather and seasonal features
-                      </p>
-                    </div>
-
-                    <div>
-                      <span className="font-medium">
-                        Includes:
-                      </span>
-
-                      <ul className="list-disc ml-5">
-                        <li>Rainfall</li>
-                        <li>Temperature</li>
-                        <li>Humidity</li>
-                        <li>Pressure</li>
-                        <li>Wind</li>
-                        <li>Solar radiation</li>
-                        <li>Location</li>
-                        <li>Seasonal patterns</li>
-                      </ul>
-                    </div>
-
-                    <p className="text-xs text-gray-500">
-                      The prediction is generated using historical
-                      weather patterns and current forecast data.
+                  <div className="border-t border-brand-100 pt-4 space-y-3">
+                    <p className="text-ink-muted">
+                      Informed by rainfall, temperature, humidity, pressure,
+                      wind, solar radiation, this destination, and the time
+                      of year — 17 forecast and seasonal signals in total.
                     </p>
-
+                    {/* Kept deliberately — the plain-language sentence above
+                        is what a traveler needs, but the model name matters
+                        for competition judges assessing the ML pipeline, so
+                        it stays as a quiet footnote rather than the primary
+                        message (not removed, per explicit product decision). */}
+                    <p className="font-mono text-[11px] tracking-wide uppercase text-ink-muted/70">
+                      Model &middot; LightGBM Classifier
+                    </p>
                   </div>
                 </div>
               )
@@ -1362,14 +1365,14 @@ export default function ItineraryPage() {
                 // an API outage/quota limit). Math.round(null) is 0 in JS, so
                 // without this guard it would silently show "0 km/h" — a real-
                 // looking number for a day with no actual data.
-                <p className="text-sm text-gray-600">{FORECAST_ONLY_NOTE}</p>
+                <p className="text-sm text-ink-muted">{FORECAST_ONLY_NOTE}</p>
               ) : (
                 <div className="space-y-4 text-sm">
                   <div className="text-center">
                     <div className="text-3xl font-bold">{Math.round(forecastDay.wind_speed)} km/h</div>
-                    <div className="text-gray-500">{forecastDay.wind_level}</div>
+                    <div className="text-ink-muted">{forecastDay.wind_level}</div>
                   </div>
-                  <p className="text-xs text-gray-500 border-t pt-4">
+                  <p className="text-xs text-ink-muted border-t border-brand-100 pt-4">
                     Based on this destination's 10-year historical average wind speed, not a live forecast.
                   </p>
                 </div>
@@ -1386,7 +1389,7 @@ export default function ItineraryPage() {
                     substitution, just with this one extra line making the
                     source clear. */}
                 {forecastDay.is_climatology && (riskInfoModal === "temperature" || riskInfoModal === "beach") && (
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-ink-muted">
                     {riskInfoModal === "temperature"
                       ? "Based on this destination's 10-year historical average temperature, not a live forecast."
                       : "Based on this destination's 10-year historical weather averages, not a live forecast."}
@@ -1400,7 +1403,7 @@ export default function ItineraryPage() {
                       {Math.round(riskInfoMeta[riskInfoModal].score)}%
                     </div>
 
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-ink-muted">
                       {riskInfoMeta[riskInfoModal].level}
                     </div>
                   </div>
@@ -1408,7 +1411,7 @@ export default function ItineraryPage() {
 
                 {/* Temperature advice */}
                 {riskInfoModal === "temperature" && (
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-ink-muted">
                     {riskInfoMeta.temperature.advice}
                   </div>
                 )}
@@ -1417,14 +1420,14 @@ export default function ItineraryPage() {
                 {riskInfoMeta[riskInfoModal]?.breakdown?.map((item) => (
                   <div
                     key={item.factor}
-                    className="flex justify-between items-center border-b pb-2"
+                    className="flex justify-between items-center border-b border-brand-100 pb-2"
                   >
                     <div>
                       <div className="font-medium">
                         {item.factor}
                       </div>
 
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-ink-muted">
                         {typeof item.value === "number" && item.factor in RISK_BREAKDOWN_DECIMALS
                           ? item.value.toFixed(RISK_BREAKDOWN_DECIMALS[item.factor])
                           : item.value} {item.unit}
@@ -1437,7 +1440,7 @@ export default function ItineraryPage() {
                           ? "text-green-600"
                           : item.impact < 0
                           ? "text-red-600"
-                          : "text-gray-400"
+                          : "text-ink-muted"
                       }
                     >
                       {item.impact > 0 ? "+" : ""}
@@ -1462,29 +1465,30 @@ export default function ItineraryPage() {
           hasHotel={Boolean(trip.hotel_address?.trim())}
           hotelParts={hotelParts}
           onEditHotel={openHotelModal}
-          tripDates={tripDates}
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
           generating={generating}
           hasItinerary={Boolean(itinerary)}
           onGenerate={handleRegenerateClick}
+          tripDates={tripDates}
+          selectedDate={selectedDate}
+          onSelectDate={setSelectedDate}
         />
 
       {/* min-w-0 so the horizontally-scrollable strips inside can never widen
           this grid column past its share of the row. */}
-      <Card className="lg:col-span-2 min-w-0 p-5 sm:p-6 space-y-5">
+      <Card className="lg:col-span-2 min-w-0 overflow-hidden">
+      <div className="p-5 sm:p-6 space-y-5">
         {/* Day header — the selected day's identity on the left, its weather
             headline (temp + condition + the single worst risk) condensed onto
             the same row on the right. The full 9-card risk strip and hourly
             strip live behind the toggle below, so the activity timeline (the
             actual plan) is what fills this pane by default. */}
-        <div className="flex flex-col gap-3 pb-4 border-b border-gray-100">
+        <div className="flex flex-col gap-3 pb-4 border-b border-brand-100">
           <div className="flex flex-wrap items-center gap-2 min-w-0">
             <h2 className="heading-3 whitespace-nowrap">
               {selectedDayNumber > 0 ? `Day ${selectedDayNumber} · ${selectedDate}` : 'Day-by-day Activities'}
             </h2>
             {weatherStatus === 'loaded' && forecastDay?.is_climatology && (
-              <span className="inline-flex text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 whitespace-nowrap">
+              <span className="inline-flex text-xs font-medium px-2.5 py-1 rounded-full bg-surface-sunken text-ink-muted whitespace-nowrap">
                 Typical weather (historical average)
               </span>
             )}
@@ -1505,26 +1509,26 @@ export default function ItineraryPage() {
                 <div className="flex items-end gap-3">
                   <div className="flex flex-col items-center gap-0.5 shrink-0">
                     <WeatherIcon condition={forecastDay.condition} timeStr={forecastDay.date + "T12:00:00"} className="w-8 h-8 text-brand-500" />
-                    <span className="text-xs font-semibold text-gray-700 capitalize whitespace-nowrap">{forecastDay.condition}</span>
+                    <span className="text-xs font-semibold text-ink-muted capitalize whitespace-nowrap">{forecastDay.condition}</span>
                   </div>
                   {isToday && (
                     <div className="flex flex-col">
-                      <span className="font-display text-3xl font-bold text-gray-900 leading-none">{getCurrentTemp()}°</span>
+                      <span className="font-display text-3xl font-bold text-ink leading-none">{getCurrentTemp()}°</span>
                       {getFeelsLikeTemp() !== null && (
-                        <span className="text-xs font-medium text-gray-400 whitespace-nowrap">Feels like {getFeelsLikeTemp()}°</span>
+                        <span className="text-xs font-medium text-ink-muted whitespace-nowrap">Feels like {getFeelsLikeTemp()}°</span>
                       )}
                     </div>
                   )}
                 </div>
                 <div className="flex items-center gap-4">
                   {isToday ? (
-                    <span className="text-sm font-medium text-gray-500 whitespace-nowrap">
+                    <span className="text-sm font-medium text-ink-muted whitespace-nowrap">
                       H: {Math.round(forecastDay.temp_max)}° &nbsp; L: {Math.round(forecastDay.temp_min)}°
                     </span>
                   ) : (
-                    <span className="font-display text-2xl font-bold text-gray-900 whitespace-nowrap">
-                      <span className="text-sm font-medium text-gray-500">H:</span> {Math.round(forecastDay.temp_max)}&deg;
-                      <span className="text-sm font-medium text-gray-500 ml-2">L:</span> {Math.round(forecastDay.temp_min)}&deg;
+                    <span className="font-display text-2xl font-bold text-ink whitespace-nowrap">
+                      <span className="text-sm font-medium text-ink-muted">H:</span> {Math.round(forecastDay.temp_max)}&deg;
+                      <span className="text-sm font-medium text-ink-muted ml-2">L:</span> {Math.round(forecastDay.temp_min)}&deg;
                     </span>
                   )}
                   {/* Moved up from the collapsible panel — the condensed
@@ -1533,11 +1537,11 @@ export default function ItineraryPage() {
                       to earn a permanent spot rather than staying hidden
                       behind a tap. */}
                   {forecastDay.sunrise && forecastDay.sunset && (
-                    <div className="flex items-center gap-4 pl-3 border-l border-gray-200">
-                      <span className="flex items-center gap-1.5 text-base font-medium text-gray-900 whitespace-nowrap">
+                    <div className="flex items-center gap-4 pl-3 border-l border-brand-100">
+                      <span className="flex items-center gap-1.5 text-base font-medium text-ink whitespace-nowrap">
                         <Sunrise size={20} className="text-amber-500" /> {forecastDay.sunrise}
                       </span>
-                      <span className="flex items-center gap-1.5 text-base font-medium text-gray-900 whitespace-nowrap">
+                      <span className="flex items-center gap-1.5 text-base font-medium text-ink whitespace-nowrap">
                         <Sunset size={20} className="text-orange-600" /> {forecastDay.sunset}
                       </span>
                     </div>
@@ -1572,7 +1576,7 @@ export default function ItineraryPage() {
                 onClick={() => setForecastExpanded((open) => !open)}
                 aria-expanded={forecastExpanded}
                 aria-controls="full-forecast-panel"
-                className="flex items-center gap-1 shrink-0 text-xs font-semibold text-brand-600 hover:text-brand-700"
+                className="flex items-center gap-1 shrink-0 text-xs font-semibold text-brand-600 hover:text-brand-700 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
               >
                 {forecastExpanded ? 'Hide full forecast' : 'View full forecast'}
                 {forecastExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -1585,10 +1589,7 @@ export default function ItineraryPage() {
 
         {/* WEATHER MODULE */}
         {weatherStatus === 'loading' && (
-          <div>
-            <span className="sr-only">Loading weather...</span>
-            <SkeletonWeatherPanel />
-          </div>
+          <PlaneLoader label="Loading weather…" className="py-10" />
         )}
 
         {weatherStatus === 'failed' && (
@@ -1601,15 +1602,15 @@ export default function ItineraryPage() {
         )}
 
         {weatherStatus === 'loaded' && forecastDay && forecastExpanded && (
-          <div id="full-forecast-panel" className="border border-gray-100 p-4 rounded-lg bg-gray-50/50 space-y-4">
+          <div id="full-forecast-panel" className="border border-brand-100 p-4 rounded-lg bg-surface-sunken/50 space-y-4">
 
-                <h3 className="flex items-center justify-between gap-2 text-sm font-semibold text-gray-800">
+                <h3 className="flex items-center justify-between gap-2 text-sm font-semibold text-ink">
                     <span className="flex items-center gap-2"><AlertTriangle size={16} className="text-brand-600" /> Risks</span>
                     {/* Deliberately generic, not "Tap Wind, UV, or Visibility" — only those
                         3 cards open a popup today (see WEATHER_INFO_META), but more risk
                         cards are expected to gain the same click-for-details behavior later,
                         and this wording shouldn't need to change when they do. */}
-                    <span className="flex items-center gap-1 text-xs font-normal text-gray-400">
+                    <span className="flex items-center gap-1 text-xs font-normal text-ink-muted">
                         <Info size={12} /> Tap a card for more details
                     </span>
                 </h3>
@@ -1695,8 +1696,12 @@ export default function ItineraryPage() {
                       // The icon chip carries the family identity color (what kind of
                       // hazard); the badge below is the ONLY severity signal
                       // (levelColorClass), kept visually and structurally separate.
-                      <motion.div
+                      // motion.button (not motion.div+onClick) — same element type as
+                      // the Hiking/Wind/UV/Visibility cards below, so all 9 cards in
+                      // this row are keyboard/screen-reader reachable, not just 4 of 9.
+                      <motion.button
                         key={c.l}
+                        type="button"
                         variants={ITEM_VARIANTS}
                         whileHover={{ y: -3 }}
                         whileTap={{ scale: 0.97 }}
@@ -1712,14 +1717,15 @@ export default function ItineraryPage() {
                         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${levelColorClass(c.s)}`}>
                           {c.s}
                         </span>
-                      </motion.div>
+                      </motion.button>
                   ))}
                   {/* Explanations (climatology caveats, forecast-only notices, the
                       real ML/formula writeups) all live in the risk-info modal now
                       (see riskInfoModal below) — every card face just shows label,
                       value, badge, same shape whether the day is climatology or a
                       real forecast, tap for detail. */}
-                  <motion.div
+                  <motion.button
+                      type="button"
                       variants={ITEM_VARIANTS}
                       whileHover={{ y: -3 }}
                       whileTap={{ scale: 0.97 }}
@@ -1737,9 +1743,9 @@ export default function ItineraryPage() {
                       </div>
 
                       {forecastDay.temperature_advice && (
-                        <div className="text-[11px] text-gray-500 leading-snug">{forecastDay.temperature_advice}</div>
+                        <div className="text-[11px] text-ink-muted leading-snug">{forecastDay.temperature_advice}</div>
                       )}
-                    </motion.div>
+                    </motion.button>
                   {[
                     {
                       l: 'Hiking Safety',
@@ -1794,10 +1800,10 @@ export default function ItineraryPage() {
                 </motion.div>
                 {/* Edge fades — always-on hint that the strip scrolls, rather than
                     tracking scroll position for a "only show once scrolled" version.
-                    Matches the strip's own bg-gray-50/50 wrapper background so the
+                    Matches the strip's own bg-surface-sunken/50 wrapper background so the
                     fade reads as a soft vignette, not a mismatched color block. */}
-                <div className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-gray-50 to-transparent" />
-                <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-gray-50 to-transparent" />
+                <div className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-surface-sunken to-transparent" />
+                <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-surface-sunken to-transparent" />
                 </div>
 
                 {/* Climatology-fallback days have no hourly data at all (see
@@ -1806,7 +1812,7 @@ export default function ItineraryPage() {
                     days. */}
                 {!forecastDay.is_climatology && (
                 <>
-                <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-800 pt-5 border-t">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-ink pt-5 border-t border-brand-100">
                     <Clock size={16} className="text-brand-600" /> Hourly Forecast
                 </h3>
 
@@ -1855,21 +1861,21 @@ export default function ItineraryPage() {
                           const Icon = h.kind === 'sunrise' ? Sunrise : Sunset
                           const color = h.kind === 'sunrise' ? 'text-accent-500' : 'text-orange-500'
                           return (
-                            <div key={h.kind} className="flex flex-col items-center min-w-[68px] shrink-0 snap-start gap-0.5 rounded-2xl px-2 py-3 transition-colors hover:bg-white">
+                            <div key={h.kind} className="flex flex-col items-center min-w-[68px] shrink-0 snap-start gap-0.5 rounded-2xl px-2 py-3 transition-colors hover:bg-surface-sunken">
                                 <span className={`text-[10px] font-semibold ${color} whitespace-nowrap`}>{h.label}</span>
                                 <Icon size={20} className={color} />
                                 {/* Empty h-4 slot mirrors the rain-% slot on hour cards, so
                                     this card's height/rows line up with its neighbors. */}
                                 <div className="h-4" />
-                                <span className="text-[10px] font-bold text-gray-500 leading-none mt-0.5 capitalize">{h.kind}</span>
+                                <span className="text-[10px] font-bold text-ink-muted leading-none mt-0.5 capitalize">{h.kind}</span>
                             </div>
                           )
                         }
 
                         const isNow = h.time.startsWith(currentHourPrefix)
                         return (
-                          <div key={i} className={`flex flex-col items-center min-w-[68px] shrink-0 snap-start gap-0.5 rounded-2xl px-2 py-3 transition-colors ${isNow ? 'bg-brand-50 ring-1 ring-brand-300 shadow-bento-sm' : 'hover:bg-white'}`}>
-                              <span className={`text-[10px] ${isNow ? 'text-brand-600 font-bold' : 'text-gray-500'}`}>{isNow ? 'Now' : formatHour(h.time)}</span>
+                          <div key={i} className={`flex flex-col items-center min-w-[68px] shrink-0 snap-start gap-0.5 rounded-2xl px-2 py-3 transition-colors ${isNow ? 'bg-brand-50 ring-1 ring-brand-300 shadow-bento-sm' : 'hover:bg-surface-sunken'}`}>
+                              <span className={`text-[10px] ${isNow ? 'text-brand-600 font-bold' : 'text-ink-muted'}`}>{isNow ? 'Now' : formatHour(h.time)}</span>
 
                               <WeatherIcon condition={h.condition} timeStr={h.time} className="w-5 h-5 text-brand-500" />
 
@@ -1902,7 +1908,7 @@ export default function ItineraryPage() {
         {itinerary && selectedDate && (
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-800">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
                 <ListChecks size={16} className="text-brand-600" /> Itinerary for Day {selectedDayNumber}
               </h3>
               {/* Disabled while generating — otherwise an activity added here
@@ -1941,7 +1947,7 @@ export default function ItineraryPage() {
                     <div className="flex flex-col items-center w-14 shrink-0 pt-1">
                       <span className="text-xs font-semibold text-ink tabular-nums whitespace-nowrap">{startTime}</span>
                       <span className="w-2.5 h-2.5 rounded-full bg-brand-600 ring-4 ring-brand-100 shrink-0 mt-2" />
-                      {!isLast && <span className="w-px flex-1 bg-gray-200 mt-1.5 mb-1.5" />}
+                      {!isLast && <span className="w-px flex-1 bg-brand-100 mt-1.5 mb-1.5" />}
                     </div>
                     <div className={`flex-1 rounded-2xl p-4 ${activity.is_swapped ? 'bg-amber-50/60 ring-1 ring-amber-100' : 'bg-surface'} ${isLast ? 'mb-0' : 'mb-4'}`}>
                       <div className="flex items-center gap-2 flex-wrap">
@@ -1950,12 +1956,12 @@ export default function ItineraryPage() {
                             and burying the replacement in the details below. */}
                         {activity.is_swapped ? (
                           <span className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-medium text-gray-400 line-through">{activity.name}</span>
+                            <span className="font-medium text-ink-muted line-through">{activity.name}</span>
                             <ArrowRight size={14} className="text-amber-500 shrink-0" />
-                            <span className="font-semibold text-gray-900">{activity.alternate_name}</span>
+                            <span className="font-semibold text-ink">{activity.alternate_name}</span>
                           </span>
                         ) : (
-                          <span className="font-medium text-gray-900">{activity.name}</span>
+                          <span className="font-medium text-ink">{activity.name}</span>
                         )}
                         {/* activity.type already reflects the current plan regardless of
                             is_swapped (apply_swap overwrites it to the alternate's real
@@ -1987,7 +1993,7 @@ export default function ItineraryPage() {
                           <button
                             type="button"
                             onClick={() => openEditActivityModal(activity)}
-                            className="text-gray-400 hover:text-brand-600"
+                            className="text-ink-muted hover:text-brand-600"
                             aria-label={`Edit ${activity.name}`}
                           >
                             <Pencil size={14} />
@@ -1995,7 +2001,7 @@ export default function ItineraryPage() {
                           <button
                             type="button"
                             onClick={() => setActivityPendingDelete(activity)}
-                            className="text-gray-400 hover:text-red-600"
+                            className="text-ink-muted hover:text-red-600"
                             aria-label={`Delete ${activity.name}`}
                           >
                             <Trash2 size={14} />
@@ -2004,22 +2010,22 @@ export default function ItineraryPage() {
                       </div>
                       {activity.is_swapped ? (
                         <>
-                          <p className="text-sm text-gray-500">{activity.time_slot}</p>
-                          <p className="text-sm text-gray-600">{activity.alternate_location}</p>
+                          <p className="text-sm text-ink-muted">{activity.time_slot}</p>
+                          <p className="text-sm text-ink-muted">{activity.alternate_location}</p>
                           {/* Promoted out of a small italic caption into the same
                               Info-prefixed note treatment used for the weather-info
                               popup's advice text above (see weatherInfoMeta.advice),
                               just retinted amber for the swap context. */}
-                          <p className="flex items-start gap-2 text-sm text-gray-700 bg-amber-50 ring-1 ring-amber-100 rounded-xl p-3.5 mt-2">
+                          <p className="flex items-start gap-2 text-sm text-ink-muted bg-amber-50 ring-1 ring-amber-100 rounded-xl p-3.5 mt-2">
                             <Info size={15} className="text-amber-500 shrink-0 mt-0.5" />
                             {activity.swap_reason}
                           </p>
                         </>
                       ) : (
                         <>
-                          <p className="text-sm text-gray-500">{activity.time_slot}</p>
-                          <p className="text-sm text-gray-600">{activity.location}</p>
-                          <p className="text-sm text-gray-500">{activity.description}</p>
+                          <p className="text-sm text-ink-muted">{activity.time_slot}</p>
+                          <p className="text-sm text-ink-muted">{activity.location}</p>
+                          <p className="text-sm text-ink-muted">{activity.description}</p>
                         </>
                       )}
                     </div>
@@ -2050,31 +2056,57 @@ export default function ItineraryPage() {
           </div>
         )}
         {!itinerary && !itineraryNotice && (
-          <Placeholder label="Your day-by-day plan will appear here once generated." />
+          <EmptyState
+            icon={CalendarPlus}
+            title="No itinerary yet"
+            description="Your day-by-day plan will appear here once generated."
+          />
         )}
+        </div>
       </Card>
       </div>
       )}
 
       {/* Full-width below the sidebar/main grid rather than squeezed into
           the narrow rail — a map that's too small to read isn't "low effort",
-          it's just not useful. Still explicitly low-priority (see CLAUDE.md):
-          internals untouched, just given room to actually work. */}
+          it's just not useful. Still explicitly low-priority (see CLAUDE.md).
+          Collapsed by default (see mapExpanded above) — an explicit
+          secondary view instead of a fixture every trip page always renders
+          whether or not anyone opens it; internals untouched, just given
+          room to actually work once shown. */}
       {trip && (
-      <Card className="p-5 sm:p-6">
-        <h2 className="eyebrow flex items-center gap-1.5 mb-3">
-          <MapPin size={12} className="text-brand-600" /> {capitalize(destination || 'Trip')} Map
-        </h2>
-        <MapView
-          height="h-80"
-          center={mapCenter}
-          stops={stops}
-          hotel={
-            hotelLocation && trip.hotel_address
-              ? { position: hotelLocation, label: trip.hotel_address }
-              : null
-          }
-        />
+      <Card className="overflow-hidden">
+      <div className="p-5 sm:p-6">
+        <button
+          type="button"
+          onClick={() => setMapExpanded((open) => !open)}
+          aria-expanded={mapExpanded}
+          aria-controls="trip-map-panel"
+          className="w-full flex items-center justify-between gap-2 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+        >
+          <h2 className="heading-3 flex items-center gap-1.5">
+            <MapPin size={14} className="text-brand-600" /> {capitalize(destination || 'Trip')} Map
+          </h2>
+          <span className="flex items-center gap-1 shrink-0 text-xs font-semibold text-brand-600 hover:text-brand-700">
+            {mapExpanded ? 'Hide map' : 'Show map'}
+            {mapExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </span>
+        </button>
+        {mapExpanded && (
+          <div id="trip-map-panel" className="mt-3">
+            <MapView
+              height="h-80"
+              center={mapCenter}
+              stops={stops}
+              hotel={
+                hotelLocation && trip.hotel_address
+                  ? { position: hotelLocation, label: trip.hotel_address }
+                  : null
+              }
+            />
+          </div>
+        )}
+      </div>
       </Card>
       )}
 

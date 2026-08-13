@@ -83,53 +83,82 @@ export default function AccountPage() {
         Account
       </h1>
 
-      {/* Profile header: gradient banner with the avatar overlapping its bottom edge */}
-      <Card className="overflow-hidden p-0">
-        <div className="h-24 bg-brand-mesh" />
-        <div className="px-6 pb-6 sm:px-8 sm:pb-8">
-          <div className="-mt-10 flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-brand-mesh text-3xl font-display font-bold text-white shadow-brand-glow ring-4 ring-white">
+      {/* Impeccable relayout: a passenger ID stub instead of a gradient
+          profile banner — "Passenger" echoes the same field-label
+          convention as the landing page's TicketArtifact, so Account reads
+          as the same document family rather than a generic settings page. */}
+      <div className="rounded-2xl bg-surface shadow-ticket overflow-hidden flex">
+        <div className="flex-1 min-w-0">
+        <div className="bg-brand-900 px-6 py-5 sm:px-8 flex items-center gap-4">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-brand-700 text-2xl font-display font-bold text-white">
             {avatarLetter}
           </div>
+          <div className="min-w-0">
+            <p className="font-mono text-[11px] tracking-wide uppercase text-brand-300">Passenger</p>
+            <p className="break-all font-display font-semibold text-white">{email}</p>
+          </div>
+        </div>
 
-          <p className="mt-3 break-all text-base text-gray-600">
-            {email}
-          </p>
-          <p className="text-sm text-ink-muted">
-            Member since <span className="font-medium text-ink">{formatMemberSince(user?.created_at)}</span>
-          </p>
-          {/* Hardcoded demo value, not real data — there's still no billing
-              backend (SubscriptionPage's Continue button is a toast, not a
-              save), so this can't actually reflect what anyone picked.
-              "Monthly Explorer" matches the plan name in SubscriptionPage.jsx
-              verbatim. Green pill now that it's representing an active
-              status rather than "nothing to report". */}
-          <p className="mt-1.5 flex items-center gap-1.5 text-sm text-ink-muted">
-            Active plan:
-            <span className="inline-flex items-center rounded-full bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-1">
-              Monthly Explorer
+        <div className="relative px-6 py-6 sm:px-8">
+          {/* A rubber-stamp graphic, not the amber shadow-stamp treatment —
+              that shadow is reserved for the actual REBOOKED weather-swap
+              moment, so a routine "verified" flourish here uses a plain
+              ring instead of competing for the same visual signal. */}
+          <div className="hidden sm:flex absolute top-4 right-4 sm:right-6 h-16 w-16 shrink-0 -rotate-12 items-center justify-center rounded-full border-2 border-dashed border-brand-300 text-brand-400" aria-hidden="true">
+            <span className="text-center font-mono text-[8px] font-bold uppercase leading-tight tracking-wide">
+              Verified<br />Member
             </span>
-          </p>
+          </div>
+          <div className="flex flex-wrap gap-x-8 gap-y-3">
+            <div>
+              <p className="font-mono text-[11px] tracking-wide uppercase text-ink-muted">Member since</p>
+              <p className="mt-0.5 text-sm font-medium text-ink">{formatMemberSince(user?.created_at)}</p>
+            </div>
+            <div>
+              <p className="font-mono text-[11px] tracking-wide uppercase text-ink-muted">Active plan</p>
+              {/* Hardcoded demo value, not real data — there's still no
+                  billing backend (SubscriptionPage's Continue button is a
+                  toast, not a save), so this can't actually reflect what
+                  anyone picked. Deliberately generic ("Demo Plan," not a
+                  specific tier name like "Monthly Explorer") — naming a
+                  real tier here read as a bug the moment it didn't match
+                  whatever was actually selected on SubscriptionPage.jsx. */}
+              <span className="mt-1 inline-flex items-center rounded-full bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-1">
+                Demo Plan
+              </span>
+              <p className="mt-1 text-[11px] text-ink-muted">No billing is connected yet.</p>
+            </div>
+          </div>
 
           <div className="mt-5 flex flex-wrap gap-3">
-            <div className="flex items-center gap-2 rounded-full bg-white border border-gray-200/80 shadow-bento-sm px-4 py-2.5">
+            <div className="flex items-center gap-2 rounded-full bg-surface-sunken border border-brand-100 px-4 py-2.5">
               {loadingTripCount ? (
                 <Skeleton className="h-4 w-4 inline-block" />
               ) : (
-                <span className="font-display font-bold text-ink tabular-nums">{tripCount}</span>
+                <span className="font-mono font-bold text-ink tabular-nums">{tripCount}</span>
               )}
               <span className="text-xs text-ink-muted">Trips Planned</span>
             </div>
-            <div className="flex items-center gap-2 rounded-full bg-white border border-gray-200/80 shadow-bento-sm px-4 py-2.5">
+            <div className="flex items-center gap-2 rounded-full bg-surface-sunken border border-brand-100 px-4 py-2.5">
               {loadingTripCount ? (
                 <Skeleton className="h-4 w-4 inline-block" />
               ) : (
-                <span className="font-display font-bold text-ink tabular-nums">{destinationCount}</span>
+                <span className="font-mono font-bold text-ink tabular-nums">{destinationCount}</span>
               )}
               <span className="text-xs text-ink-muted">Destinations</span>
             </div>
           </div>
         </div>
-      </Card>
+        </div>
+        {/* A margin on both sides of the barcode, not flush with the
+            content or the card's own outer edge — a printed strip on a
+            real ticket has a border around it too. */}
+        <div className="w-2.5 sm:w-3 shrink-0 bg-surface" aria-hidden="true" />
+        {/* Barcode on its own solid-backed side strip, like a real boarding
+            pass, rather than a horizontal band across the bottom. */}
+        <div className="w-9 sm:w-11 shrink-0 barcode-strip-v text-white/70 bg-brand-950" aria-hidden="true" />
+        <div className="w-2.5 sm:w-3 shrink-0 bg-surface" aria-hidden="true" />
+      </div>
 
       {/* Quick links — a small account hub rather than a single dead-end card */}
       <Card className="p-2">

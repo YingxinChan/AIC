@@ -1,20 +1,44 @@
 import colors from 'tailwindcss/colors'
 
+// "Boarding pass" direction (see index.html's direction-contract comment):
+// brand is the deep thermal-print navy that carries the surface — the
+// dominant Committed color, not an accent. accent (amber) is deliberately
+// NOT a general-purpose highlight color here — it's reserved for
+// change/swap ("REBOOKED") states only; introducing it elsewhere dilutes
+// the one signal it's meant to carry.
+const brandNavy = {
+  50: '#EEF1F7',
+  100: '#DCE3F0',
+  200: '#B9C7E0',
+  300: '#8FA3CB',
+  400: '#5D76A8',
+  500: '#3A5080',
+  600: '#2C4066',
+  700: '#1F2E4D',
+  800: '#16213A',
+  900: '#0F1729',
+  950: '#080D18',
+}
+
 export default {
   content: ['./index.html', './src/**/*.{js,jsx}'],
   theme: {
     extend: {
       colors: {
-        brand: colors.indigo,
+        brand: brandNavy,
         accent: colors.amber,
-        surface: '#F5F5F7',
-        'surface-sunken': '#EDEDF0',
-        ink: '#1D1D1F',
-        'ink-muted': '#6E6E73',
+        surface: '#F7F2E7',
+        'surface-sunken': '#EFE6D2',
+        ink: '#1A2233',
+        'ink-muted': '#5B6478',
       },
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        display: ['Outfit', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['"Bricolage Grotesque"', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        // Every time/date/flight-number/ticket-data field — the thermal-
+        // printer register of the boarding-pass direction, never used for
+        // prose.
+        mono: ['"Martian Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
       fontSize: {
         display: ['clamp(2.75rem, 6vw, 4.5rem)', { lineHeight: '1.02', letterSpacing: '-0.035em' }],
@@ -31,11 +55,19 @@ export default {
         bento: '0 1px 2px rgba(16,24,40,.04), 0 6px 16px -4px rgba(16,24,40,.08)',
         'bento-hover': '0 2px 4px rgba(16,24,40,.04), 0 16px 32px -8px rgba(16,24,40,.12)',
         'bento-lg': '0 4px 8px rgba(16,24,40,.04), 0 32px 64px -12px rgba(16,24,40,.16)',
-        'brand-glow': '0 8px 24px -6px rgba(79,70,229,.45)',
+        'brand-glow': '0 8px 24px -6px rgba(15,23,41,.45)',
+        // A paper object lifted well off the surface — firmer and more
+        // vertically offset than the ambient "bento" shadows, so ticket
+        // artifacts read as a physical thing sitting on the page rather
+        // than a flat card with a rounded corner.
+        ticket: '0 2px 4px rgba(15,23,41,.14), 0 28px 56px -14px rgba(15,23,41,.45)',
+        // The small rotated amber "REBOOKED" stamp — a tight, warm-tinted
+        // shadow, not a glow.
+        stamp: '0 2px 6px -1px rgba(180,120,10,.4)',
       },
       backgroundImage: {
         'brand-mesh':
-          'radial-gradient(at 0% 0%, #4f46e5 0px, transparent 55%), radial-gradient(at 90% 10%, #7c3aed 0px, transparent 50%), radial-gradient(at 50% 100%, #4338ca 0px, transparent 60%)',
+          'radial-gradient(at 0% 0%, #16213A 0px, transparent 55%), radial-gradient(at 90% 10%, #2C4066 0px, transparent 50%), radial-gradient(at 50% 100%, #0F1729 0px, transparent 60%)',
       },
       keyframes: {
         shimmer: { '100%': { transform: 'translateX(100%)' } },

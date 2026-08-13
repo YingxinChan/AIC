@@ -27,11 +27,10 @@ export default function WeatherSwapDemo() {
   }, [prefersReducedMotion, paused])
 
   return (
-    <section id="adapts" className="max-w-6xl mx-auto px-4 py-16 sm:py-20 border-t border-gray-100">
+    <section id="adapts" className="max-w-6xl mx-auto px-4 py-16 sm:py-20 border-t border-brand-100">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
         <div>
-          <p className="eyebrow">See it in action</p>
-          <h2 className="heading-1 mt-2">When the forecast changes, so does your day</h2>
+          <h2 className="heading-1">When the forecast changes, so does your day</h2>
           <motion.ul
             className="mt-8 space-y-5"
             variants={GRID_VARIANTS}
@@ -98,7 +97,7 @@ export default function WeatherSwapDemo() {
                   transition={{ duration: 0.3 }}
                   className="space-y-3"
                 >
-                  <div className="rounded-2xl bg-surface p-4">
+                  <div className="rounded-2xl bg-surface-sunken p-4">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium text-gray-900">Picasso Museum</span>
                       <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
@@ -109,7 +108,7 @@ export default function WeatherSwapDemo() {
                       </span>
                     </div>
                   </div>
-                  <div className="rounded-2xl bg-surface p-4">
+                  <div className="rounded-2xl bg-surface-sunken p-4">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium text-gray-900">Tapas dinner in El Born</span>
                       <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
@@ -127,7 +126,7 @@ export default function WeatherSwapDemo() {
                   transition={{ duration: 0.3 }}
                   className="space-y-3"
                 >
-                  <div className="rounded-2xl bg-surface p-4">
+                  <div className="rounded-2xl bg-surface-sunken p-4">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium text-gray-900">Park Güell walking tour</span>
                       <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-800">
@@ -135,7 +134,7 @@ export default function WeatherSwapDemo() {
                       </span>
                     </div>
                   </div>
-                  <div className="rounded-2xl bg-surface p-4">
+                  <div className="rounded-2xl bg-surface-sunken p-4">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium text-gray-900">Tapas dinner in El Born</span>
                       <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">

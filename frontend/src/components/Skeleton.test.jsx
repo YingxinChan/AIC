@@ -1,10 +1,6 @@
 import { render } from '@testing-library/react'
 import Skeleton, {
-  SkeletonTripCard,
-  SkeletonStatCard,
-  SkeletonFlightRow,
-  SkeletonWeatherPanel,
-  SkeletonTripPage,
+  SkeletonTicketRow,
 } from './Skeleton'
 
 test('renders a base shimmer block', () => {
@@ -13,11 +9,7 @@ test('renders a base shimmer block', () => {
 })
 
 test.each([
-  ['SkeletonTripCard', SkeletonTripCard],
-  ['SkeletonStatCard', SkeletonStatCard],
-  ['SkeletonFlightRow', SkeletonFlightRow],
-  ['SkeletonWeatherPanel', SkeletonWeatherPanel],
-  ['SkeletonTripPage', SkeletonTripPage],
+  ['SkeletonTicketRow', SkeletonTicketRow],
 ])('%s renders without throwing', (_name, Component) => {
   const { container } = render(<Component />)
   expect(container.firstChild).toBeInTheDocument()

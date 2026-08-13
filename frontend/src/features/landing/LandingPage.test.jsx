@@ -8,7 +8,7 @@ function renderPage() {
 
 test('renders the headline and Get Started CTA linking to register', () => {
   renderPage()
-  expect(screen.getByRole('heading', { name: /navia changes them back/i })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: /navia reissues them/i })).toBeInTheDocument()
   const getStartedLinks = screen.getAllByRole('link', { name: /get started/i })
   expect(getStartedLinks.length).toBeGreaterThan(0)
   getStartedLinks.forEach((link) => expect(link).toHaveAttribute('href', '/register'))

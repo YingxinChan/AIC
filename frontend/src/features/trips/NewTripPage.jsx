@@ -9,7 +9,6 @@ import ErrorMessage from '../../components/ErrorMessage'
 import HotelSearchInput from '../../components/HotelSearchInput'
 import Input, { Textarea } from '../../components/Input'
 import Button from '../../components/Button'
-import Card from '../../components/Card'
 import { useToast } from '../../components/Toast'
 import { SPRING_SOFT, SPRING_POP, GRID_VARIANTS, ITEM_VARIANTS } from '../../lib/motion'
 import { createTrip, selectFlight } from './tripsApi'
@@ -29,6 +28,14 @@ const PLACES_STEP = STEPS.indexOf('places')
 const STEP_ICONS = {
   origin: Plane, destination: MapPin, dates: Calendar,
   flight: Plane, hotel: Building2, places: Camera, review: ClipboardCheck,
+}
+
+// Short mono gate labels for the gate-sequence tracker — replaces the plain
+// "Step X of Y" progress bar with a legible row of named stops, like an
+// airport gate sequence (A1 -> A2 -> A3).
+const GATE_LABELS = {
+  origin: 'From', destination: 'To', dates: 'Dates',
+  flight: 'Flight', hotel: 'Hotel', places: 'Places', review: 'Review',
 }
 
 export default function NewTripPage() {
@@ -76,6 +83,20 @@ export default function NewTripPage() {
   // covers the optional steps, so required steps (and review) fall back to
   // stepValid.
   const stepSatisfied = stepHasValue ?? stepValid
+
+  // Same satisfied logic as stepValid/stepHasValue above, but keyed by every
+  // step at once (not just the current one) — purely derived from the draft,
+  // no new state — so the gate-sequence tracker below can show a checkmark
+  // on every gate already passed, not only the one currently open.
+  const stepSatisfiedByKey = {
+    origin: Boolean(draft.origin?.trim()),
+    destination: Boolean(draft.destination?.trim()),
+    dates: Boolean(draft.startDate && draft.endDate && !datesInvalid),
+    flight: Boolean(draft.flightNumber?.trim()) || bothFlightsPicked,
+    hotel: Boolean(draft.hotelAddress?.trim()),
+    places: Boolean(draft.placesToVisit?.trim()),
+    review: true,
+  }
 
   // Enter-to-continue only actually fires on these — single plain-text-input
   // steps where the browser's native implicit form submission applies (see
@@ -154,21 +175,56 @@ export default function NewTripPage() {
       <h1 className="heading-1">Plan Your Trip!</h1>
       <p className="text-body-sm text-ink-muted mt-1 mb-6">Just a few quick questions and we'll set up your trip.</p>
 
-      <Card as="form" onSubmit={handleSubmit} className="p-6 sm:p-8">
-        <div className="flex items-center justify-between mb-2">
-          {step > 0 ? (
-            <button type="button" onClick={back} className="flex items-center gap-1 text-sm text-ink-muted hover:text-ink font-medium">
-              <ArrowLeft size={15} /> Back
-            </button>
-          ) : <span />}
-          <span className="text-xs font-semibold text-ink-muted">Step {step + 1} of {STEPS.length}</span>
-        </div>
-        <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden mb-6">
-          <motion.div
-            className="h-full rounded-full bg-gradient-to-r from-brand-500 to-purple-500"
-            animate={{ width: `${((step + 1) / STEPS.length) * 100}%` }}
-            transition={SPRING_SOFT}
-          />
+      <form onSubmit={handleSubmit} className="rounded-2xl bg-surface shadow-ticket overflow-hidden flex">
+      <div className="p-6 sm:p-8 flex-1 min-w-0">
+        {step > 0 && (
+          <button type="button" onClick={back} className="flex items-center gap-1 text-sm text-ink-muted hover:text-ink font-medium mb-3">
+            <ArrowLeft size={15} /> Back
+          </button>
+        )}
+
+        {/* Impeccable relayout: replaces the plain gradient progress bar +
+            "Step X of Y" text with a row of named gates, like an airport
+            gate sequence — you can tap back to any gate already reached,
+            but not skip ahead of one that hasn't been validated yet
+            (goTo() has no validity guard of its own, so future gates stay
+            disabled rather than opening a way to reach Review with a
+            required field still empty). */}
+        <div
+          role="tablist"
+          aria-label="Trip setup steps"
+          className="flex items-center gap-1.5 overflow-x-auto -mx-1 px-1 pb-1 mb-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {STEPS.map((key, index) => {
+            const isCurrent = index === step
+            const isDone = stepSatisfiedByKey[key] && index < step
+            const isFuture = index > step
+            return (
+              <div key={key} className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  role="tab"
+                  onClick={() => goTo(index)}
+                  disabled={isFuture}
+                  aria-current={isCurrent ? 'step' : undefined}
+                  aria-selected={isCurrent}
+                  className={`shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-full font-mono text-[10px] tracking-wide uppercase transition-colors disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 ${
+                    isCurrent
+                      ? 'bg-brand-600 text-white'
+                      : isDone
+                        ? 'bg-brand-50 text-brand-600 hover:bg-brand-100'
+                        : 'bg-surface-sunken text-ink-muted/60'
+                  }`}
+                >
+                  {isDone && <Check size={10} strokeWidth={3} />}
+                  {GATE_LABELS[key]}
+                </button>
+                {index < STEPS.length - 1 && (
+                  <span className="text-ink-muted/40" aria-hidden="true">&middot;</span>
+                )}
+              </div>
+            )
+          })}
         </div>
 
         <AnimatePresence mode="wait">
@@ -253,14 +309,14 @@ export default function NewTripPage() {
                       <p className="font-semibold text-ink text-sm">
                         {draft.outboundFlight.airline} · {draft.outboundFlight.flight_number}
                       </p>
-                      <p className="text-xs text-gray-500">{draft.outboundFlight.departure_time} &rarr; {draft.outboundFlight.arrival_time}</p>
+                      <p className="text-xs text-ink-muted">{draft.outboundFlight.departure_time} &rarr; {draft.outboundFlight.arrival_time}</p>
                     </div>
                     <div className="bg-brand-50 border border-brand-100 rounded-lg p-3">
                       <p className="text-xs font-medium text-brand-600 mb-0.5">Return Flight</p>
                       <p className="font-semibold text-ink text-sm">
                         {draft.returnFlight.airline} · {draft.returnFlight.flight_number}
                       </p>
-                      <p className="text-xs text-gray-500">{draft.returnFlight.departure_time} &rarr; {draft.returnFlight.arrival_time}</p>
+                      <p className="text-xs text-ink-muted">{draft.returnFlight.departure_time} &rarr; {draft.returnFlight.arrival_time}</p>
                     </div>
                     <Button type="button" variant="secondary" onClick={handleFindFlight} className="w-full">
                       Change Flights
@@ -328,7 +384,7 @@ export default function NewTripPage() {
                   variants={GRID_VARIANTS}
                   initial="hidden"
                   animate="show"
-                  className="rounded-xl bg-surface ring-1 ring-gray-200/70 divide-y divide-gray-200/70"
+                  className="rounded-xl bg-surface-sunken ring-1 ring-brand-100 divide-y divide-brand-100"
                 >
                   <ReviewRow label={`${draft.origin} → ${draft.destination}`} sub={`${draft.startDate} → ${draft.endDate}`} onEdit={() => goTo(0)} />
                   <ReviewRow
@@ -364,7 +420,7 @@ export default function NewTripPage() {
               )}
               {showEnterHint && (
                 <p className="text-center text-xs text-ink-muted mt-2.5">
-                  Press <kbd className="px-1.5 py-0.5 rounded border border-gray-300 bg-gray-50 font-mono text-[10px]">Enter ↵</kbd> to continue
+                  Press <kbd className="px-1.5 py-0.5 rounded border border-brand-200 bg-surface-sunken font-mono text-[10px]">Enter ↵</kbd> to continue
                 </p>
               )}
             </div>
@@ -372,7 +428,11 @@ export default function NewTripPage() {
         </AnimatePresence>
 
         {errorMessage && <div className="mt-4"><ErrorMessage message={errorMessage} /></div>}
-      </Card>
+      </div>
+      {/* Barcode on its own solid-backed side strip, like a real boarding
+          pass, rather than a horizontal band across the bottom. */}
+      <div className="w-6 sm:w-7 shrink-0 barcode-strip-v text-brand-900/60 bg-surface-sunken" aria-hidden="true" />
+      </form>
     </div>
   )
 }

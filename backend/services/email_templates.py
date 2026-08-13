@@ -4,6 +4,69 @@ from html import escape
 from core.config import settings
 
 FONT_STACK = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+# Reserved for ticket-data fields only (trip/day labels, destination code) —
+# the same mono-for-data/sans-for-prose split the frontend's font-mono
+# convention uses (see tailwind.config.js). Email-safe web fonts only, no
+# @font-face — 'Courier New' is the nearest universally-installed monospace.
+MONO_STACK = "'Courier New', Courier, monospace"
+
+# Brand navy, matching frontend/tailwind.config.js's brandNavy scale exactly
+# — this template used to run its own unrelated indigo/purple palette,
+# visibly disconnected from the app itself the moment a real user compared
+# the two. accent (amber) stays reserved for an actual swap ("REBOOKED"),
+# same rule as the frontend.
+NAVY_900 = "#0F1729"
+NAVY_100 = "#DCE3F0"
+INK = "#1A2233"
+INK_MUTED = "#5B6478"
+# Gmail's Android/iOS apps run their own auto-dark-mode pass that no
+# meta tag or CSS override can fully opt out of (confirmed by testing —
+# color-scheme/prefers-color-scheme are both ignored). Its transform
+# preserves hue and flips lightness, so a *warm* near-white (the frontend's
+# actual cream, #F7F2E7) inverts into a muddy dark olive-brown — the exact
+# "ugly" reported. Two colors from brandNavy itself (brand-50/brand-100,
+# already cool blue-tinted near-whites, no warm hue for Gmail to invert
+# into mud) invert into a clean dark navy-gray instead, and still read as
+# clearly part of this app's palette in light mode — just the cool side of
+# it rather than the cream side, which is the deliberate trade for a
+# surface that has to survive a transform it can't opt out of.
+SURFACE = "#EEF1F7"  # brandNavy 50
+SURFACE_SUNKEN = "#E2E7F2"  # between brandNavy 50 and 100
+ACCENT_500 = "#F59E0B"
+# Off-white, not pure #ffffff — the header text is the other thing Gmail's
+# pass visibly touched (turned "Navia" nearly invisible against its own
+# navy background in testing), and every report of this behavior traces it
+# to literal #ffffff/#000000 specifically being flagged for "readability"
+# adjustment regardless of what they're actually sitting on. One step off
+# pure white is enough to stop being a target without being a visible
+# change to anyone reading it normally.
+OFF_WHITE = "#F7F8FA"
+
+
+# This design is light-only (the frontend has no dark theme either) — it
+# isn't repainted for dark mode, it's defended against it. Apple Mail and
+# Outlook both honor the color-scheme/supported-color-schemes meta+CSS
+# below and leave a light-only design alone entirely; Gmail's apps don't
+# honor either one and dark-mode-process regardless, which is what the
+# SURFACE/OFF_WHITE choices above are actually defending against.
+DARK_MODE_CSS = f"""
+    :root {{ color-scheme: light; supported-color-schemes: light; }}
+    @media (prefers-color-scheme: dark) {{
+      .nv-shell {{ background-color: {SURFACE_SUNKEN} !important; }}
+      .nv-card {{ background-color: {SURFACE} !important; }}
+      .nv-header {{ background-color: {NAVY_900} !important; }}
+      .nv-footer {{ background-color: {SURFACE} !important; }}
+      .nv-border {{ border-color: {NAVY_100} !important; }}
+      .nv-white {{ color: {OFF_WHITE} !important; }}
+      .nv-ink {{ color: {INK} !important; }}
+      .nv-ink-muted {{ color: {INK_MUTED} !important; }}
+      .nv-strike {{ color: {INK_MUTED} !important; }}
+      .nv-warn {{ color: #b45309 !important; }}
+      .nv-good {{ color: #15803d !important; }}
+      .nv-cta {{ background-color: {NAVY_900} !important; }}
+      .nv-rebooked {{ background-color: {ACCENT_500} !important; color: {NAVY_900} !important; }}
+    }}
+"""
 
 
 def _cta_html(text: str) -> str:
@@ -13,8 +76,8 @@ def _cta_html(text: str) -> str:
     # span several trips.
     return f'''<table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0 0;">
       <tr>
-        <td style="border-radius:8px; background-color:#4f46e5;">
-          <a href="{settings.frontend_url}" style="display:inline-block; padding:10px 20px; font-size:14px; font-weight:600; color:#ffffff; text-decoration:none; font-family:{FONT_STACK};">{escape(text, quote=False)} &rarr;</a>
+        <td class="nv-cta" style="border-radius:999px; background-color:{NAVY_900};">
+          <a href="{settings.frontend_url}" class="nv-white" style="display:inline-block; padding:10px 22px; font-size:14px; font-weight:600; color:{OFF_WHITE}; text-decoration:none; font-family:{FONT_STACK};">{escape(text, quote=False)} &rarr;</a>
         </td>
       </tr>
     </table>'''
@@ -67,28 +130,50 @@ def _format_day(day_date: str) -> str:
         return day_date
 
 
-def _wrap(heading: str, body_html: str) -> str:
+def _wrap(heading: str, body_html: str, tag: str = "NAVIA") -> str:
+    # A light boarding-pass flavor, not a full replica — no side barcode or
+    # punched notches (email clients render CSS far too inconsistently for
+    # those), just what carries across reliably: the navy the app actually
+    # uses, a small corner tag mirroring the app's "BOARDING PASS" stub
+    # label, a dashed perforation under the header, and a pill CTA.
     return f"""<!doctype html>
 <html>
-  <body style="margin:0; padding:0; background-color:#f3f4f6; font-family:{FONT_STACK};">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f3f4f6; padding:32px 16px;">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light">
+    <meta name="supported-color-schemes" content="light">
+    <style>{DARK_MODE_CSS}</style>
+  </head>
+  <body class="nv-shell" style="margin:0; padding:0; background-color:{SURFACE_SUNKEN}; font-family:{FONT_STACK};">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="nv-shell" bgcolor="{SURFACE_SUNKEN}" style="background-color:{SURFACE_SUNKEN}; padding:32px 16px;">
       <tr>
         <td align="center">
-          <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px; width:100%; background-color:#ffffff; border-radius:12px; overflow:hidden; border:1px solid #e5e7eb;">
+          <table role="presentation" width="480" cellpadding="0" cellspacing="0" class="nv-card nv-border" bgcolor="{SURFACE}" style="max-width:480px; width:100%; background-color:{SURFACE}; border-radius:12px; overflow:hidden; border:1px solid {NAVY_100};">
             <tr>
-              <td style="background-color:#4f46e5; background-image:linear-gradient(135deg,#4f46e5,#7c3aed); padding:24px 32px;">
-                <span style="color:#ffffff; font-size:18px; font-weight:700; font-family:{FONT_STACK};">Navia</span>
+              <td class="nv-header" bgcolor="{NAVY_900}" style="background-color:{NAVY_900}; padding:24px 32px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                  <tr>
+                    <td class="nv-white" style="color:{OFF_WHITE}; font-size:18px; font-weight:700; font-family:{FONT_STACK};">Navia</td>
+                    <td align="right">
+                      <span style="display:inline-block; padding:4px 10px; border:1px solid rgba(255,255,255,0.35); border-radius:999px; color:#B9C7E0; font-size:10px; font-weight:700; letter-spacing:0.12em; font-family:{MONO_STACK};">{escape(tag, quote=False)}</span>
+                    </td>
+                  </tr>
+                </table>
               </td>
             </tr>
             <tr>
-              <td style="padding:32px;">
-                <h1 style="margin:0 0 16px; font-size:20px; color:#111827; font-family:{FONT_STACK};">{heading}</h1>
+              <td class="nv-border" style="padding:0; border-top:2px dashed {NAVY_100};"></td>
+            </tr>
+            <tr>
+              <td class="nv-card" bgcolor="{SURFACE}" style="padding:32px; background-color:{SURFACE};">
+                <h1 class="nv-ink" style="margin:0 0 16px; font-size:20px; color:{INK}; font-family:{FONT_STACK};">{heading}</h1>
                 {body_html}
               </td>
             </tr>
             <tr>
-              <td style="padding:20px 32px; background-color:#f9fafb; border-top:1px solid #e5e7eb;">
-                <p style="margin:0; font-size:12px; color:#9ca3af; font-family:{FONT_STACK};">You're receiving this because you have an active trip on Navia.</p>
+              <td class="nv-footer nv-border" bgcolor="{SURFACE}" style="padding:20px 32px; background-color:{SURFACE}; border-top:1px solid {NAVY_100};">
+                <p class="nv-ink-muted" style="margin:0; font-size:12px; color:{INK_MUTED}; font-family:{FONT_STACK};">You're receiving this because you have an active trip on Navia.</p>
               </td>
             </tr>
           </table>
@@ -103,7 +188,8 @@ def test_email() -> tuple[str, str]:
     text = "This is a test email from Navia — if you're reading this, notifications are working!"
     html = _wrap(
         "Test email",
-        f'<p style="margin:0; font-size:14px; color:#374151; line-height:1.6; font-family:{FONT_STACK};">{text}</p>',
+        f'<p class="nv-ink" style="margin:0; font-size:14px; color:{INK}; line-height:1.6; font-family:{FONT_STACK};">{text}</p>',
+        tag="TEST",
     )
     return html, text
 
@@ -117,23 +203,28 @@ def _swap_row_html(s: dict) -> str:
     alternate_location = escape(s["alternate_location"], quote=False)
     reason = escape(s["reason"], quote=False)
     icon = _rule_icon(s.get("rule_id"))
+    # REBOOKED pill matches the frontend's shadow-stamp treatment exactly
+    # (amber, dark-navy text) — amber is reserved there for the same one
+    # moment (an actual weather swap), so reusing it here for the identical
+    # event is the rule, not an exception to it.
     return f'''<tr>
-      <td style="padding:16px 0; border-bottom:1px solid #f3f4f6;">
-        <p style="margin:0 0 8px; font-size:12px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.03em; font-family:{FONT_STACK};">{trip_name} &middot; {day}</p>
+      <td class="nv-border" style="padding:16px 0; border-bottom:1px solid {NAVY_100};">
+        <p class="nv-ink-muted" style="margin:0 0 8px; font-size:12px; font-weight:600; color:{INK_MUTED}; text-transform:uppercase; letter-spacing:0.03em; font-family:{MONO_STACK};">{trip_name} &middot; {day}</p>
         <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
           <tr>
             <td style="vertical-align:top; width:45%;">
-              <p style="margin:0; font-size:13px; color:#9ca3af; text-decoration:line-through; font-family:{FONT_STACK};">{original_name}</p>
-              <p style="margin:2px 0 0; font-size:12px; color:#9ca3af; text-decoration:line-through; font-family:{FONT_STACK};">{original_location}</p>
+              <p class="nv-strike" style="margin:0; font-size:13px; color:{INK_MUTED}; text-decoration:line-through; font-family:{FONT_STACK};">{original_name}</p>
+              <p class="nv-strike" style="margin:2px 0 0; font-size:12px; color:{INK_MUTED}; text-decoration:line-through; font-family:{FONT_STACK};">{original_location}</p>
             </td>
-            <td style="vertical-align:middle; width:10%; text-align:center; color:#9ca3af; font-size:14px; font-family:{FONT_STACK};">&rarr;</td>
+            <td class="nv-ink-muted" style="vertical-align:middle; width:10%; text-align:center; color:{INK_MUTED}; font-size:14px; font-family:{FONT_STACK};">&rarr;</td>
             <td style="vertical-align:top; width:45%;">
-              <p style="margin:0; font-size:14px; font-weight:600; color:#111827; font-family:{FONT_STACK};">{alternate_name}</p>
-              <p style="margin:2px 0 0; font-size:12px; color:#6b7280; font-family:{FONT_STACK};">{alternate_location}</p>
+              <p class="nv-ink" style="margin:0; font-size:14px; font-weight:600; color:{INK}; font-family:{FONT_STACK};">{alternate_name}</p>
+              <p class="nv-ink-muted" style="margin:2px 0 0; font-size:12px; color:{INK_MUTED}; font-family:{FONT_STACK};">{alternate_location}</p>
+              <span class="nv-rebooked" style="display:inline-block; margin-top:4px; padding:2px 8px; border-radius:999px; background-color:{ACCENT_500}; color:{NAVY_900}; font-size:10px; font-weight:700; letter-spacing:0.04em; font-family:{FONT_STACK};">REBOOKED</span>
             </td>
           </tr>
         </table>
-        <p style="margin:8px 0 0; font-size:12px; color:#b45309; font-family:{FONT_STACK};">{icon} {reason}</p>
+        <p class="nv-warn" style="margin:8px 0 0; font-size:12px; color:#b45309; font-family:{FONT_STACK};">{icon} {reason}</p>
       </td>
     </tr>'''
 
@@ -155,12 +246,12 @@ def _tip_row_html(t: dict) -> str:
     tip = escape(t["tip"], quote=False)
     icon = _rule_icon(t.get("rule_id"))
     return f'''<tr>
-      <td style="padding:16px 0; border-bottom:1px solid #f3f4f6;">
-        <p style="margin:0 0 8px; font-size:12px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.03em; font-family:{FONT_STACK};">{trip_name} &middot; {day}</p>
-        <p style="margin:0; font-size:14px; font-weight:600; color:#111827; font-family:{FONT_STACK};">{name}</p>
-        <p style="margin:2px 0 0; font-size:12px; color:#6b7280; font-family:{FONT_STACK};">{location}</p>
-        <p style="margin:8px 0 0; font-size:12px; color:#b45309; font-family:{FONT_STACK};">{icon} {reason}</p>
-        <p style="margin:4px 0 0; font-size:13px; color:#374151; font-family:{FONT_STACK};">💡 {tip}</p>
+      <td class="nv-border" style="padding:16px 0; border-bottom:1px solid {NAVY_100};">
+        <p class="nv-ink-muted" style="margin:0 0 8px; font-size:12px; font-weight:600; color:{INK_MUTED}; text-transform:uppercase; letter-spacing:0.03em; font-family:{MONO_STACK};">{trip_name} &middot; {day}</p>
+        <p class="nv-ink" style="margin:0; font-size:14px; font-weight:600; color:{INK}; font-family:{FONT_STACK};">{name}</p>
+        <p class="nv-ink-muted" style="margin:2px 0 0; font-size:12px; color:{INK_MUTED}; font-family:{FONT_STACK};">{location}</p>
+        <p class="nv-warn" style="margin:8px 0 0; font-size:12px; color:#b45309; font-family:{FONT_STACK};">{icon} {reason}</p>
+        <p class="nv-ink" style="margin:4px 0 0; font-size:13px; color:{INK}; font-family:{FONT_STACK};">💡 {tip}</p>
       </td>
     </tr>'''
 
@@ -176,11 +267,11 @@ def _reverted_row_html(r: dict) -> str:
     restored_name = escape(r["restored_name"], quote=False)
     restored_location = escape(r["restored_location"], quote=False)
     return f'''<tr>
-      <td style="padding:16px 0; border-bottom:1px solid #f3f4f6;">
-        <p style="margin:0 0 8px; font-size:12px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.03em; font-family:{FONT_STACK};">{trip_name} &middot; {day}</p>
-        <p style="margin:0; font-size:14px; font-weight:600; color:#111827; font-family:{FONT_STACK};">{restored_name}</p>
-        <p style="margin:2px 0 0; font-size:12px; color:#6b7280; font-family:{FONT_STACK};">{restored_location}</p>
-        <p style="margin:8px 0 0; font-size:12px; color:#15803d; font-family:{FONT_STACK};">&#9989; Forecast improved — we've switched back to your original plan.</p>
+      <td class="nv-border" style="padding:16px 0; border-bottom:1px solid {NAVY_100};">
+        <p class="nv-ink-muted" style="margin:0 0 8px; font-size:12px; font-weight:600; color:{INK_MUTED}; text-transform:uppercase; letter-spacing:0.03em; font-family:{MONO_STACK};">{trip_name} &middot; {day}</p>
+        <p class="nv-ink" style="margin:0; font-size:14px; font-weight:600; color:{INK}; font-family:{FONT_STACK};">{restored_name}</p>
+        <p class="nv-ink-muted" style="margin:2px 0 0; font-size:12px; color:{INK_MUTED}; font-family:{FONT_STACK};">{restored_location}</p>
+        <p class="nv-good" style="margin:8px 0 0; font-size:12px; color:#15803d; font-family:{FONT_STACK};">&#9989; Forecast improved — we've switched back to your original plan.</p>
       </td>
     </tr>'''
 
@@ -194,11 +285,11 @@ def _summary_point_html(point: dict) -> str:
     icon = SUMMARY_ICONS.get(point.get("icon"), "💡")
     text = escape(point["text"], quote=False)
     return f'''<tr>
-      <td style="padding:10px 0; border-bottom:1px solid #f3f4f6;">
+      <td class="nv-border" style="padding:10px 0; border-bottom:1px solid {NAVY_100};">
         <table role="presentation" cellpadding="0" cellspacing="0">
           <tr>
             <td style="vertical-align:top; width:28px; font-size:16px; font-family:{FONT_STACK};">{icon}</td>
-            <td style="vertical-align:top; font-size:14px; color:#374151; line-height:1.5; font-family:{FONT_STACK};">{text}</td>
+            <td class="nv-ink" style="vertical-align:top; font-size:14px; color:{INK}; line-height:1.5; font-family:{FONT_STACK};">{text}</td>
           </tr>
         </table>
       </td>
@@ -224,8 +315,8 @@ def daily_summary_email(trip, weather_day: dict, summary_points: list[dict]) -> 
     rows = "".join(_summary_point_html(p) for p in summary_points)
 
     body_html = f"""
-      <p style="margin:0 0 4px; font-size:12px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.03em; font-family:{FONT_STACK};">{destination} &middot; {day}</p>
-      <p style="margin:0 0 16px; font-size:16px; font-weight:600; color:#111827; font-family:{FONT_STACK};">{condition}, {temp_min}&deg;&ndash;{temp_max}&deg;C</p>
+      <p class="nv-ink-muted" style="margin:0 0 4px; font-size:12px; font-weight:600; color:{INK_MUTED}; text-transform:uppercase; letter-spacing:0.03em; font-family:{MONO_STACK};">{destination} &middot; {day}</p>
+      <p class="nv-ink" style="margin:0 0 16px; font-size:16px; font-weight:600; color:{INK}; font-family:{FONT_STACK};">{condition}, {temp_min}&deg;&ndash;{temp_max}&deg;C</p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0">{rows}</table>
       {_cta_html("View your itinerary")}
     """
@@ -235,7 +326,7 @@ def daily_summary_email(trip, weather_day: dict, summary_points: list[dict]) -> 
         + f"\n\n{_cta_text('View your itinerary')}"
     )
 
-    return _wrap(f"Today's weather in {trip.destination}", body_html), text
+    return _wrap(f"Today's weather in {trip.destination}", body_html, tag="DAILY FORECAST"), text
 
 
 def swap_digest_email(
@@ -254,7 +345,7 @@ def swap_digest_email(
     if swaps:
         rows = "".join(_swap_row_html(s) for s in swaps)
         sections_html.append(f"""
-          <p style="margin:0 0 16px; font-size:14px; color:#374151; line-height:1.6; font-family:{FONT_STACK};">
+          <p class="nv-ink" style="margin:0 0 16px; font-size:14px; color:{INK}; line-height:1.6; font-family:{FONT_STACK};">
             The forecast means we've swapped these plans for better-suited alternatives:
           </p>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0">{rows}</table>
@@ -267,7 +358,7 @@ def swap_digest_email(
     if tips:
         rows = "".join(_tip_row_html(t) for t in tips)
         sections_html.append(f"""
-          <p style="margin:24px 0 16px; font-size:14px; color:#374151; line-height:1.6; font-family:{FONT_STACK};">
+          <p class="nv-ink" style="margin:24px 0 16px; font-size:14px; color:{INK}; line-height:1.6; font-family:{FONT_STACK};">
             Weather's worth a heads-up here, even though we haven't changed these plans:
           </p>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0">{rows}</table>
@@ -279,7 +370,7 @@ def swap_digest_email(
     if reverted:
         rows = "".join(_reverted_row_html(r) for r in reverted)
         sections_html.append(f"""
-          <p style="margin:24px 0 16px; font-size:14px; color:#374151; line-height:1.6; font-family:{FONT_STACK};">
+          <p class="nv-ink" style="margin:24px 0 16px; font-size:14px; color:{INK}; line-height:1.6; font-family:{FONT_STACK};">
             Good news — the forecast improved, so these plans are back to normal:
           </p>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0">{rows}</table>
@@ -296,4 +387,5 @@ def swap_digest_email(
 
     body_html = "".join(sections_html) + _cta_html("View your trips")
     text = "\n\n".join(sections_text) + f"\n\n{_cta_text('View your trips')}"
-    return _wrap(heading, body_html), text
+    tag = "ITINERARY UPDATE" if (swaps or reverted) else "WEATHER TIP"
+    return _wrap(heading, body_html, tag=tag), text

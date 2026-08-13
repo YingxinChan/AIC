@@ -72,19 +72,25 @@ export default function Modal({ open, onClose, title, children, size = 'sm' }) {
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className={`bg-white rounded-3xl shadow-bento-lg p-6 w-full ${maxWidthClass}`}
+        className={`bg-surface rounded-3xl shadow-ticket overflow-hidden w-full ${maxWidthClass}`}
         onClick={(e) => e.stopPropagation()}
         initial={{ opacity: 0, scale: 0.95, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={SPRING_POP}
       >
-        <div className="flex items-center justify-between mb-4">
-          <h2 id={titleId} className="heading-3">{title}</h2>
-          <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X size={20} />
-          </button>
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 id={titleId} className="heading-3">{title}</h2>
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-ink-muted hover:text-ink rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          {children}
         </div>
-        {children}
       </motion.div>
     </motion.div>
   )

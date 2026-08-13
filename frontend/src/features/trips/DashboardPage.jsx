@@ -1,21 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Plane, ArrowRight, Calendar, ChevronRight, Compass, Plus } from 'lucide-react'
+import { Plane, ArrowRight, ChevronRight, Calendar, Compass, Plus } from 'lucide-react'
 import ErrorMessage from '../../components/ErrorMessage'
 import Button from '../../components/Button'
 import Card from '../../components/Card'
 import EmptyState from '../../components/EmptyState'
-import Skeleton, { SkeletonTripCard, SkeletonForecastGlance } from '../../components/Skeleton'
+import PageLoader from '../../components/PageLoader'
+import Skeleton from '../../components/Skeleton'
 import { GRID_VARIANTS, ITEM_VARIANTS } from '../../lib/motion'
 import { WeatherIcon } from '../../lib/weatherDisplay'
 import { useTrips } from './useTrips'
-import { tripStatus, STATUS_STYLES } from './tripStatus'
-import { capitalize } from '../../lib/format'
-import { findDestinationImage } from './destinationImages'
+import { tripStatus } from './tripStatus'
+import { capitalize, cityCode } from '../../lib/format'
+import TripTicketCard from './TripTicketCard'
 import { geocodeCity } from '../../lib/geocode'
 import { getForecast } from '../weather/weatherApi'
-import planeWing from '../../assets/dashboard-plane-wing.jpg'
 
 // The strip scrolls horizontally, so this only needs to be "enough to make
 // scrolling worthwhile on a wide screen" — 2 left a large empty gap next to
@@ -121,67 +121,79 @@ export default function DashboardPage() {
         )}
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-4 items-start">
-        <div
-          className={`relative rounded-3xl shadow-bento-lg text-white overflow-hidden min-h-[280px] flex flex-col justify-center p-8 bg-cover ${showForecastColumn ? 'lg:col-span-2' : 'lg:col-span-3'}`}
-          style={{ backgroundImage: `url(${planeWing})`, backgroundPosition: 'center 68%' }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-brand-950/92 via-brand-800/85 to-purple-900/70" />
-          <div className="relative max-w-md">
-            {loading ? (
-              // Which hero variant will render isn't known until trips
-              // finish loading, so this is a deliberate default guess, not
-              // a guaranteed match: shaped like the upcoming-trip variant
-              // (short destination name + one date line), matching
-              // showForecastColumn's own default assumption below. Correct
-              // for any account with a trip already planned; an account
-              // that turns out to have none will briefly show this shape
-              // before reflowing into the longer "Plan your perfect trip"
-              // copy — a one-time state right after signup, not the
-              // common case, so it's the better default to optimize for.
-              <div className="space-y-3 animate-pulse">
-                <div className="h-3 w-36 rounded bg-white/20" />
-                <div className="h-8 w-40 rounded bg-white/20" />
-                <div className="h-4 w-48 rounded bg-white/20" />
-                <div className="h-10 w-32 rounded-full bg-white/20 mt-2" />
-              </div>
-            ) : showGenericHero ? (
-              <>
-                <p className="text-xs font-medium text-brand-200 mb-1">Ready for your next adventure?</p>
-                <h2 className="heading-2 text-white">Plan your perfect trip</h2>
-                <p className="text-sm text-brand-100 mt-2">
-                  Tell us your destination and dates — Navia builds a day-by-day plan synced with the hourly forecast, so rain never ruins your plans.
-                </p>
-                <Button to="/trips/new" variant="onBrand" shape="pill" className="mt-5 w-fit">
-                  <Plane size={16} /> Plan a Trip <ArrowRight size={14} />
-                </Button>
-              </>
-            ) : (
-              <>
-                <p className="text-xs font-medium text-brand-200 mb-1">{isOngoing ? 'Your current trip' : 'Your next adventure'}</p>
-                <h2 className="heading-2 text-white">{capitalize(featuredTrip.destination)}</h2>
-                <p className="flex items-center gap-1.5 text-sm text-brand-100 mt-2">
-                  <Calendar size={14} /> {featuredTrip.start_date} &rarr; {featuredTrip.end_date}
-                </p>
-                <Button to={`/trips/${featuredTrip.id}`} variant="onBrand" shape="pill" className="mt-5 w-fit">
-                  <Plane size={16} /> View Trip <ArrowRight size={14} />
-                </Button>
-              </>
+      {/* A full-page takeover while trips load — not a patchwork of a small
+          hero animation plus gray shimmer everywhere else below it. Once
+          this resolves, the real content (hero, stats, trips list) mounts
+          all at once. */}
+      {loading ? (
+        <PageLoader label="Loading your trips…" />
+      ) : (
+      <>
+      {/* Impeccable relayout: hero and forecast-at-a-glance used to be two
+          separate boxes side by side in a 3-col grid — an ordinary
+          dashboard-widget arrangement. They're one boarding pass now: a
+          torn-stub column on the right of the main coupon (same anatomy as
+          the landing page's own TicketArtifact — main coupon | perforation |
+          stub), a second tear (ticket-divider-h) into the forecast below.
+          The stub's own notches + "BOARDING PASS" tag already say "ticket"
+          clearly — an extra full-bleed barcode texture behind the coupon
+          text was redundant with it and dropped during a distill pass. */}
+      <div className="rounded-2xl shadow-ticket overflow-hidden">
+        <div className="grid grid-cols-[1fr_auto]">
+          <div className="relative text-white overflow-hidden min-h-[220px] flex bg-brand-900">
+            <div className="relative flex-1 flex flex-col justify-center p-8">
+            <div className="relative max-w-md">
+              {showGenericHero ? (
+                <>
+                  <p className="font-mono text-[11px] tracking-wide uppercase text-brand-300">Ready for your next adventure?</p>
+                  <h2 className="font-display text-4xl sm:text-5xl font-bold text-white mt-1.5">Plan your perfect trip</h2>
+                  <p className="text-sm text-brand-100 mt-2">
+                    Tell us your destination and dates — Navia builds a day-by-day plan synced with the hourly forecast, so rain never ruins your plans.
+                  </p>
+                  <Button to="/trips/new" variant="onBrand" shape="pill" className="mt-5 w-fit">
+                    <Plane size={16} /> Plan a Trip <ArrowRight size={14} />
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <p className="font-mono text-[11px] tracking-wide uppercase text-brand-300">{isOngoing ? 'Your current trip' : 'Your next adventure'}</p>
+                  <h2 className="font-display text-5xl sm:text-6xl font-bold text-white mt-1.5 leading-none">{capitalize(featuredTrip.destination)}</h2>
+                  <p className="flex items-center gap-1.5 text-sm text-brand-100 mt-2 font-mono">
+                    <Calendar size={14} /> {featuredTrip.start_date} &rarr; {featuredTrip.end_date}
+                  </p>
+                  <Button to={`/trips/${featuredTrip.id}`} variant="onBrand" shape="pill" className="mt-5 w-fit">
+                    <Plane size={16} /> View Trip <ArrowRight size={14} />
+                  </Button>
+                </>
+              )}
+            </div>
+            </div>
+          </div>
+
+          {/* The torn stub — static branding, not trip data, so it renders
+              identically across the loading/generic/featured states above
+              instead of needing its own three-way conditional. Wide and
+              confident on purpose — a real boarding-pass stub is a
+              proportionally large chunk of the document, not a sliver. */}
+          <div className="ticket-divider hidden sm:flex flex-col items-center justify-center gap-3 w-20 sm:w-24 shrink-0 bg-brand-950 text-brand-200 [--ticket-notch:theme(colors.brand.950)]">
+            {!showGenericHero && (
+              <p className="font-display font-bold text-xl text-white leading-none">{cityCode(featuredTrip.destination)}</p>
             )}
+            <Plane size={20} className="text-brand-400 rotate-45" />
+            <span className="font-mono text-xs font-bold tracking-[0.25em] [writing-mode:vertical-rl]">BOARDING PASS</span>
           </div>
         </div>
 
         {showForecastColumn && (
-          loading ? (
-            <SkeletonForecastGlance />
-          ) : (
+            <>
+            <div className="ticket-divider-h bg-surface" aria-hidden="true" />
             <Link
               to={`/trips/${featuredTrip.id}`}
-              className="group min-h-[280px] flex flex-col justify-center gap-6 rounded-3xl border border-gray-200/80 shadow-bento hover:shadow-bento-hover hover:border-brand-200 transition-shadow bg-white p-6"
+              className="group flex flex-col gap-6 hover:bg-surface-sunken transition-colors bg-surface p-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500"
             >
               <div>
-                <p className="text-xs font-medium text-ink-muted">{isOngoing ? "Your current trip's forecast at a glance" : "Your next trip's forecast at a glance"}</p>
-                <h3 className="font-display font-semibold text-ink text-lg mt-0.5">{capitalize(featuredTrip.destination)}</h3>
+                <p className="font-mono text-[11px] tracking-wide uppercase text-ink-muted">{isOngoing ? "Your current trip's forecast at a glance" : "Your next trip's forecast at a glance"}</p>
+                <h3 className="font-display font-semibold text-ink text-lg mt-1">{capitalize(featuredTrip.destination)}</h3>
                 <p className="text-sm text-ink-muted mt-0.5">
                   {isOngoing
                     ? 'Enjoy your trip!'
@@ -205,7 +217,7 @@ export default function DashboardPage() {
                 forecastGlance?.length > 0 ? (
                   <div className="flex gap-2">
                     {forecastGlance.map((day) => (
-                      <div key={day.date} className="flex-1 min-w-0 flex flex-col items-center gap-1.5 rounded-xl bg-surface py-3.5 px-1 group-hover:bg-surface-sunken transition-colors">
+                      <div key={day.date} className="flex-1 min-w-0 flex flex-col items-center gap-1.5 rounded-xl bg-surface-sunken py-3.5 px-1 group-hover:bg-white transition-colors">
                         <span className="text-[11px] font-medium text-ink-muted">
                           {new Date(`${day.date}T00:00:00Z`).toLocaleDateString(undefined, { weekday: 'short', timeZone: 'UTC' })}
                         </span>
@@ -230,42 +242,26 @@ export default function DashboardPage() {
                 )
               )}
             </Link>
-          )
+            </>
         )}
       </div>
 
-      {!error && (
-        <div className="flex flex-wrap gap-3">
-          {loading ? (
-            <>
-              <Skeleton className="h-[46px] w-36 rounded-full" />
-              <Skeleton className="h-[46px] w-36 rounded-full" />
-            </>
-          ) : trips.length > 0 ? (
-            <motion.div className="flex flex-wrap gap-3" variants={GRID_VARIANTS} initial="hidden" animate="show">
-              <motion.div variants={ITEM_VARIANTS} className="flex items-center gap-2 rounded-full bg-white border border-gray-200/80 shadow-bento-sm px-4 py-2.5">
-                <span className="font-display font-bold text-ink tabular-nums">{trips.length}</span>
-                <span className="text-xs text-ink-muted">Trips Planned</span>
-              </motion.div>
-              <motion.div variants={ITEM_VARIANTS} className="flex items-center gap-2 rounded-full bg-white border border-gray-200/80 shadow-bento-sm px-4 py-2.5">
-                <span className="font-display font-bold text-ink tabular-nums">{destinationCount}</span>
-                <span className="text-xs text-ink-muted">Destinations</span>
-              </motion.div>
-            </motion.div>
-          ) : null}
-        </div>
+      {!error && trips.length > 0 && (
+        <motion.div className="flex flex-wrap gap-3" variants={GRID_VARIANTS} initial="hidden" animate="show">
+          <motion.div variants={ITEM_VARIANTS} className="flex items-center gap-2 rounded-full bg-surface border border-brand-100 px-4 py-2.5">
+            <span className="font-mono font-bold text-ink tabular-nums">{trips.length}</span>
+            <span className="text-xs text-ink-muted">Trips Planned</span>
+          </motion.div>
+          <motion.div variants={ITEM_VARIANTS} className="flex items-center gap-2 rounded-full bg-surface border border-brand-100 px-4 py-2.5">
+            <span className="font-mono font-bold text-ink tabular-nums">{destinationCount}</span>
+            <span className="text-xs text-ink-muted">Destinations</span>
+          </motion.div>
+        </motion.div>
       )}
 
-      {loading && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          <SkeletonTripCard />
-          <SkeletonTripCard />
-        </div>
-      )}
+      {error && <ErrorMessage message="Something went wrong while loading your trips." />}
 
-      {!loading && error && <ErrorMessage message="Something went wrong while loading your trips." />}
-
-      {!loading && !error && trips.length === 0 && (
+      {!error && trips.length === 0 && (
         <EmptyState
           icon={Compass}
           title="No trips yet"
@@ -274,63 +270,32 @@ export default function DashboardPage() {
         />
       )}
 
-      {!loading && !error && trips.length > 0 && (
+      {/* Horizontal-scroll strip of ticket-styled photo cards — a block-card
+          rail, not the full-width booklet-row layout (that stays on
+          MyTripsPage). */}
+      {!error && trips.length > 0 && (
         <div>
-          <h3 className="font-semibold text-ink mb-3">Recent Trips</h3>
+          <h3 className="heading-3 mb-3">Recent Trips</h3>
           <motion.div
             className="scroll-strip gap-4 -mx-1 px-1 pb-1"
             variants={GRID_VARIANTS}
             initial="hidden"
             animate="show"
           >
-            {recentTrips.map((trip) => {
-              const status = tripStatus(trip)
-              const cardImage = findDestinationImage(trip.destination)
-              return (
-                <Card
-                  key={trip.id}
-                  as={Link}
-                  to={`/trips/${trip.id}`}
-                  hoverable
-                  variants={ITEM_VARIANTS}
-                  className="group relative block w-72 sm:w-80 shrink-0 snap-start overflow-hidden hover:border-brand-300"
-                >
-                  <div
-                    className={`h-48 overflow-hidden ${cardImage ? '' : 'bg-gradient-to-br from-brand-400 to-purple-400'} ${cardImage && cardImage.fit !== 'contain' ? 'bg-cover' : ''} bg-center transition-transform duration-500 group-hover:scale-105`}
-                    style={
-                      cardImage
-                        ? cardImage.fit === 'contain'
-                          ? {
-                              backgroundImage: `url(${cardImage.url}), linear-gradient(to bottom right, #818cf8, #c084fc)`,
-                              backgroundSize: 'contain, cover',
-                              backgroundPosition: `${cardImage.position}, center`,
-                              backgroundRepeat: 'no-repeat, no-repeat',
-                            }
-                          : { backgroundImage: `url(${cardImage.url})`, backgroundPosition: cardImage.position }
-                        : undefined
-                    }
-                  />
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent px-4 pb-3.5 pt-10">
-                    <span className={`inline-block mb-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full ${STATUS_STYLES[status]}`}>
-                      {status}
-                    </span>
-                    <p className="font-display font-semibold text-white text-lg leading-tight">{capitalize(trip.name)}</p>
-                    <p className="flex items-center gap-1.5 text-xs text-white/80 mt-1">
-                      <Calendar size={12} /> {trip.start_date} &rarr; {trip.end_date}
-                    </p>
-                  </div>
-                </Card>
-              )
-            })}
+            {recentTrips.map((trip) => (
+              <motion.div key={trip.id} variants={ITEM_VARIANTS} className="w-72 sm:w-80 shrink-0 snap-start">
+                <TripTicketCard trip={trip} />
+              </motion.div>
+            ))}
             {trips.length > recentTrips.length && (
               <Card
                 as={Link}
                 to="/trips"
                 hoverable
                 variants={ITEM_VARIANTS}
-                className="group flex h-48 w-40 shrink-0 snap-start flex-col items-center justify-center gap-2 border-dashed text-ink-muted hover:border-brand-300 hover:text-brand-600"
+                className="group flex h-56 w-40 shrink-0 snap-start flex-col items-center justify-center gap-2 border-dashed !border-brand-200 text-ink-muted hover:!border-brand-300 hover:text-brand-600"
               >
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-surface transition-colors group-hover:bg-brand-50">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-sunken transition-colors group-hover:bg-brand-50">
                   <ChevronRight size={16} />
                 </span>
                 <span className="text-sm font-medium">View all</span>
@@ -339,6 +304,8 @@ export default function DashboardPage() {
             )}
           </motion.div>
         </div>
+      )}
+      </>
       )}
     </div>
   )

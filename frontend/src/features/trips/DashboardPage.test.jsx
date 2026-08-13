@@ -114,11 +114,11 @@ test('shows a destination photo background on Recent Trips cards, case-insensiti
   renderPage()
 
   const parisCard = (await screen.findByText('A')).closest('a')
-  const parisPhoto = parisCard.querySelector('div')
+  const parisPhoto = parisCard.querySelectorAll('div')[1]
   expect(parisPhoto.style.backgroundImage).toContain('/images/destinations/paris.jpg')
 
   const unmappedCard = screen.getByText('B').closest('a')
-  const unmappedPhoto = unmappedCard.querySelector('div')
+  const unmappedPhoto = unmappedCard.querySelectorAll('div')[1]
   expect(unmappedPhoto.style.backgroundImage).toBe('')
   expect(unmappedPhoto.className).toContain('from-brand-400')
 })

@@ -3,14 +3,14 @@ import { getMotionComponent } from '../lib/motionComponent'
 
 const VARIANTS = {
   primary: 'bg-brand-600 text-white shadow-brand-glow hover:bg-brand-700 focus-visible:ring-brand-500',
-  secondary: 'bg-white text-ink border border-gray-300 hover:bg-gray-50 focus-visible:ring-brand-500',
+  secondary: 'bg-surface text-ink border border-brand-200 hover:bg-surface-sunken focus-visible:ring-brand-500',
   ghost: 'text-brand-600 hover:bg-brand-50 focus-visible:ring-brand-500',
   danger: 'text-red-600 hover:bg-red-50 focus-visible:ring-red-500',
   accent: 'bg-accent-500 text-ink hover:bg-accent-400 focus-visible:ring-accent-500',
   // White pill/button sitting on a brand-colored background (hero banners, CTA panels)
   onBrand: 'bg-white text-brand-700 hover:bg-brand-50 focus-visible:ring-white',
   // Frosted floating control sitting directly on top of a photo (card corner actions)
-  overlay: 'bg-white/85 backdrop-blur-sm text-gray-700 hover:bg-white hover:text-red-600 focus-visible:ring-red-500',
+  overlay: 'bg-white/85 backdrop-blur-sm text-ink-muted hover:bg-white hover:text-red-600 focus-visible:ring-red-500',
 }
 
 const SHAPES = {

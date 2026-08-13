@@ -188,7 +188,7 @@ test('shows a loading message while the trip is still being fetched', async () =
   getTrip.mockReturnValue(new Promise(() => {}))
   renderAt(1)
 
-  expect(await screen.findByText(/loading trip/i)).toBeInTheDocument()
+  expect(await screen.findByText(/loading your trip/i)).toBeInTheDocument()
 })
 
 test('shows an error message with a way back, instead of a blank page, when the trip fails to load', async () => {
@@ -815,7 +815,7 @@ test('editing dates in-place re-fetches weather for the new range instead of lea
   renderAt(1)
   await waitFor(() => expect(getForecast).toHaveBeenCalledWith(51.5074, -0.1278, '2026-08-01', '2026-08-02'))
 
-  fireEvent.click(await screen.findByRole('button', { name: /^edit dates$/i }))
+  fireEvent.click((await screen.findAllByRole('button', { name: /^edit dates$/i })).at(0))
   fireEvent.change(screen.getByLabelText(/date depart/i), { target: { value: '2026-08-05' } })
   fireEvent.change(screen.getByLabelText(/date return/i), { target: { value: '2026-08-06' } })
   fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
@@ -1050,7 +1050,7 @@ test('"Edit Dates" opens the modal pre-filled with the trip\'s current dates', a
   getTrip.mockResolvedValue({ destination: 'Paris', start_date: '2026-08-01', end_date: '2026-08-10' })
   renderAt(1)
 
-  fireEvent.click(await screen.findByRole('button', { name: /^edit dates$/i }))
+  fireEvent.click((await screen.findAllByRole('button', { name: /^edit dates$/i })).at(0))
 
   expect(screen.getByRole('heading', { name: /edit dates/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/date depart/i)).toHaveValue('2026-08-01')
@@ -1062,13 +1062,13 @@ test('confirming the dates save calls updateTrip and the page reflects the new v
   updateTrip.mockResolvedValue({ destination: 'Paris', start_date: '2026-08-02', end_date: '2026-08-11' })
   renderAt(1)
 
-  fireEvent.click(await screen.findByRole('button', { name: /^edit dates$/i }))
+  fireEvent.click((await screen.findAllByRole('button', { name: /^edit dates$/i })).at(0))
   fireEvent.change(screen.getByLabelText(/date depart/i), { target: { value: '2026-08-02' } })
   fireEvent.change(screen.getByLabelText(/date return/i), { target: { value: '2026-08-11' } })
   fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
 
   await waitFor(() => expect(updateTrip).toHaveBeenCalledWith('1', { start_date: '2026-08-02', end_date: '2026-08-11' }))
-  expect(await screen.findByText(/2026-08-02.*2026-08-11/)).toBeInTheDocument()
+  await waitFor(() => expect(screen.getAllByText(/2026-08-02.*2026-08-11/).length).toBeGreaterThan(0))
 })
 
 test('saving the dates does not regenerate immediately — it opens the review prompt instead', async () => {
@@ -1076,7 +1076,7 @@ test('saving the dates does not regenerate immediately — it opens the review p
   updateTrip.mockResolvedValue({ destination: 'Paris', start_date: '2026-08-02', end_date: '2026-08-11' })
   renderAt(1)
 
-  fireEvent.click(await screen.findByRole('button', { name: /^edit dates$/i }))
+  fireEvent.click((await screen.findAllByRole('button', { name: /^edit dates$/i })).at(0))
   fireEvent.change(screen.getByLabelText(/date depart/i), { target: { value: '2026-08-02' } })
   fireEvent.change(screen.getByLabelText(/date return/i), { target: { value: '2026-08-11' } })
   fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
@@ -1089,7 +1089,7 @@ test('Cancel in the dates modal closes without saving', async () => {
   getTrip.mockResolvedValue({ destination: 'Paris', start_date: '2026-08-01', end_date: '2026-08-10' })
   renderAt(1)
 
-  fireEvent.click(await screen.findByRole('button', { name: /^edit dates$/i }))
+  fireEvent.click((await screen.findAllByRole('button', { name: /^edit dates$/i })).at(0))
   fireEvent.change(screen.getByLabelText(/date depart/i), { target: { value: '2026-08-02' } })
   fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }))
 
@@ -1102,7 +1102,7 @@ test('a rejected dates updateTrip shows a saving-failed message instead of crash
   updateTrip.mockRejectedValue(new Error('server error'))
   renderAt(1)
 
-  fireEvent.click(await screen.findByRole('button', { name: /^edit dates$/i }))
+  fireEvent.click((await screen.findAllByRole('button', { name: /^edit dates$/i })).at(0))
   fireEvent.change(screen.getByLabelText(/date depart/i), { target: { value: '2026-08-02' } })
   fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
 
@@ -1113,7 +1113,7 @@ test('an invalid date range (end before/equal to start) disables Save and never 
   getTrip.mockResolvedValue({ destination: 'Paris', start_date: '2026-08-01', end_date: '2026-08-10' })
   renderAt(1)
 
-  fireEvent.click(await screen.findByRole('button', { name: /^edit dates$/i }))
+  fireEvent.click((await screen.findAllByRole('button', { name: /^edit dates$/i })).at(0))
   fireEvent.change(screen.getByLabelText(/date depart/i), { target: { value: '2026-08-10' } })
   fireEvent.change(screen.getByLabelText(/date return/i), { target: { value: '2026-08-01' } })
 
@@ -1131,7 +1131,7 @@ test('clearing the start (or end) date field disables Save instead of allowing a
   getTrip.mockResolvedValue({ destination: 'Paris', start_date: '2026-08-01', end_date: '2026-08-10' })
   renderAt(1)
 
-  fireEvent.click(await screen.findByRole('button', { name: /^edit dates$/i }))
+  fireEvent.click((await screen.findAllByRole('button', { name: /^edit dates$/i })).at(0))
   fireEvent.change(screen.getByLabelText(/date depart/i), { target: { value: '' } })
 
   expect(screen.getByRole('button', { name: /^save$/i })).toBeDisabled()
@@ -1518,7 +1518,14 @@ test('moving the pointer over the popup chart follows it and shows that point\'s
   }
 })
 
-test('risk cards (e.g. Heavy Rain) are not clickable — no popup opens', async () => {
+// Regression test replacing a stale one that asserted the opposite: Heavy
+// Rain (and Flood/Beach Safety/Snow/Extreme Temp) already had an onClick
+// opening the same risk-info modal system as UV/Wind/Hiking/Visibility —
+// the old test only checked for the *absence of a button role*, which
+// passed by accident on an inaccessible div and masked exactly the
+// keyboard/screen-reader gap the design critique caught. All 9 risk cards
+// are real buttons now, matching this test's own name for the other 4.
+test('clicking the Heavy Rain card opens its detail modal, same as every other risk card', async () => {
   getTrip.mockResolvedValue({ destination: 'London', start_date: '2026-08-01', end_date: '2026-08-01' })
   geocodeCity.mockResolvedValueOnce([51.5074, -0.1278])
   getForecast.mockResolvedValueOnce([{
@@ -1545,10 +1552,10 @@ test('risk cards (e.g. Heavy Rain) are not clickable — no popup opens', async 
   renderAt(1)
   await expandForecast()
 
-  // findAllByText (not findByText) — "Heavy Rain" can legitimately appear
-  // more than once on the page (e.g. the risk card plus its detail modal).
-  await screen.findAllByText(/heavy rain/i)
-  expect(screen.queryByRole('button', { name: /heavy rain/i })).not.toBeInTheDocument()
+  fireEvent.click(await screen.findByRole('button', { name: /heavy rain/i }))
+
+  expect(await screen.findByRole('heading', { name: /heavy rain/i })).toBeInTheDocument()
+  expect(screen.getByText(/heavy rain probability/i)).toBeInTheDocument()
 })
 
 test('the review prompt offers Dates/Outbound/Return but not Hotel again, right after a hotel save', async () => {
@@ -1649,7 +1656,7 @@ test('the hero "Edit Dates" and hotel card "Edit Hotel" buttons have distinct ac
   })
   renderAt(1)
 
-  expect(await screen.findByRole('button', { name: /^edit dates$/i })).toBeInTheDocument()
+  expect((await screen.findAllByRole('button', { name: /^edit dates$/i })).at(0)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /^edit hotel$/i })).toBeInTheDocument()
 })
 
@@ -1662,8 +1669,11 @@ test('hero card shows the real trip name, destination, dates, and a status deriv
   await screen.findByText('Tokyo Trip')
   // Match the combined "start -> end" text so this only finds the hero's own
   // date-range line, not one of the day tabs (which now also render a single
-  // date each, e.g. "Day 1 - 2099-01-01").
-  expect(screen.getByText(/2099-01-01.*2099-01-10/)).toBeInTheDocument()
+  // date each, e.g. "Day 1 - 2099-01-01"). The hero renders this in two
+  // responsive places (mobile fallback + sm+ stub) — only one is ever
+  // visible at a given viewport, but jsdom doesn't evaluate the media query
+  // that makes that true, so both exist in the test DOM at once.
+  expect(screen.getAllByText(/2099-01-01.*2099-01-10/).length).toBeGreaterThan(0)
   expect(screen.getByText(/upcoming/i)).toBeInTheDocument()
 })
 
@@ -1828,6 +1838,8 @@ test('passes selected day activities to MapView as stops', async () => {
 
   await screen.findByText("British Museum")
 
+  fireEvent.click(screen.getByRole('button', { name: /show map/i }))
+
   expect(mockMapView).toHaveBeenLastCalledWith(
     expect.objectContaining({
       stops: [
@@ -1896,6 +1908,8 @@ test('updates MapView stops when switching days', async () => {
 
   await screen.findByText("Big Ben")
 
+  fireEvent.click(screen.getByRole('button', { name: /show map/i }))
+
   expect(mockMapView).toHaveBeenLastCalledWith(
     expect.objectContaining({
       stops: [
@@ -1942,6 +1956,8 @@ test('passes hotel location to MapView when hotel address exists', async () => {
 
   await screen.findByText("Park Hyatt Tokyo")
 
+  fireEvent.click(screen.getByRole('button', { name: /show map/i }))
+
   expect(mockMapView).toHaveBeenLastCalledWith(
     expect.objectContaining({
       hotel: {
@@ -1963,7 +1979,7 @@ test('does not pass hotel to MapView when hotel address is missing', async () =>
 
   renderAt(1)
 
-  await waitFor(() => expect(getTrip).toHaveBeenCalled())
+  fireEvent.click(await screen.findByRole('button', { name: /show map/i }))
 
   expect(mockMapView).toHaveBeenLastCalledWith(
     expect.objectContaining({

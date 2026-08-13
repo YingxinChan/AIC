@@ -13,12 +13,12 @@ function renderPage() {
 }
 
 describe('SubscriptionPage', () => {
-  test('renders the Plan heading', () => {
+  test('renders the fare-selection heading', () => {
     renderPage()
 
     expect(
       screen.getByRole('heading', {
-        name: 'Plan',
+        name: /which plan would you like/i,
       }),
     ).toBeInTheDocument()
   })

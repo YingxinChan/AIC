@@ -1,7 +1,7 @@
 import { useId } from 'react'
 
 export function inputClasses({ hasTrailing = false } = {}) {
-  return `w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-body-sm text-ink placeholder:text-gray-400 shadow-bento-sm transition focus:border-brand-400 focus:outline-none focus:ring-4 focus:ring-brand-500/15 disabled:bg-gray-50 ${hasTrailing ? 'pr-10' : ''}`
+  return `w-full rounded-xl border border-brand-100 bg-surface px-3.5 py-2.5 text-body-sm text-ink placeholder:text-ink-muted/60 shadow-bento-sm transition focus:border-brand-400 focus:outline-none focus:ring-4 focus:ring-brand-500/15 disabled:bg-surface-sunken ${hasTrailing ? 'pr-10' : ''}`
 }
 
 export function Field({ id, label, labelIcon, hint, error, required, className = '', children }) {
@@ -11,7 +11,7 @@ export function Field({ id, label, labelIcon, hint, error, required, className =
         <label htmlFor={id} className="field-label">
           {labelIcon}
           {label}
-          {required && <span className="text-red-500">*</span>}
+          {required && <span className="text-red-600">*</span>}
         </label>
       )}
       {children}

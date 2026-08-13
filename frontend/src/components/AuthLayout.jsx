@@ -1,53 +1,66 @@
 import { Outlet, useLocation, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { EASE_OUT } from '../lib/motion'
-import { DESTINATION_IMAGES } from '../features/trips/destinationImages'
 import logo from '../assets/logo.png'
 import NaviaWordmark from './NaviaWordmark'
+import SplitFlapText from './SplitFlapText'
+
+// Impeccable surface concept-seed roll (scope=surface, mode=operate):
+// assigned candidate — split-flap board header on a single centered ticket
+// card. Same visual technique the landing page's weather demo used, but
+// played once on mount instead of looping, since this surface is Operate
+// (get signed in) not Persuade (hold attention) — see SplitFlapText.jsx.
+const HEADER_WORDS = {
+  login: ['CHECKING IN…', 'WELCOME BACK'],
+  register: ['NEW BOOKING…', 'WELCOME ABOARD'],
+}
 
 export default function AuthLayout() {
   const location = useLocation()
-  return (
-    <div className="min-h-screen grid lg:grid-cols-2 bg-white">
-      <div
-        className="relative hidden lg:flex flex-col justify-between p-10 text-white bg-cover bg-center"
-        style={{ backgroundImage: `url(${DESTINATION_IMAGES.Prague.url})` }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-br from-brand-950/90 via-brand-900/70 to-purple-900/50" />
-        <Link to="/" className="relative flex items-center gap-2">
-          <span className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
-            <img src={logo} alt="" className="w-full h-full object-cover" />
-          </span>
-          <NaviaWordmark className="h-4 w-auto" accentClassName="text-brand-300" />
-        </Link>
-        <div className="relative max-w-md">
-          <p className="font-display font-bold text-4xl leading-tight">
-            Weather-perfect trips, without the guesswork.
-          </p>
-          <p className="mt-4 text-brand-100 text-body-lg">
-            83% of travelers have had a holiday ruined by bad weather. Navia makes sure yours isn't next.
-          </p>
-        </div>
-        <p className="relative text-xs text-brand-200">Aegis Innovation Competition 2026</p>
-      </div>
+  const isRegister = location.pathname.startsWith('/register')
 
-      <div className="flex items-center justify-center px-4 py-12 sm:px-8">
-        <motion.div
-          key={location.pathname}
-          className="w-full max-w-sm"
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={EASE_OUT}
-        >
-          <div className="mb-8 flex items-center gap-2 lg:hidden">
-            <span className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
-              <img src={logo} alt="" className="w-full h-full object-cover" />
-            </span>
-            <NaviaWordmark className="h-5 w-auto text-ink" />
+  return (
+    <div className="relative min-h-screen flex items-center justify-center px-4 py-12 bg-brand-950 overflow-hidden">
+      <div className="absolute inset-0 barcode-strip text-white/[0.11]" aria-hidden="true" />
+
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={EASE_OUT}
+        className="relative w-full max-w-sm"
+      >
+        <div className="bg-surface text-ink rounded-2xl shadow-ticket overflow-hidden">
+          <div className="flex flex-col items-center gap-3 px-8 pt-8 pb-6 text-center">
+            <Link to="/" className="flex items-center gap-2">
+              <span className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
+                <img src={logo} alt="" className="w-full h-full object-cover" />
+              </span>
+              <NaviaWordmark className="h-5 w-auto text-ink" />
+            </Link>
+            <SplitFlapText
+              words={isRegister ? HEADER_WORDS.register : HEADER_WORDS.login}
+              className="font-mono text-[11px] tracking-wide text-ink-muted uppercase"
+              aria-hidden="true"
+            />
           </div>
-          <Outlet />
-        </motion.div>
-      </div>
+
+          <div className="ticket-divider-h bg-surface" aria-hidden="true" />
+          <div className="px-8 pt-7 pb-8">
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={EASE_OUT}
+            >
+              <Outlet />
+            </motion.div>
+          </div>
+
+          <div className="h-8 barcode-strip text-brand-900/60" aria-hidden="true" />
+        </div>
+
+        <p className="mt-6 text-center text-xs text-brand-300">Aegis Innovation Competition 2026</p>
+      </motion.div>
     </div>
   )
 }

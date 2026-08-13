@@ -20,7 +20,7 @@ export default function Card({ as = 'div', hoverable = false, elevation = 'md', 
 
   return (
     <Component
-      className={`bg-white rounded-2xl border border-gray-200/80 ${ELEVATIONS[elevation]} transition-shadow ${hoverable ? `${HOVER_ELEVATIONS[elevation]} hover:border-brand-200` : ''} ${className}`}
+      className={`bg-surface rounded-2xl border border-brand-100 ${ELEVATIONS[elevation]} transition-shadow ${hoverable ? `${HOVER_ELEVATIONS[elevation]} hover:border-brand-200` : ''} ${className}`}
       {...hoverProps}
       {...rest}
     >

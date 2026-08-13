@@ -75,6 +75,18 @@ test('a celebration-variant toast gets the brand-gradient treatment instead of t
   expect(toast.closest('div')).toHaveClass('from-brand-600')
 })
 
+test('a swap-variant toast gets the reserved amber treatment, distinct from both everyday and celebration', async () => {
+  render(
+    <ToastProvider>
+      <Trigger message="Itinerary regenerated — 2 activities adjusted for weather" variant="swap" />
+    </ToastProvider>
+  )
+  fireEvent.click(screen.getByRole('button', { name: 'Fire' }))
+
+  const toast = await screen.findByText(/itinerary regenerated/i)
+  expect(toast.closest('div')).toHaveClass('bg-accent-500')
+})
+
 test('an unrecognized variant falls back to the everyday success style rather than rendering blank', async () => {
   render(
     <ToastProvider>

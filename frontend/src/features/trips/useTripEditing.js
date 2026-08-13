@@ -53,10 +53,16 @@ export function useTripEditing({ tripId, trip, setTrip, itinerary, setItinerary,
         if (data.days) {
           setItinerary(data)
           const swappedCount = data.days.flatMap(d => d.activities).filter(a => a.is_swapped).length
+          // The 'swap' toast variant is the one moment besides the REBOOKED
+          // stamp itself that earns the reserved amber treatment — this is
+          // the product's actual premise happening, not a routine save, so
+          // it shouldn't look like "Flight saved" in a slightly different
+          // font.
           toast.show(
             swappedCount > 0
               ? `Itinerary regenerated — ${swappedCount} ${swappedCount === 1 ? 'activity' : 'activities'} adjusted for weather`
-              : 'Itinerary regenerated'
+              : 'Itinerary regenerated',
+            swappedCount > 0 ? 'swap' : 'success'
           )
         } else {
           setItineraryNotice(data.message || 'Could not generate the itinerary.')
