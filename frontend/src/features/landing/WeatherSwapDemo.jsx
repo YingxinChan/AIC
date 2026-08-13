@@ -6,7 +6,7 @@ import { GRID_VARIANTS, ITEM_VARIANTS } from '../../lib/motion'
 
 const BULLETS = [
   { icon: CloudRain, text: 'Reads the hourly forecast, not just today’s headline' },
-  { icon: Shuffle, text: 'Swaps a rained-out activity for an indoor alternative nearby' },
+  { icon: Shuffle, text: 'Swaps an activity affected by bad weather for an indoor alternative nearby' },
   { icon: MapPinned, text: 'Keeps the rest of the day’s route efficient after the swap.' },
 ]
 
@@ -99,7 +99,7 @@ export default function WeatherSwapDemo() {
                 >
                   <div className="rounded-2xl bg-surface-sunken p-4">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-gray-900">Picasso Museum</span>
+                      <span className="font-medium text-ink">Picasso Museum</span>
                       <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
                         indoor
                       </span>
@@ -110,7 +110,7 @@ export default function WeatherSwapDemo() {
                   </div>
                   <div className="rounded-2xl bg-surface-sunken p-4">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-gray-900">Tapas dinner in El Born</span>
+                      <span className="font-medium text-ink">Tapas dinner in El Born</span>
                       <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
                         indoor
                       </span>
@@ -128,7 +128,7 @@ export default function WeatherSwapDemo() {
                 >
                   <div className="rounded-2xl bg-surface-sunken p-4">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-gray-900">Park Güell walking tour</span>
+                      <span className="font-medium text-ink">Park Güell walking tour</span>
                       <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-800">
                         outdoor
                       </span>
@@ -136,7 +136,7 @@ export default function WeatherSwapDemo() {
                   </div>
                   <div className="rounded-2xl bg-surface-sunken p-4">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-gray-900">Tapas dinner in El Born</span>
+                      <span className="font-medium text-ink">Tapas dinner in El Born</span>
                       <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
                         indoor
                       </span>

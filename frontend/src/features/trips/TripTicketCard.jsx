@@ -21,7 +21,7 @@ export default function TripTicketCard({ trip, onDelete, deleting, daysUntilLabe
       as={Link}
       to={`/trips/${trip.id}`}
       hoverable
-      className={`group relative flex h-56 overflow-hidden !border-brand-100 !shadow-ticket hover:!border-brand-300 ${className}`}
+      className={`group relative flex h-48 max-w-xs mx-auto overflow-hidden !border-brand-100 !shadow-ticket hover:!border-brand-300 ${className}`}
     >
       <div className="relative flex-1 min-w-0 overflow-hidden">
         <div

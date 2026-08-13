@@ -28,7 +28,7 @@ import { getTrip } from './tripsApi'
 import { getItinerary } from './itineraryApi'
 import { tripStatus, STATUS_STYLES } from './tripStatus'
 import { geocodeCity, geocodeAddress } from '../../lib/geocode'
-import { capitalize } from '../../lib/format'
+import { capitalize, cityCode, cityOnly } from '../../lib/format'
 import { splitTimeSlot } from '../../lib/timeSlot'
 import { getForecast, getHourlyForecast } from '../weather/weatherApi'
 import { getPendingReview, clearPendingReview } from '../../lib/pendingReview'
@@ -359,7 +359,7 @@ const bandForValue = (bands, v) => {
   return match;
 };
 
-const Sparkline = ({ data, unit = '', currentTime = null, color = '#6366f1', bands = null, width = 280, height = 90 }) => {
+const Sparkline = ({ data, unit = '', currentTime = null, color = '#3A5080', bands = null, width = 280, height = 90 }) => {
   const areaGradientId = useId();
   const lineGradientId = useId();
   const svgRef = useRef(null);
@@ -444,7 +444,7 @@ const Sparkline = ({ data, unit = '', currentTime = null, color = '#6366f1', ban
           </defs>
           {ticks.map((t) => {
             const y = top + usableHeight - (t / axisMax) * usableHeight;
-            return <line key={t} x1="0" y1={y} x2={width} y2={y} stroke="currentColor" strokeWidth="1" strokeDasharray="3 3" className="text-gray-200" />;
+            return <line key={t} x1="0" y1={y} x2={width} y2={y} stroke="currentColor" strokeWidth="1" strokeDasharray="3 3" className="text-brand-100" />;
           })}
           {!bands && <path d={areaPath} fill={`url(#${areaGradientId})`} />}
           <path d={linePath} fill="none" stroke={bands ? `url(#${lineGradientId})` : color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -452,12 +452,12 @@ const Sparkline = ({ data, unit = '', currentTime = null, color = '#6366f1', ban
             <>
               <line
                 x1={points[activeIndex][0]} y1={0} x2={points[activeIndex][0]} y2={height}
-                stroke={hoverIndex !== null ? '#9ca3af' : colorForIndex(activeIndex)} strokeWidth="1"
+                stroke={hoverIndex !== null ? '#8FA3CB' : colorForIndex(activeIndex)} strokeWidth="1"
                 strokeDasharray={hoverIndex !== null ? undefined : '3 3'}
               />
               <circle
                 cx={points[activeIndex][0]} cy={points[activeIndex][1]} r="4"
-                fill={hoverIndex !== null ? '#374151' : colorForIndex(activeIndex)}
+                fill={hoverIndex !== null ? '#5B6478' : colorForIndex(activeIndex)}
                 stroke="white" strokeWidth="1.5"
               />
             </>
@@ -466,7 +466,7 @@ const Sparkline = ({ data, unit = '', currentTime = null, color = '#6366f1', ban
         {/* Banded metrics (UV) show WHO level names here instead of numbers —
             unit shown once on the top tick otherwise, matching how the
             reference charts label their y-axis. */}
-        <div className="h-24 flex flex-col justify-between text-[10px] text-gray-400 py-1 text-right">
+        <div className="h-24 flex flex-col justify-between text-[10px] text-ink-muted py-1 text-right">
           {[...ticks].reverse().map((t, i) => (
             <span key={t} style={bands ? { color: bandForValue(bands, t).color } : undefined}>
               {bands ? bandForValue(bands, t).level : `${formatAxisTick(t)}${i === 0 && unit ? ` ${unit}` : ''}`}
@@ -474,7 +474,7 @@ const Sparkline = ({ data, unit = '', currentTime = null, color = '#6366f1', ban
           ))}
         </div>
       </div>
-      <div className="relative h-4 text-xs text-gray-400">
+      <div className="relative h-4 text-xs text-ink-muted">
         {axisLabels.map(({ idx, label }) => (
           <span key={label} className="absolute -translate-x-1/2" style={{ left: `${(points[idx][0] / width) * 100}%` }}>
             {label}
@@ -482,7 +482,7 @@ const Sparkline = ({ data, unit = '', currentTime = null, color = '#6366f1', ban
         ))}
       </div>
       {activeIndex !== null && (
-        <div className="text-xs font-medium" style={{ color: hoverIndex !== null ? '#374151' : colorForIndex(activeIndex) }}>
+        <div className="text-xs font-medium" style={{ color: hoverIndex !== null ? '#5B6478' : colorForIndex(activeIndex) }}>
           {hoverIndex !== null ? formatHour(data[activeIndex].time) : 'Now'} · {formatAxisTick(data[activeIndex].value)}{unit ? ` ${unit}` : ''}
         </div>
       )}
@@ -886,7 +886,16 @@ export default function ItineraryPage() {
         // of the skyline visible regardless of vertical crop position.
         <div className="max-w-6xl mx-auto">
           <div className="rounded-3xl shadow-ticket overflow-hidden">
-            <div className="grid grid-cols-[auto_1fr_auto]">
+            {/* grid-cols-1 on mobile, not just grid-cols-[auto_1fr_auto]
+                unconditionally — the side barcode and stub are both hidden
+                below sm, and CSS Grid auto-placement skips display:none
+                items entirely rather than leaving their track empty, so the
+                lone visible item (the photo) shifted into the first track
+                (auto, sized to its own content) instead of the middle 1fr
+                track, leaving a large unfilled gap on the right. A real bug,
+                not just unused markup — only showed up on an actual mobile
+                render, not in code review. */}
+            <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr_auto]">
               {/* Barcode on its own solid-backed strip, like a real boarding
                   pass prints it on paper — not textured directly over the
                   photo, which just reads as a smear across the image. */}
@@ -925,8 +934,8 @@ export default function ItineraryPage() {
                   {status && <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_STYLES[status]}`}>{status}</span>}
                 </div>
                 <div className="relative w-full">
-                  <p className="flex items-center gap-1.5 text-sm text-brand-200"><MapPin size={14} /> {capitalize(destination)}</p>
-                  <h2 className="font-display text-4xl sm:text-5xl font-bold mt-1 leading-none">{capitalize(trip.name || `${destination} Trip`)}</h2>
+                  <p className="flex items-center gap-1.5 text-sm text-brand-200"><MapPin size={14} /> {cityOnly(destination)}</p>
+                  <h2 className="font-display text-4xl sm:text-5xl font-bold mt-1 leading-none">{capitalize(trip.name || `${cityOnly(destination)} Trip`)}</h2>
                   {/* The stub (right) states dates on sm+; this is the
                       mobile-only fallback, since the stub hides there —
                       never both at once. */}
@@ -951,7 +960,8 @@ export default function ItineraryPage() {
                 <div className="flex-1 p-4 space-y-3">
                   <div>
                     <p className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-wide text-ink-muted"><MapPin size={10} /> Destination</p>
-                    <p className="font-display font-bold text-xl text-ink leading-none mt-0.5 truncate uppercase">{destination}</p>
+                    <p className="font-display font-bold text-xl text-ink leading-none mt-0.5">{cityCode(destination)}</p>
+                    <p className="font-mono text-[10px] uppercase tracking-wide text-ink-muted mt-0.5 truncate">{capitalize(destination)}</p>
                   </div>
                   {trip.start_date && trip.end_date && (
                     <>
@@ -1337,14 +1347,14 @@ export default function ItineraryPage() {
                     <p className="text-ink-muted">
                       Informed by rainfall, temperature, humidity, pressure,
                       wind, solar radiation, this destination, and the time
-                      of year — 17 forecast and seasonal signals in total.
+                      of year, 17 forecast and seasonal signals in total.
                     </p>
                     {/* Kept deliberately — the plain-language sentence above
                         is what a traveler needs, but the model name matters
                         for competition judges assessing the ML pipeline, so
                         it stays as a quiet footnote rather than the primary
                         message (not removed, per explicit product decision). */}
-                    <p className="font-mono text-[11px] tracking-wide uppercase text-ink-muted/70">
+                    <p className="font-mono text-[11px] tracking-wide uppercase text-ink-muted">
                       Model &middot; LightGBM Classifier
                     </p>
                   </div>
@@ -1457,7 +1467,15 @@ export default function ItineraryPage() {
 
       {/* 5D: Trip rail (left) + day/forecast/activities pane (right) */}
       {trip && (
-      <div className="grid gap-6 lg:grid-cols-3 lg:items-start">
+      /* grid-cols-1 explicitly, not just lg:grid-cols-3 — Tailwind's
+         grid-cols-N generates minmax(0,1fr) tracks, which force
+         min-width:0 on the grid item. With no base grid-cols at all,
+         mobile falls back to an implicit auto-sized track with no such
+         clamp, so this row's own content (the day-selector strip, flight
+         rows) could size the whole grid — and therefore the whole page —
+         wider than the viewport instead of wrapping/clipping. This was the
+         actual cause of the page-wide horizontal overflow on mobile. */
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-start">
 
         <TripSidebar
           trip={trip}
@@ -1993,7 +2011,7 @@ export default function ItineraryPage() {
                           <button
                             type="button"
                             onClick={() => openEditActivityModal(activity)}
-                            className="text-ink-muted hover:text-brand-600"
+                            className="text-ink-muted hover:text-brand-600 p-2.5 -m-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                             aria-label={`Edit ${activity.name}`}
                           >
                             <Pencil size={14} />
@@ -2001,7 +2019,7 @@ export default function ItineraryPage() {
                           <button
                             type="button"
                             onClick={() => setActivityPendingDelete(activity)}
-                            className="text-ink-muted hover:text-red-600"
+                            className="text-ink-muted hover:text-red-600 p-2.5 -m-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                             aria-label={`Delete ${activity.name}`}
                           >
                             <Trash2 size={14} />

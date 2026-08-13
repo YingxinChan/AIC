@@ -7,12 +7,14 @@ import {
 } from 'lucide-react'
 import ErrorMessage from '../../components/ErrorMessage'
 import HotelSearchInput from '../../components/HotelSearchInput'
+import CitySearchInput from '../../components/CitySearchInput'
 import Input, { Textarea } from '../../components/Input'
 import Button from '../../components/Button'
 import { useToast } from '../../components/Toast'
 import { SPRING_SOFT, SPRING_POP, GRID_VARIANTS, ITEM_VARIANTS } from '../../lib/motion'
 import { createTrip, selectFlight } from './tripsApi'
 import { useTripDraft } from './useTripDraft'
+import { cityOnly } from '../../lib/format'
 
 // One question at a time rather than one long form. Required steps
 // (origin/destination/dates) gate Continue on stepValid; optional steps
@@ -133,7 +135,7 @@ export default function NewTripPage() {
     setErrorMessage('')
     try {
       const trip = await createTrip({
-        name: `${draft.destination} Trip`,
+        name: `${cityOnly(draft.destination)} Trip`,
         destination: draft.destination,
         origin: draft.origin,
         start_date: draft.startDate,
@@ -175,7 +177,15 @@ export default function NewTripPage() {
       <h1 className="heading-1">Plan Your Trip!</h1>
       <p className="text-body-sm text-ink-muted mt-1 mb-6">Just a few quick questions and we'll set up your trip.</p>
 
-      <form onSubmit={handleSubmit} className="rounded-2xl bg-surface shadow-ticket overflow-hidden flex">
+      {/* No overflow-hidden on the form — it was clipping the
+          CitySearchInput dropdown against the card's bottom edge whenever
+          the suggestion list ran past it. The content pane has no
+          background of its own to round (it just shows the form's own
+          bg-surface through), so only the barcode strip — the one child
+          with a distinct background that would otherwise show square
+          corners past the form's rounded ones — rounds its own right-side
+          corners below. */}
+      <form onSubmit={handleSubmit} className="rounded-2xl bg-surface shadow-ticket flex">
       <div className="p-6 sm:p-8 flex-1 min-w-0">
         {step > 0 && (
           <button type="button" onClick={back} className="flex items-center gap-1 text-sm text-ink-muted hover:text-ink font-medium mb-3">
@@ -240,13 +250,12 @@ export default function NewTripPage() {
             {STEPS[step] === 'origin' && (
               <div className="space-y-4">
                 <p className="heading-3">Where are you flying from?</p>
-                <Input
+                <CitySearchInput
                   id="origin"
                   label="Departure"
                   labelIcon={<Plane size={16} className="text-brand-600" />}
-                  type="text"
                   value={draft.origin || ''}
-                  onChange={(e) => updateDraft({ origin: e.target.value })}
+                  onChange={(city) => updateDraft({ origin: city })}
                   placeholder="e.g. London, UK"
                   autoFocus
                   required
@@ -257,13 +266,12 @@ export default function NewTripPage() {
             {STEPS[step] === 'destination' && (
               <div className="space-y-4">
                 <p className="heading-3">Where are you headed?</p>
-                <Input
+                <CitySearchInput
                   id="destination"
                   label="Destination"
                   labelIcon={<MapPin size={16} className="text-brand-600" />}
-                  type="text"
                   value={draft.destination || ''}
-                  onChange={(e) => updateDraft({ destination: e.target.value })}
+                  onChange={(city) => updateDraft({ destination: city })}
                   placeholder="e.g. Berlin, Germany"
                   autoFocus
                   required
@@ -431,7 +439,7 @@ export default function NewTripPage() {
       </div>
       {/* Barcode on its own solid-backed side strip, like a real boarding
           pass, rather than a horizontal band across the bottom. */}
-      <div className="w-6 sm:w-7 shrink-0 barcode-strip-v text-brand-900/60 bg-surface-sunken" aria-hidden="true" />
+      <div className="w-6 sm:w-7 shrink-0 rounded-r-2xl barcode-strip-v text-brand-900/60 bg-surface-sunken" aria-hidden="true" />
       </form>
     </div>
   )

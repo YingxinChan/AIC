@@ -37,7 +37,7 @@ test('moves focus into the dialog on open, onto its first focusable element', ()
   )
   // The close (X) button is the dialog's first focusable element, ahead of
   // the "Save" button in the body.
-  expect(screen.getByRole('button', { name: '' })).toHaveFocus()
+  expect(screen.getByRole('button', { name: 'Close' })).toHaveFocus()
 })
 
 test('restores focus to whatever triggered the modal once it closes', () => {
@@ -70,7 +70,7 @@ test('Tab from the last focusable element wraps back to the first, trapping focu
       <button type="button">Save</button>
     </Modal>
   )
-  const closeButton = screen.getByRole('button', { name: '' })
+  const closeButton = screen.getByRole('button', { name: 'Close' })
   const saveButton = screen.getByRole('button', { name: 'Save' })
 
   saveButton.focus()

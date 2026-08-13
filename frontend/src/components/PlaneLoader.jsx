@@ -21,9 +21,15 @@ export default function PlaneLoader({ label, dark = false, className = '' }) {
           <Plane size={20} className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rotate-45 ${planeClass}`} aria-hidden="true" />
         ) : (
           <motion.div
-            className="absolute top-1/2 -translate-y-1/2"
-            initial={{ left: '-10%' }}
-            animate={{ left: '105%' }}
+            // x (translateX) instead of the `left` property — left forces a
+            // layout recalculation every frame for as long as this loader is
+            // mounted; x is compositor-only. -16px/168px match the old
+            // -10%/105% of this track's 160px (w-40) width in pixels, since
+            // motion's x-percentages are relative to the plane icon's own
+            // size, not the track's.
+            className="absolute left-0 top-1/2 -translate-y-1/2"
+            initial={{ x: -16 }}
+            animate={{ x: 168 }}
             transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
             aria-hidden="true"
           >

@@ -46,7 +46,7 @@ export default function LoginPage() {
     <div>
       <div className="mb-8">
         <h1 className="heading-1">Welcome back</h1>
-        <p className="text-body-sm text-ink-muted mt-1.5">Sign in to plan your weather-synced itinerary</p>
+        <p className="text-body-sm text-ink-muted mt-1.5">Sign in and let the forecast guide your trip</p>
       </div>
 
       {error && <ErrorMessage message={error} />}

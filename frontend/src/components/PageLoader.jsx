@@ -17,9 +17,14 @@ export default function PageLoader({ label = 'Loading…' }) {
           <Plane size={32} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rotate-45 text-brand-600" aria-hidden="true" />
         ) : (
           <motion.div
-            className="absolute top-1/2 -translate-y-1/2"
-            initial={{ left: '-10%' }}
-            animate={{ left: '105%' }}
+            // x (translateX) instead of the `left` property — left forces a
+            // layout recalculation every frame for as long as this loader is
+            // mounted; x is compositor-only. Pixel values calibrated to the
+            // sm:w-80 (320px) track since motion's x-percentages are
+            // relative to the plane icon itself, not the track.
+            className="absolute left-0 top-1/2 -translate-y-1/2"
+            initial={{ x: -32 }}
+            animate={{ x: 336 }}
             transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
             aria-hidden="true"
           >

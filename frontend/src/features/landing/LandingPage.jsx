@@ -61,7 +61,7 @@ const FEATURE_LIST_VARIANTS = {
 
 const CONTROLS = [
   { tag: 'SET', title: 'Tell us where and when', description: 'Pick your destination and travel dates. Navia takes it from there.' },
-  { tag: 'READ', title: 'Navia reads the hourly forecast', description: 'Hourly weather for every day of your trip, turned into real risk scores for rain, heat, and wind — not just a daily summary.' },
+  { tag: 'READ', title: 'Navia reads the hourly forecast', description: 'Hourly weather for every day of your trip, turned into real risk scores for rain, heat, and wind, rather than just a daily summary.' },
   { tag: 'REFLOW', title: 'Your board updates itself', description: 'If rain moves in, indoor and outdoor activities swap automatically. No manual re-planning.' },
 ]
 
@@ -173,7 +173,7 @@ function TicketArtifact() {
             </div>
             <p className="mt-1.5 font-display font-bold">Matisse Museum <span className="font-sans font-normal text-ink-muted">(Indoor)</span></p>
             <p className="mt-2 text-xs text-ink-muted leading-relaxed">
-              Rain expected 2pm — indoor swap keeps your afternoon on track.
+              Rain expected 2pm, so this swap keeps your afternoon on track.
             </p>
           </div>
 
@@ -278,7 +278,7 @@ export default function LandingPage() {
                 Navia reissues them.
               </motion.h1>
               <motion.p variants={ITEM_VARIANTS} className="mt-6 max-w-lg text-brand-100 text-body-lg">
-                Every day of your trip is a ticket. When the forecast turns, Navia reissues it — a new activity, the same plan, one stated reason.
+                Every day of your trip is a ticket. When the forecast turns, Navia reissues it with a new activity, the same plan, and one stated reason.
               </motion.p>
               <motion.div variants={ITEM_VARIANTS} className="mt-9">
                 <Button to="/register" size="lg" variant="accent" shape="pill">
@@ -314,7 +314,7 @@ export default function LandingPage() {
               </div>
               <div>
                 <p className="font-display font-extrabold text-3xl text-brand-700"><StatCounter value={85} /></p>
-                <p className="mt-1.5 text-sm text-ink-muted">want automatic indoor ⇄ outdoor swaps</p>
+                <p className="mt-1.5 text-sm text-ink-muted">want or would consider automatic indoor ⇄ outdoor swaps</p>
               </div>
               <div>
                 <p className="font-display font-extrabold text-3xl text-brand-700"><StatCounter value={73} /></p>
@@ -377,6 +377,8 @@ export default function LandingPage() {
               <img
                 src={image.url}
                 alt={city}
+                loading="lazy"
+                decoding="async"
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-brand-950/85 via-brand-950/0 to-transparent" />
@@ -413,7 +415,7 @@ export default function LandingPage() {
                 <span className="w-11 h-11 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center">
                   <Icon size={20} />
                 </span>
-                <span className="font-mono text-[11px] text-ink-muted/50">{String(index + 1).padStart(2, '0')}</span>
+                <span className="font-mono text-[11px] text-ink-muted">{String(index + 1).padStart(2, '0')}</span>
               </div>
               <h3 className="heading-3 mt-4">{title}</h3>
               <p className="mt-1.5 text-body-sm text-ink-muted">{description}</p>
@@ -430,7 +432,7 @@ export default function LandingPage() {
           <div>
             <h2 className="heading-1">The missing layer between booking and weather</h2>
             <p className="mt-4 text-ink-muted text-body-lg">
-              Booking platforms and weather apps have never talked to each other. Navia is the layer that watches the forecast and rewrites the plan itself — the only row on this board that ever changes.
+              Booking platforms and weather apps have never talked to each other. Navia is the layer that watches the forecast and rewrites the plan itself, the only row on this board that ever changes.
             </p>
           </div>
           <Board label="Who actually reflows your plan" colLabels={['—', 'Approach', 'Status']}>
@@ -469,7 +471,7 @@ export default function LandingPage() {
       <footer className="border-t border-brand-100 py-10">
         <div className="max-w-6xl mx-auto px-4 flex flex-col items-center gap-2 text-center">
           <NaviaWordmark className="h-4 w-auto text-ink" />
-          <p className="text-body-sm text-ink-muted">Weather-perfect trips, without the guesswork.</p>
+          <p className="text-body-sm text-ink-muted">Trips planned around the weather, without the guesswork.</p>
           <p className="text-body-sm text-ink-muted">Aegis Innovation Competition 2026</p>
         </div>
       </footer>

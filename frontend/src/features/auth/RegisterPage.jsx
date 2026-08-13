@@ -49,7 +49,7 @@ export default function RegisterPage() {
     <div>
       <div className="mb-8">
         <h1 className="heading-1">Create your account</h1>
-        <p className="text-body-sm text-ink-muted mt-1.5">Start planning weather-perfect trips today</p>
+        <p className="text-body-sm text-ink-muted mt-1.5">Start planning and let the forecast guide your trip</p>
       </div>
 
       {error && <ErrorMessage message={error} />}

@@ -12,7 +12,7 @@ import { GRID_VARIANTS, ITEM_VARIANTS } from '../../lib/motion'
 import { WeatherIcon } from '../../lib/weatherDisplay'
 import { useTrips } from './useTrips'
 import { tripStatus } from './tripStatus'
-import { capitalize, cityCode } from '../../lib/format'
+import { cityCode, cityOnly } from '../../lib/format'
 import TripTicketCard from './TripTicketCard'
 import { geocodeCity } from '../../lib/geocode'
 import { getForecast } from '../weather/weatherApi'
@@ -157,7 +157,7 @@ export default function DashboardPage() {
               ) : (
                 <>
                   <p className="font-mono text-[11px] tracking-wide uppercase text-brand-300">{isOngoing ? 'Your current trip' : 'Your next adventure'}</p>
-                  <h2 className="font-display text-5xl sm:text-6xl font-bold text-white mt-1.5 leading-none">{capitalize(featuredTrip.destination)}</h2>
+                  <h2 className="font-display text-5xl sm:text-6xl font-bold text-white mt-1.5 leading-none">{cityOnly(featuredTrip.destination)}</h2>
                   <p className="flex items-center gap-1.5 text-sm text-brand-100 mt-2 font-mono">
                     <Calendar size={14} /> {featuredTrip.start_date} &rarr; {featuredTrip.end_date}
                   </p>
@@ -193,7 +193,7 @@ export default function DashboardPage() {
             >
               <div>
                 <p className="font-mono text-[11px] tracking-wide uppercase text-ink-muted">{isOngoing ? "Your current trip's forecast at a glance" : "Your next trip's forecast at a glance"}</p>
-                <h3 className="font-display font-semibold text-ink text-lg mt-1">{capitalize(featuredTrip.destination)}</h3>
+                <h3 className="font-display font-semibold text-ink text-lg mt-1">{cityOnly(featuredTrip.destination)}</h3>
                 <p className="text-sm text-ink-muted mt-0.5">
                   {isOngoing
                     ? 'Enjoy your trip!'
@@ -222,17 +222,17 @@ export default function DashboardPage() {
                           {new Date(`${day.date}T00:00:00Z`).toLocaleDateString(undefined, { weekday: 'short', timeZone: 'UTC' })}
                         </span>
                         <WeatherIcon condition={day.condition} timeStr={`${day.date}T12:00:00`} className="w-6 h-6 text-brand-500" />
-                        {day.temp_max != null && day.temp_min != null && (
-                          <span className="text-[11px] text-ink-muted whitespace-nowrap">
-                            {Math.round(day.temp_max)}&deg;/{Math.round(day.temp_min)}&deg;
-                          </span>
-                        )}
                         {day.condition && (
                           // break-words needs a constrained width to actually
                           // wrap rather than just growing — without w-full it
                           // sizes to its own content and single long words
                           // like "Thunderstorm" overflow past the chip edges.
-                          <span className="w-full text-[10px] text-ink-muted/80 text-center leading-tight capitalize break-words">{day.condition}</span>
+                          <span className="w-full text-[10px] text-ink-muted text-center leading-tight capitalize break-words">{day.condition}</span>
+                        )}
+                        {day.temp_max != null && day.temp_min != null && (
+                          <span className="text-[11px] text-ink-muted whitespace-nowrap">
+                            {Math.round(day.temp_max)}&deg;/{Math.round(day.temp_min)}&deg;
+                          </span>
                         )}
                       </div>
                     ))}
@@ -293,7 +293,7 @@ export default function DashboardPage() {
                 to="/trips"
                 hoverable
                 variants={ITEM_VARIANTS}
-                className="group flex h-56 w-40 shrink-0 snap-start flex-col items-center justify-center gap-2 border-dashed !border-brand-200 text-ink-muted hover:!border-brand-300 hover:text-brand-600"
+                className="group flex h-48 w-40 shrink-0 snap-start flex-col items-center justify-center gap-2 border-dashed !border-brand-200 text-ink-muted hover:!border-brand-300 hover:text-brand-600"
               >
                 <span className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-sunken transition-colors group-hover:bg-brand-50">
                   <ChevronRight size={16} />

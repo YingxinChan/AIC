@@ -167,7 +167,7 @@ export default function TripSidebar({
               <h3 className="font-mono text-[11px] tracking-wide uppercase text-ink-muted flex items-center gap-1.5">
                 <Building2 size={12} className="text-brand-600" /> Hotel
               </h3>
-              <button type="button" onClick={onEditHotel} className="text-xs text-brand-600 font-medium hover:text-brand-700">
+              <button type="button" onClick={onEditHotel} className="text-xs text-brand-600 font-medium hover:text-brand-700 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2">
                 {hasHotel ? 'Edit Hotel' : 'Add Hotel'}
               </button>
             </div>

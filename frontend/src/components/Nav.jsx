@@ -60,9 +60,9 @@ export default function Nav() {
             whileTap={{ scale: 0.9 }}
             to="/account"
             aria-label="Account"
-            className={`ml-1 w-9 h-9 rounded-full border flex items-center justify-center transition-colors ${isAccount ? 'border-white text-white' : 'border-brand-700 text-brand-300 hover:text-white hover:border-brand-500'}`}
+            className={`ml-1 w-11 h-11 rounded-full border flex items-center justify-center transition-colors ${isAccount ? 'border-white text-white' : 'border-brand-700 text-brand-300 hover:text-white hover:border-brand-500'}`}
           >
-            <User size={16} />
+            <User size={18} />
           </MotionLink>
         </div>
       </div>

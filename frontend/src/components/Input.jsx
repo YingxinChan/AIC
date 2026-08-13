@@ -30,7 +30,7 @@ export default function Input({ id, label, labelIcon, hint, error, required, cla
   const fieldId = id || generatedId
   return (
     <Field id={fieldId} label={label} labelIcon={labelIcon} hint={hint} error={error} required={required} className={className}>
-      <input id={fieldId} className={inputClasses()} aria-invalid={!!error} {...rest} />
+      <input id={fieldId} className={inputClasses()} aria-invalid={!!error} required={required} aria-required={required} {...rest} />
     </Field>
   )
 }
@@ -40,7 +40,7 @@ export function Textarea({ id, label, labelIcon, hint, error, required, classNam
   const fieldId = id || generatedId
   return (
     <Field id={fieldId} label={label} labelIcon={labelIcon} hint={hint} error={error} required={required} className={className}>
-      <textarea id={fieldId} rows={rows} className={inputClasses()} aria-invalid={!!error} {...rest} />
+      <textarea id={fieldId} rows={rows} className={inputClasses()} aria-invalid={!!error} required={required} aria-required={required} {...rest} />
     </Field>
   )
 }
@@ -50,7 +50,7 @@ export function Select({ id, label, labelIcon, hint, error, required, className 
   const fieldId = id || generatedId
   return (
     <Field id={fieldId} label={label} labelIcon={labelIcon} hint={hint} error={error} required={required} className={className}>
-      <select id={fieldId} className={inputClasses()} aria-invalid={!!error} {...rest}>
+      <select id={fieldId} className={inputClasses()} aria-invalid={!!error} required={required} aria-required={required} {...rest}>
         {children}
       </select>
     </Field>
