@@ -80,8 +80,7 @@ def _sunrise_sunset(
     unlike every other field in this file, it needs no historical weather
     data at all, just the standard solar-position formulas (declination +
     hour angle) astral implements; Open-Meteo's own sunrise/sunset uses the
-    same family of equations internally. See
-    docs/CLIMATOLOGY_SUNRISE_SUNSET.md for the full writeup. Returns
+    same family of equations internally. Returns
     (None, None) for locations experiencing polar day/night on this date,
     where "sunrise"/"sunset" aren't meaningful concepts."""
     try:
