@@ -193,7 +193,12 @@ class ExtremeHeatRule(WeatherRiskRule):
     id = "extreme_heat"
     activity_tag = "strenuous_outdoor"
     avoid_phrase = "strenuous outdoor activities (long hikes, extended walking tours)"
-    TEMP_MAX_THRESHOLD_C = 35  # TODO: confirm with team
+    # Met Office's own "Extreme Heat" NSWWS warning tier (Amber warnings are
+    # issued around temperatures peaking near 38°C) — not the UK heatwave
+    # threshold (25-28°C, a lower/regional figure for a different alert),
+    # and not evidence for anywhere outside the UK, but a real cited number
+    # rather than the previous unconfirmed placeholder.
+    TEMP_MAX_THRESHOLD_C = 38
 
     def day_triggers(self, forecast_day: dict) -> bool:
         temp_max = forecast_day.get("temp_max")
@@ -363,12 +368,14 @@ def _score_cold_from_temp_min(temp_min: float | None) -> float:
 
 
 def _score_heat_from_temp_max(temp_max: float | None) -> float:
-    """Mirrors _score_cold_from_temp_min — temp_max >= 30 advisory, >= 35
-    swap (the existing ExtremeHeatRule's threshold, now the swap tier with a
-    new advisory tier below it)."""
+    """temp_max >= 30 advisory (loosely above the Met Office's 25-28°C UK
+    heatwave range — a flat pan-European rounding, since this scoring
+    engine isn't region-specific). temp_max >= 38 swap — the Met Office's
+    own "Extreme Heat" Amber NSWWS warning tier (ExtremeHeatRule.
+    TEMP_MAX_THRESHOLD_C above), not the lower heatwave figure."""
     if temp_max is None:
         return 0
-    if temp_max >= 35:
+    if temp_max >= 38:
         return 80
     if temp_max >= 30:
         return 50

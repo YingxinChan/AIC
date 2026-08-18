@@ -200,9 +200,9 @@ def test_wind_rule_only_fires_for_wind_exposed_activities_on_strong_wind():
 
 def test_extreme_heat_rule_only_fires_for_strenuous_outdoor_above_threshold():
     rule = ExtremeHeatRule()
-    assert rule.evaluate({"temp_max": 36}, _activity("strenuous_outdoor")) is not None
+    assert rule.evaluate({"temp_max": 39}, _activity("strenuous_outdoor")) is not None
     assert rule.evaluate({"temp_max": 30}, _activity("strenuous_outdoor")) is None
-    assert rule.evaluate({"temp_max": 36}, _activity("beach")) is None
+    assert rule.evaluate({"temp_max": 39}, _activity("beach")) is None
 
 
 def test_extreme_cold_rule_only_fires_for_strenuous_outdoor_below_threshold():
@@ -304,8 +304,8 @@ def test_score_cold_boundaries():
 def test_score_heat_boundaries():
     assert score_heat({"temp_max": 29.9}) == 0
     assert score_heat({"temp_max": 30}) == 50
-    assert score_heat({"temp_max": 34.9}) == 50
-    assert score_heat({"temp_max": 35}) == 80
+    assert score_heat({"temp_max": 37.9}) == 50
+    assert score_heat({"temp_max": 38}) == 80
     assert score_heat({"temp_max": None}) == 0
 
 
