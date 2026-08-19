@@ -199,7 +199,7 @@ export default function LandingPage() {
             <div className="w-9 h-9 rounded-lg overflow-hidden flex items-center justify-center">
               <img src={logo} alt="" className="w-full h-full object-cover" />
             </div>
-            <NaviaWordmark className="h-4 w-auto text-ink" />
+            <NaviaWordmark className="h-4 w-auto" />
           </div>
           <nav className="hidden md:flex items-center gap-1">
             {NAV_LINKS.map((link) => (
@@ -470,7 +470,7 @@ export default function LandingPage() {
 
       <footer className="border-t border-brand-100 py-10">
         <div className="max-w-6xl mx-auto px-4 flex flex-col items-center gap-2 text-center">
-          <NaviaWordmark className="h-4 w-auto text-ink" />
+          <NaviaWordmark className="h-4 w-auto" />
           <p className="text-body-sm text-ink-muted">Trips planned around the weather, without the guesswork.</p>
           <p className="text-body-sm text-ink-muted">Aegis Innovation Competition 2026</p>
         </div>

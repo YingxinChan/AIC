@@ -25,7 +25,7 @@ export default function Nav() {
           <span className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
             <img src={logo} alt="" className="w-full h-full object-cover" />
           </span>
-          <NaviaWordmark className="h-5 w-auto text-white" accentClassName="text-brand-300" />
+          <NaviaWordmark className="h-5 w-auto" variant="white" />
         </Link>
         <div className="flex items-center gap-1.5 text-sm font-mono uppercase tracking-wide text-[13px]">
           <Link

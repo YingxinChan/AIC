@@ -35,7 +35,7 @@ export default function AuthLayout() {
               <span className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
                 <img src={logo} alt="" className="w-full h-full object-cover" />
               </span>
-              <NaviaWordmark className="h-5 w-auto text-ink" />
+              <NaviaWordmark className="h-5 w-auto" />
             </Link>
             <SplitFlapText
               words={isRegister ? HEADER_WORDS.register : HEADER_WORDS.login}
