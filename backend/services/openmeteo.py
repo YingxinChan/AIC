@@ -13,7 +13,15 @@ from core.config import settings
 # rate limit — see https://open-meteo.com/en/docs for the pattern. Empty
 # key (the default) keeps every call on the free, shared-IP-pooled tier.
 FORECAST_HOST = "customer-api.open-meteo.com" if settings.openmeteo_api_key else "api.open-meteo.com"
-ARCHIVE_HOST = "customer-archive-api.open-meteo.com" if settings.openmeteo_api_key else "archive-api.open-meteo.com"
+
+# The Archive/historical endpoint is NOT included in the Standard plan —
+# customer-archive-api.open-meteo.com 403s on Standard ("requires the API
+# Professional or Enterprise plan") even with a valid key. Archive calls
+# stay on the free host unconditionally until/unless the plan is upgraded,
+# rather than silently breaking climatology fallback (see
+# climatology_service.py's except-and-degrade-to-"Unknown" handling) the
+# moment OPENMETEO_API_KEY is set for the (Standard-covered) forecast calls.
+ARCHIVE_HOST = "archive-api.open-meteo.com"
 
 
 def _apikey_param() -> str:
@@ -155,11 +163,11 @@ def get_forecast(lat: float, lon: float, start_date: str = None, end_date: str =
 
 def get_historical_forecast(lat: float, lon: float, start_date: str, end_date: str):
     """Daily historical observations from Open-Meteo's Archive API — same
-    provider as get_forecast(), and same free/paid host switch based on
-    OPENMETEO_API_KEY. Used for climatology (long-run averages) on trip days
-    too far out for a real forecast; unlike get_forecast(), start_date/end_date
-    here are required and must already be in the past, so there's no
-    "default to today" behavior to replicate."""
+    provider as get_forecast(), but always the free tier (see ARCHIVE_HOST).
+    Used for climatology (long-run averages) on trip days too far out for a
+    real forecast; unlike get_forecast(), start_date/end_date here are
+    required and must already be in the past, so there's no "default to
+    today" behavior to replicate."""
     daily = ",".join([
         "weather_code",
         "precipitation_sum",
@@ -176,7 +184,6 @@ def get_historical_forecast(lat: float, lon: float, start_date: str, end_date: s
         f"&start_date={start_date}"
         f"&end_date={end_date}"
         f"&timezone=GMT"
-        f"{_apikey_param()}"
     )
 
     response = _get_with_retry(url, timeout=10)
