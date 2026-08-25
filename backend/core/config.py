@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     gmail_user: str = ""
     gmail_app_password: str = ""
     openweather_api_key: str = ""
+    # Open-Meteo's free tier (no key) is what get_forecast()/get_historical_forecast()
+    # use by default. Set this once the team's paid commercial plan is active —
+    # it switches those calls to the customer-* hosts with dedicated rate limits,
+    # instead of the free tier's shared-IP pool. Empty stays on the free tier.
+    openmeteo_api_key: str = ""
     anthropic_api_key: str = ""
     # Linked from notification emails ("View your itinerary" / "View your
     # trips") so the traveler can jump straight to the relevant page instead

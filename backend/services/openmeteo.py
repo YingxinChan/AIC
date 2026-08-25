@@ -6,6 +6,19 @@ import time
 import requests
 from datetime import date, datetime, timedelta
 
+from core.config import settings
+
+# Open-Meteo's paid plans serve from a "customer-" prefixed host instead of
+# the free one, with an apikey query param unlocking that host's dedicated
+# rate limit — see https://open-meteo.com/en/docs for the pattern. Empty
+# key (the default) keeps every call on the free, shared-IP-pooled tier.
+FORECAST_HOST = "customer-api.open-meteo.com" if settings.openmeteo_api_key else "api.open-meteo.com"
+ARCHIVE_HOST = "customer-archive-api.open-meteo.com" if settings.openmeteo_api_key else "archive-api.open-meteo.com"
+
+
+def _apikey_param() -> str:
+    return f"&apikey={settings.openmeteo_api_key}" if settings.openmeteo_api_key else ""
+
 # Render's free tier (and other shared-IP hosts) can share Open-Meteo's rate
 # limit with unrelated traffic on the same outbound IP, so a 429 there isn't
 # necessarily this app's own call volume — a short retry-with-backoff rides
@@ -100,7 +113,7 @@ def get_forecast(lat: float, lon: float, start_date: str = None, end_date: str =
 
     # Build the URL with the date parameters
     url = (
-        "https://api.open-meteo.com/v1/forecast"
+        f"https://{FORECAST_HOST}/v1/forecast"
         f"?latitude={lat}"
         f"&longitude={lon}"
         f"&hourly={hourly}"
@@ -111,6 +124,7 @@ def get_forecast(lat: float, lon: float, start_date: str = None, end_date: str =
         # lat/lon, instead of returning every timestamp in GMT regardless of
         # where the destination actually is.
         f"&timezone=auto"
+        f"{_apikey_param()}"
     )
 
     # No timeout here would let a slow/stalled Open-Meteo response hang this
@@ -140,11 +154,12 @@ def get_forecast(lat: float, lon: float, start_date: str = None, end_date: str =
 
 
 def get_historical_forecast(lat: float, lon: float, start_date: str, end_date: str):
-    """Daily historical observations from Open-Meteo's free Archive API —
-    same provider as get_forecast(), no key needed. Used for climatology
-    (long-run averages) on trip days too far out for a real forecast; unlike
-    get_forecast(), start_date/end_date here are required and must already
-    be in the past, so there's no "default to today" behavior to replicate."""
+    """Daily historical observations from Open-Meteo's Archive API — same
+    provider as get_forecast(), and same free/paid host switch based on
+    OPENMETEO_API_KEY. Used for climatology (long-run averages) on trip days
+    too far out for a real forecast; unlike get_forecast(), start_date/end_date
+    here are required and must already be in the past, so there's no
+    "default to today" behavior to replicate."""
     daily = ",".join([
         "weather_code",
         "precipitation_sum",
@@ -154,13 +169,14 @@ def get_historical_forecast(lat: float, lon: float, start_date: str, end_date: s
     ])
 
     url = (
-        "https://archive-api.open-meteo.com/v1/archive"
+        f"https://{ARCHIVE_HOST}/v1/archive"
         f"?latitude={lat}"
         f"&longitude={lon}"
         f"&daily={daily}"
         f"&start_date={start_date}"
         f"&end_date={end_date}"
         f"&timezone=GMT"
+        f"{_apikey_param()}"
     )
 
     response = _get_with_retry(url, timeout=10)

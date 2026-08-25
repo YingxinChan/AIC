@@ -3,10 +3,10 @@
 # Use "New +" -> "Blueprint" on Render and point it at this repo.
 #
 # Secrets (DATABASE_URL, SECRET_KEY, GMAIL_USER, GMAIL_APP_PASSWORD,
-# ANTHROPIC_API_KEY, CORS_ORIGINS) are deliberately NOT listed here — Render
-# Blueprints don't store real secret values in the repo. Set those in the
-# Render dashboard after the first deploy (Environment tab on the created
-# service).
+# ANTHROPIC_API_KEY, OPENMETEO_API_KEY, CORS_ORIGINS) are deliberately NOT
+# listed here — Render Blueprints don't store real secret values in the
+# repo. Set those in the Render dashboard after the first deploy
+# (Environment tab on the created service).
 services:
   - type: web
     name: climago-backend
@@ -29,4 +29,6 @@ services:
       - key: GMAIL_APP_PASSWORD
         sync: false
       - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: OPENMETEO_API_KEY
         sync: false
