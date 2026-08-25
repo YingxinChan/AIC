@@ -86,6 +86,49 @@ def test_gives_up_after_max_retries_on_persistent_timeout():
     assert mock_get.call_count == openmeteo.MAX_RETRIES
 
 
+def test_retries_on_500_then_succeeds():
+    responses = [
+        _response(500, headers={}),
+        _response(200, _forecast_json()),
+    ]
+    with patch("services.openmeteo.requests.get", side_effect=responses) as mock_get, \
+         patch("services.openmeteo.time.sleep") as mock_sleep:
+        result = get_forecast(1.0, 2.0, "2026-08-08", "2026-08-10")
+
+    assert mock_get.call_count == 2
+    assert mock_sleep.call_count == 1
+    assert result["utc_offset_seconds"] == 3600
+
+
+def test_gives_up_after_max_retries_on_persistent_503():
+    responses = [_response(503, headers={}) for _ in range(openmeteo.MAX_RETRIES)]
+    with patch("services.openmeteo.requests.get", side_effect=responses) as mock_get, \
+         patch("services.openmeteo.time.sleep"):
+        try:
+            get_forecast(1.0, 2.0, "2026-08-08", "2026-08-10")
+            assert False, "expected an exception for a non-200 response"
+        except Exception as e:
+            assert "503" in str(e)
+
+    assert mock_get.call_count == openmeteo.MAX_RETRIES
+
+
+def test_does_not_retry_on_client_error():
+    # A 403 (e.g. a plan/permissions error) is deterministic — retrying
+    # would just fail the same way every time and waste the retry budget,
+    # unlike 429/5xx which can plausibly succeed on a later attempt.
+    with patch("services.openmeteo.requests.get", return_value=_response(403, headers={})) as mock_get, \
+         patch("services.openmeteo.time.sleep") as mock_sleep:
+        try:
+            get_forecast(1.0, 2.0, "2026-08-08", "2026-08-10")
+            assert False, "expected an exception for a non-200 response"
+        except Exception as e:
+            assert "403" in str(e)
+
+    assert mock_get.call_count == 1
+    mock_sleep.assert_not_called()
+
+
 def test_retry_after_header_is_respected():
     responses = [
         _response(429, headers={"Retry-After": "5"}),

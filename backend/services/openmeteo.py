@@ -57,7 +57,13 @@ def _get_with_retry(url: str, timeout: float | None = None) -> requests.Response
                 raise
             time.sleep(BACKOFF_SECONDS * (2 ** attempt))
             continue
-        if response.status_code != 429 or attempt == MAX_RETRIES - 1:
+        # 429 (rate limit) and any 5xx (transient server-side failure) are
+        # worth retrying — Open-Meteo's free tier has no latency SLA, so an
+        # occasional 5xx is plausible. Other 4xx (bad request, forbidden,
+        # etc.) are deterministic — retrying wastes the whole budget on a
+        # response that will never change.
+        retryable = response.status_code == 429 or response.status_code >= 500
+        if not retryable or attempt == MAX_RETRIES - 1:
             return response
         retry_after = response.headers.get("Retry-After")
         delay = float(retry_after) if retry_after else BACKOFF_SECONDS * (2 ** attempt)
