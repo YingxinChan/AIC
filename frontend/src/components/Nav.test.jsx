@@ -16,7 +16,7 @@ afterEach(() => vi.restoreAllMocks())
 
 test('renders the logo, Home linking to /dashboard, and My Trips linking to /trips', () => {
   render(<MemoryRouter><Nav /></MemoryRouter>)
-  expect(screen.getByText('Navia')).toBeInTheDocument()
+  expect(screen.getByAltText('Navia')).toBeInTheDocument()
   expect(screen.getByRole('link', { name: /home/i })).toHaveAttribute('href', '/dashboard')
   expect(screen.getByRole('link', { name: /my trips/i })).toHaveAttribute('href', '/trips')
 })
